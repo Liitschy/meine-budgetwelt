@@ -51,7 +51,8 @@ func _draw() -> void:
 	_draw_income_badge(_art_point(art_rect, Vector2(0.50, 0.105)), shimmer)
 	_draw_fixed_cost_badge(_art_point(art_rect, Vector2(0.315, 0.405)))
 	_draw_savings_badge(_art_point(art_rect, Vector2(0.665, 0.315)))
-	_draw_cost_labels(art_rect)
+	if size.x >= 520.0:
+		_draw_cost_labels(art_rect)
 	_draw_available_badge(_art_point(art_rect, Vector2(0.54, 0.635)), shimmer)
 
 
