@@ -46,6 +46,9 @@ var pending_month_id := ""
 var sidebar_panel: Control
 var mobile_navigation: Control
 var dashboard_header: BoxContainer
+var dashboard_title: Label
+var month_controls: HBoxContainer
+var month_edit_button: Button
 var dashboard_body: BoxContainer
 var week_cards: BoxContainer
 var summary_panel: Control
@@ -379,7 +382,9 @@ func _build_month_flow() -> Control:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size.y = 104
 	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 17, Color("#15515b")))
-	var row := HBoxContainer.new()
+	var row := BoxContainer.new()
+	row.vertical = false
+	week_cards = row
 	row.add_theme_constant_override("separation", 10)
 	row.add_theme_constant_override("margin_left", 18)
 	row.add_theme_constant_override("margin_right", 18)
@@ -425,41 +430,49 @@ func _build_month_flow() -> Control:
 
 func _build_mobile_navigation() -> Control:
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size.y = 64
+	panel.custom_minimum_size.y = 102
 	panel.add_theme_stylebox_override("panel", _style(COLORS.sidebar, 0))
 
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
-	panel.add_child(row)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 4)
+	panel.add_child(column)
 
 	var brand := Label.new()
-	brand.text = "✦  Budget"
-	brand.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	brand.add_theme_font_size_override("font_size", 19)
+	brand.text = "✦  Meine Budgetwelt"
+	brand.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	brand.add_theme_font_size_override("font_size", 16)
 	brand.add_theme_color_override("font_color", COLORS.text)
-	row.add_child(brand)
+	column.add_child(brand)
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 4)
+	column.add_child(row)
 
 	var dashboard_button := Button.new()
-	dashboard_button.text = "Budgetwelt"
+	dashboard_button.text = "Welt"
 	dashboard_button.custom_minimum_size.y = 44
+	dashboard_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	dashboard_button.pressed.connect(_show_page.bind("dashboard"))
 	row.add_child(dashboard_button)
 
 	var costs_button := Button.new()
 	costs_button.text = "Fixkosten"
 	costs_button.custom_minimum_size.y = 44
+	costs_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	costs_button.pressed.connect(_show_page.bind("fixed_costs"))
 	row.add_child(costs_button)
 
 	var savings_button := Button.new()
 	savings_button.text = "Sparen"
 	savings_button.custom_minimum_size.y = 44
+	savings_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	savings_button.pressed.connect(_show_page.bind("savings"))
 	row.add_child(savings_button)
 
 	var bookings_button := Button.new()
-	bookings_button.text = "Buchungen"
+	bookings_button.text = "Buchen"
 	bookings_button.custom_minimum_size.y = 44
+	bookings_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bookings_button.pressed.connect(_show_page.bind("transactions"))
 	row.add_child(bookings_button)
 	return panel
@@ -565,6 +578,7 @@ func _build_header() -> Control:
 	var titles := VBoxContainer.new()
 	var title := Label.new()
 	title.text = "Deine Budgetwelt"
+	dashboard_title = title
 	title.add_theme_font_override("font", display_font)
 	title.add_theme_font_size_override("font_size", 36)
 	title.add_theme_color_override("font_color", COLORS.text)
@@ -582,22 +596,26 @@ func _build_header() -> Control:
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(spacer)
 
+	month_controls = HBoxContainer.new()
+	month_controls.add_theme_constant_override("separation", 4)
+	row.add_child(month_controls)
+
 	var previous_month := Button.new()
 	previous_month.text = "‹"
 	previous_month.tooltip_text = "Vorheriger Monat"
 	previous_month.custom_minimum_size = Vector2(48, 48)
 	previous_month.add_theme_font_size_override("font_size", 24)
 	previous_month.pressed.connect(_request_month_change.bind(-1))
-	row.add_child(previous_month)
+	month_controls.add_child(previous_month)
 
 	var current_month := Label.new()
 	current_month.text = "Monat"
-	current_month.custom_minimum_size.x = 150
+	current_month.custom_minimum_size.x = 130
 	current_month.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	current_month.add_theme_font_size_override("font_size", 18)
 	current_month.add_theme_color_override("font_color", COLORS.text)
 	month_selector_label = current_month
-	row.add_child(current_month)
+	month_controls.add_child(current_month)
 
 	var next_month := Button.new()
 	next_month.text = "›"
@@ -605,17 +623,18 @@ func _build_header() -> Control:
 	next_month.custom_minimum_size = Vector2(48, 48)
 	next_month.add_theme_font_size_override("font_size", 24)
 	next_month.pressed.connect(_request_month_change.bind(1))
-	row.add_child(next_month)
+	month_controls.add_child(next_month)
 
 	var edit_button := Button.new()
 	edit_button.text = "Monat einrichten"
-	edit_button.custom_minimum_size = Vector2(180, 48)
+	edit_button.custom_minimum_size = Vector2(160, 48)
+	month_edit_button = edit_button
 	edit_button.add_theme_font_size_override("font_size", 16)
 	edit_button.add_theme_color_override("font_color", Color("#042226"))
 	edit_button.add_theme_stylebox_override("normal", _style(COLORS.accent, 14))
 	edit_button.add_theme_stylebox_override("hover", _style(Color("#6ce8d7"), 14))
 	edit_button.pressed.connect(_open_setup)
-	row.add_child(edit_button)
+	month_controls.add_child(edit_button)
 
 	return row
 
@@ -3073,6 +3092,14 @@ func _apply_responsive_layout() -> void:
 	sidebar_panel.visible = not compact
 	mobile_navigation.visible = compact
 	dashboard_header.vertical = compact
+	if is_instance_valid(dashboard_title):
+		dashboard_title.add_theme_font_size_override("font_size", 29 if compact else 36)
+	if is_instance_valid(month_selector_label):
+		month_selector_label.custom_minimum_size.x = 98 if compact else 130
+		month_selector_label.add_theme_font_size_override("font_size", 15 if compact else 18)
+	if is_instance_valid(month_edit_button):
+		month_edit_button.text = "Einrichten" if compact else "Monat einrichten"
+		month_edit_button.custom_minimum_size.x = 104 if compact else 160
 	dashboard_body.vertical = stacked_content
 	if is_instance_valid(week_cards):
 		week_cards.vertical = compact
@@ -3081,7 +3108,7 @@ func _apply_responsive_layout() -> void:
 	fixed_list_header.visible = not compact
 
 	world_view.custom_minimum_size = (
-		Vector2(0, 390) if compact
+		Vector2(0, 340) if compact
 		else Vector2(0, 500) if stacked_content
 		else Vector2(700, clampf(size.y - 260.0, 620.0, 900.0))
 	)
