@@ -1,0 +1,43 @@
+; Engine configuration file.
+; Edit preferably through the Godot editor.
+
+config_version=5
+
+[application]
+
+config/name="Budget & Wocheneinkauf"
+config/description="Einfache lokale Budgetplanung"
+config/version="0.24.1"
+config/icon="res://assets/app_icon.svg"
+run/main_scene="res://app/Main.tscn"
+
+[autoload]
+
+StorageManager="*res://core/storage_manager.gd"
+BudgetManager="*res://core/budget_manager.gd"
+FixedCostManager="*res://core/fixed_cost_manager.gd"
+SavingsManager="*res://core/savings_manager.gd"
+MonthManager="*res://core/month_manager.gd"
+TransactionManager="*res://core/transaction_manager.gd"
+ShoppingManager="*res://core/shopping_manager.gd"
+MealPlanManager="*res://core/meal_plan_manager.gd"
+CustomRecipeManager="*res://core/custom_recipe_manager.gd"
+UpdateManager="*res://core/update_manager.gd"
+
+[display]
+
+window/size/viewport_width=1440
+window/size/viewport_height=900
+window/size/window_width_override=1440
+window/size/window_height_override=900
+window/stretch/mode="disabled"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+environment/defaults/default_clear_color=Color(0.015, 0.075, 0.098, 1)
+
+[application_update]
+
+manifest_url=""

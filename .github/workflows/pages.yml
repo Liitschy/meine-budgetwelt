@@ -1,0 +1,49 @@
+name: Web-App auf GitHub Pages veröffentlichen
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository laden
+        uses: actions/checkout@v4
+
+      - name: Godot installieren
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.7.1
+          use-dotnet: false
+          include-templates: true
+
+      - name: Web-App exportieren
+        run: |
+          mkdir -p web
+          godot --headless --path . --export-release Web web/index.html
+
+      - name: GitHub Pages konfigurieren
+        uses: actions/configure-pages@v5
+
+      - name: Web-Dateien hochladen
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+
+      - name: GitHub Pages veröffentlichen
+        id: deployment
+        uses: actions/deploy-pages@v4
