@@ -13,6 +13,8 @@ const DEFAULT_DATA := {
 	"additional_income": 0.0,
 	"variable_expenses": 0.0,
 	"weekly_expenses": 0.0,
+	"weekly_credit": 0.0,
+	"weekly_credit_total": 0.0,
 	"savings_payments": 0.0,
 }
 

@@ -24,7 +24,7 @@ Fixkosten und einen kompakten Monatsfluss vom Kontostand bis zum Sparziel.
 - Wochenausgaben erfassen und das verbleibende Wochenbudget sehen;
 - vergangene Monate wieder aufrufen;
 - lokale Datenspeicherung und Sicherungen;
-- vorbereitete Update-Prüfung.
+- Update-Prüfung über GitHub Pages mit sicherem Download aus GitHub Releases.
 
 Der frühere Wocheneinkauf und Speiseplan sind nicht mehr Teil der sichtbaren
 Anwendung. Bereits vorhandene Einkaufsdaten werden nicht ungefragt gelöscht.
@@ -36,6 +36,16 @@ Die portable Testversion liegt unter:
 `build/windows/Budget-und-Wocheneinkauf.exe`
 
 Eine Installation ist nicht erforderlich.
+
+## Updates
+
+Der Button **Nach Updates suchen** liest die veröffentlichte Versionsdatei
+unter GitHub Pages. Wenn eine neuere Version verfügbar ist, öffnet die App
+den offiziellen Windows-Download aus den GitHub Releases dieses Projekts.
+
+Ein Tag im Format `v1.2.3` muss zur Versionsnummer in `project.godot` passen.
+Der Workflow `Windows-Version veröffentlichen` erzeugt anschließend
+automatisch die portable EXE und eine SHA-256-Prüfsumme.
 
 ## Datenschutz
 

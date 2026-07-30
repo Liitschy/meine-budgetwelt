@@ -44,7 +44,11 @@ func add_transaction(
 	if amount <= 0.0 or description.strip_edges().is_empty():
 		return false
 
-	var normalized_kind := kind if kind in ["income", "expense", "saving"] else "expense"
+	var normalized_kind := (
+		kind
+		if kind in ["income", "expense", "saving", "weekly_credit"]
+		else "expense"
+	)
 	var month_id := MonthManager.get_active_month_id()
 	var transactions: Array = _months.get(month_id, [])
 	transactions.append({

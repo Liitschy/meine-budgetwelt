@@ -26,6 +26,7 @@ func _ready() -> void:
 		"weekly_grocery_budget": 70.0,
 	})
 	_assert_equal(snapshot.available_now, 1300.0, "Aktuell verfügbar")
+	_assert_equal(snapshot.current_balance, 1300.0, "Laufender Kontostand berücksichtigt bezahlte Fixkosten")
 	_assert_equal(snapshot.freely_available, 800.0, "Nach allen Fixkosten frei")
 	_assert_equal(snapshot.weekly_free_budget, 200.0, "Frei verfügbares Wochenbudget")
 	_assert_equal(snapshot.after_savings, 650.0, "Nach Sparziel verfügbar")
@@ -77,6 +78,19 @@ func _ready() -> void:
 		{"kind": "expense", "category": "Wochenbudget", "amount": 20.0, "day": 10},
 	], 0)
 	_assert_equal(weekly_summary.weekly_expenses, 35.0, "Ausgaben der aktuellen Budgetwoche")
+	var credited_week := TransactionCalculator.summarize([
+		{"kind": "weekly_credit", "category": "Wochenbudget", "amount": 50.0, "day": 3},
+		{"kind": "weekly_credit", "category": "Wochenbudget", "amount": 25.0, "day": 10},
+	], 0)
+	_assert_equal(credited_week.weekly_credit, 50.0, "Zusatzbudget gilt nur für die gewählte Woche")
+	_assert_equal(credited_week.weekly_credit_total, 75.0, "Alle Wochenaufladungen erhöhen den Kontobetrag")
+	var credited_budget := BudgetCalculator.calculate({
+		"balance": 1000.0,
+		"weekly_credit": 50.0,
+		"weekly_credit_total": 50.0,
+	})
+	_assert_equal(credited_budget.effective_balance, 1050.0, "Aufladung erhöht den verfügbaren Kontobetrag")
+	_assert_equal(credited_budget.weekly_free_budget, 300.0, "Aufladung wird nur der aktiven Woche zugerechnet")
 
 	var booking_snapshot := BudgetCalculator.calculate({
 		"balance": 2000.0,
@@ -88,6 +102,7 @@ func _ready() -> void:
 		"savings_payments": 50.0,
 	})
 	_assert_equal(booking_snapshot.available_now, 1350.0, "Verfügbar nach Buchungen")
+	_assert_equal(booking_snapshot.current_balance, 1350.0, "Laufender Kontostand berücksichtigt Buchungen")
 	_assert_equal(booking_snapshot.freely_available, 850.0, "Frei nach Buchungen")
 	_assert_equal(booking_snapshot.after_savings, 750.0, "Sparzahlung nicht doppelt abgezogen")
 	var shopping_summary := ShoppingCalculator.summarize([
@@ -219,6 +234,7 @@ func _test_responsive_layout() -> void:
 	_assert_equal(app._compact_layout, true, "Kompaktes Layout bei Mobilbreite")
 	_assert_equal(app.sidebar_panel.visible, false, "Seitenleiste mobil ausgeblendet")
 	_assert_equal(app.mobile_navigation.visible, true, "Mobile Navigation eingeblendet")
+	_assert_equal(app.desktop_backdrop.visible, false, "Landschaftshintergrund ist ausschließlich für Windows aktiv")
 	_assert_equal(
 		app.app_shell.get_child(app.app_shell.get_child_count() - 1),
 		app.mobile_navigation,
@@ -236,6 +252,7 @@ func _test_responsive_layout() -> void:
 	app._apply_responsive_layout()
 	_assert_equal(app._compact_layout, false, "Desktoplayout bei großer Breite")
 	_assert_equal(app.sidebar_panel.visible, true, "Seitenleiste am Desktop sichtbar")
+	_assert_equal(app.desktop_backdrop.visible, true, "Landschaft verbindet die Windows-Unterseiten optisch")
 	_assert_equal(app.mobile_navigation.visible, false, "Mobile Navigation am Desktop verborgen")
 	_assert_equal(app.dashboard_body.vertical, false, "Budgetinhalt am Desktop nebeneinander")
 	_assert_equal(app.dashboard_body.get_child(0), app.world_view, "Landschaft steht am Desktop wieder links")
@@ -256,6 +273,17 @@ func _test_responsive_layout() -> void:
 	app._normalize_amount_text("15,50", amount_line_edit, amount_input)
 	_assert_equal(amount_input.value, 15.5, "Komma-Betrag wird als Dezimalzahl übernommen")
 	_assert_equal(amount_input.step, 0.01, "Geldfelder erlauben Cent-Beträge")
+	var weekly_entries: Array = app._filter_weekly_transactions([
+		{"kind": "expense", "category": "Wochenbudget", "amount": 14.5},
+		{"kind": "expense", "category": "Freizeit", "amount": 8.0},
+		{"kind": "expense", "category": "Wochenbudget", "amount": 20.0},
+		{"kind": "income", "category": "Wochenbudget", "amount": 100.0},
+	])
+	weekly_entries = app._filter_weekly_transactions([
+		{"kind": "expense", "category": "Wochenbudget", "amount": 14.5},
+		{"kind": "weekly_credit", "category": "Wochenbudget", "amount": 50.0},
+	])
+	_assert_equal(weekly_entries.size(), 2, "Wochenbudget-Filter zeigt Ausgaben und Aufladungen")
 	app.queue_free()
 
 

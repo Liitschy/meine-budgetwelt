@@ -36,6 +36,14 @@ jobs:
           mkdir -p web
           godot --headless --path . --export-release Web web/index.html
 
+      - name: Update-Information für Windows erzeugen
+        shell: bash
+        run: |
+          VERSION="$(sed -n 's/^config\/version="\([^"]*\)"/\1/p' project.godot)"
+          DOWNLOAD_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}/Budget-und-Wocheneinkauf-${VERSION}.exe"
+          printf '{\n  "version": "%s",\n  "download_url": "%s"\n}\n' \
+            "$VERSION" "$DOWNLOAD_URL" > web/update-manifest.json
+
       - name: GitHub Pages konfigurieren
         uses: actions/configure-pages@v5
 
