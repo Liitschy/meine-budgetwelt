@@ -1288,7 +1288,7 @@ func _create_savings_money_input() -> SpinBox:
 	var input := SpinBox.new()
 	input.min_value = 0.0
 	input.max_value = 1000000.0
-	input.step = 10.0
+	input.step = 0.01
 	input.suffix = " €"
 	input.custom_minimum_size.y = 44
 	_prepare_amount_input(input)
@@ -2621,7 +2621,7 @@ func _build_balance_panel() -> PanelContainer:
 	balance_input = SpinBox.new()
 	balance_input.min_value = 0.0
 	balance_input.max_value = 1000000.0
-	balance_input.step = 1.0
+	balance_input.step = 0.01
 	balance_input.suffix = " €"
 	balance_input.custom_minimum_size.y = 48
 	_prepare_amount_input(balance_input)
@@ -2681,7 +2681,7 @@ func _build_fixed_payment_panel() -> PanelContainer:
 	fixed_payment_input = SpinBox.new()
 	fixed_payment_input.min_value = 0.0
 	fixed_payment_input.max_value = 1000000.0
-	fixed_payment_input.step = 1.0
+	fixed_payment_input.step = 0.01
 	fixed_payment_input.suffix = " €"
 	fixed_payment_input.custom_minimum_size.y = 48
 	_prepare_amount_input(fixed_payment_input)
@@ -2804,7 +2804,7 @@ func _build_add_cost_panel() -> PanelContainer:
 	cost_amount_input = SpinBox.new()
 	cost_amount_input.min_value = 0.0
 	cost_amount_input.max_value = 1000000.0
-	cost_amount_input.step = 1.0
+	cost_amount_input.step = 0.01
 	cost_amount_input.suffix = " €"
 	cost_amount_input.custom_minimum_size.y = 44
 	_prepare_amount_input(cost_amount_input)
@@ -2888,7 +2888,7 @@ func _build_month_change_panel() -> PanelContainer:
 	month_opening_balance = SpinBox.new()
 	month_opening_balance.min_value = 0.0
 	month_opening_balance.max_value = 1000000.0
-	month_opening_balance.step = 10.0
+	month_opening_balance.step = 0.01
 	month_opening_balance.suffix = " €"
 	month_opening_balance.custom_minimum_size.y = 46
 	_prepare_amount_input(month_opening_balance)
@@ -2997,7 +2997,7 @@ func _money_input(key: String, label_text: String) -> Control:
 	input.custom_minimum_size = Vector2(190, 44)
 	input.min_value = 0.0
 	input.max_value = 1000000.0
-	input.step = 10.0
+	input.step = 0.01
 	input.suffix = " €"
 	_prepare_amount_input(input)
 	input_fields[key] = input
@@ -3006,8 +3006,22 @@ func _money_input(key: String, label_text: String) -> Control:
 
 
 func _prepare_amount_input(input: SpinBox) -> void:
+	input.update_on_text_changed = true
 	var line_edit := input.get_line_edit()
 	line_edit.focus_entered.connect(_select_amount_text.bind(line_edit))
+	line_edit.text_changed.connect(_normalize_amount_text.bind(line_edit, input))
+
+
+func _normalize_amount_text(text: String, line_edit: LineEdit, input: SpinBox) -> void:
+	if not text.contains(","):
+		return
+	var caret_position := line_edit.caret_column
+	var normalized_text := text.replace(",", ".")
+	line_edit.text = normalized_text
+	line_edit.caret_column = mini(caret_position, line_edit.text.length())
+	var numeric_text := normalized_text.trim_suffix(input.suffix).strip_edges()
+	if numeric_text.is_valid_float():
+		input.value = float(numeric_text)
 
 
 func _select_amount_text(line_edit: LineEdit) -> void:
@@ -3101,6 +3115,14 @@ func _apply_responsive_layout() -> void:
 		month_edit_button.text = "Einrichten" if compact else "Monat einrichten"
 		month_edit_button.custom_minimum_size.x = 104 if compact else 160
 	dashboard_body.vertical = stacked_content
+	if compact:
+		if dashboard_body.get_child(0) != summary_panel:
+			dashboard_body.move_child(summary_panel, 0)
+	else:
+		if dashboard_body.get_child(0) != world_view:
+			dashboard_body.move_child(world_view, 0)
+	if world_view.has_method("set_compact_mode"):
+		world_view.set_compact_mode(compact)
 	if is_instance_valid(week_cards):
 		week_cards.vertical = compact
 	fixed_header.vertical = compact
@@ -3108,7 +3130,7 @@ func _apply_responsive_layout() -> void:
 	fixed_list_header.visible = not compact
 
 	world_view.custom_minimum_size = (
-		Vector2(0, 340) if compact
+		Vector2(0, 250) if compact
 		else Vector2(0, 500) if stacked_content
 		else Vector2(700, clampf(size.y - 260.0, 620.0, 900.0))
 	)

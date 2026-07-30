@@ -4,6 +4,7 @@ const WORLD_ART := preload("res://assets/world/budget_world_island.png")
 
 var snapshot: Dictionary = {}
 var _time := 0.0
+var _compact_mode := false
 
 const WATER := Color("#0a817e")
 const WATER_LIGHT := Color("#43e0cc")
@@ -21,6 +22,13 @@ func _ready() -> void:
 
 func set_snapshot(value: Dictionary) -> void:
 	snapshot = value
+	queue_redraw()
+
+
+func set_compact_mode(value: bool) -> void:
+	if _compact_mode == value:
+		return
+	_compact_mode = value
 	queue_redraw()
 
 
@@ -46,6 +54,9 @@ func _draw() -> void:
 	var rendered_size := art_size * scale_factor
 	var art_rect := Rect2((size - rendered_size) * 0.5, rendered_size)
 	draw_texture_rect(WORLD_ART, art_rect, false)
+
+	if _compact_mode:
+		return
 
 	var shimmer := 0.92 + sin(_time * 1.5) * 0.06
 	_draw_income_badge(_art_point(art_rect, Vector2(0.50, 0.105)), shimmer)

@@ -219,6 +219,8 @@ func _test_responsive_layout() -> void:
 	_assert_equal(app.sidebar_panel.visible, false, "Seitenleiste mobil ausgeblendet")
 	_assert_equal(app.mobile_navigation.visible, true, "Mobile Navigation eingeblendet")
 	_assert_equal(app.dashboard_body.vertical, true, "Budgetinhalt mobil gestapelt")
+	_assert_equal(app.dashboard_body.get_child(0), app.summary_panel, "Monatsübersicht steht mobil vor der Landschaft")
+	_assert_equal(app.world_view._compact_mode, true, "Landschaft nutzt mobil den aufgeräumten Modus")
 	_assert_equal(app.fixed_summary_row.vertical, true, "Fixkostensummen mobil gestapelt")
 	_assert_equal(app.savings_summary_row.vertical, true, "Sparziele mobil gestapelt")
 	_assert_equal(app.transaction_summary_row.vertical, true, "Buchungen mobil gestapelt")
@@ -228,6 +230,7 @@ func _test_responsive_layout() -> void:
 	_assert_equal(app.sidebar_panel.visible, true, "Seitenleiste am Desktop sichtbar")
 	_assert_equal(app.mobile_navigation.visible, false, "Mobile Navigation am Desktop verborgen")
 	_assert_equal(app.dashboard_body.vertical, false, "Budgetinhalt am Desktop nebeneinander")
+	_assert_equal(app.dashboard_body.get_child(0), app.world_view, "Landschaft steht am Desktop wieder links")
 
 	var amount_input: SpinBox = app._create_savings_money_input()
 	app.add_child(amount_input)
@@ -241,6 +244,9 @@ func _test_responsive_layout() -> void:
 		"0",
 		"Vorhandene Null wird vollständig ausgewählt"
 	)
+	app._normalize_amount_text("15,50", amount_line_edit, amount_input)
+	_assert_equal(amount_input.value, 15.5, "Komma-Betrag wird als Dezimalzahl übernommen")
+	_assert_equal(amount_input.step, 0.01, "Geldfelder erlauben Cent-Beträge")
 	app.queue_free()
 
 
