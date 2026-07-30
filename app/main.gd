@@ -48,6 +48,8 @@ var month_opening_balance: SpinBox
 var pending_month_id := ""
 var sidebar_panel: Control
 var mobile_navigation: Control
+var mobile_nav_buttons: Dictionary = {}
+var book_navigation_controls: Array[Control] = []
 var app_shell: VBoxContainer
 var app_bar: Control
 var app_local_status: Label
@@ -62,6 +64,11 @@ var summary_panel: Control
 var fixed_header: BoxContainer
 var fixed_summary_row: BoxContainer
 var fixed_list_header: Control
+var fixed_list_panel: Control
+var savings_header: BoxContainer
+var savings_list_panel: Control
+var transactions_header: BoxContainer
+var transactions_list_panel: Control
 var add_cost_dialog: Control
 var month_change_dialog: Control
 var setup_dialog: Control
@@ -475,8 +482,8 @@ func _build_month_flow() -> Control:
 
 func _build_mobile_navigation() -> Control:
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size.y = 76
-	panel.add_theme_stylebox_override("panel", _style(Color("#062a34"), 0, Color("#16515b")))
+	panel.custom_minimum_size.y = 88
+	panel.add_theme_stylebox_override("panel", _style(Color("#03181ef8"), 0, Color("#b78b43")))
 
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 4)
@@ -486,37 +493,24 @@ func _build_mobile_navigation() -> Control:
 	row.add_theme_constant_override("margin_bottom", 6)
 	panel.add_child(row)
 
-	var dashboard_button := Button.new()
-	dashboard_button.text = "⌂\nÜbersicht"
-	dashboard_button.custom_minimum_size.y = 62
-	dashboard_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	dashboard_button.add_theme_font_size_override("font_size", 12)
-	dashboard_button.pressed.connect(_show_page.bind("dashboard"))
-	row.add_child(dashboard_button)
-
-	var costs_button := Button.new()
-	costs_button.text = "▤\nFixkosten"
-	costs_button.custom_minimum_size.y = 62
-	costs_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	costs_button.add_theme_font_size_override("font_size", 12)
-	costs_button.pressed.connect(_show_page.bind("fixed_costs"))
-	row.add_child(costs_button)
-
-	var savings_button := Button.new()
-	savings_button.text = "♧\nSparen"
-	savings_button.custom_minimum_size.y = 62
-	savings_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	savings_button.add_theme_font_size_override("font_size", 12)
-	savings_button.pressed.connect(_show_page.bind("savings"))
-	row.add_child(savings_button)
-
-	var bookings_button := Button.new()
-	bookings_button.text = "≡\nBuchungen"
-	bookings_button.custom_minimum_size.y = 62
-	bookings_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bookings_button.add_theme_font_size_override("font_size", 12)
-	bookings_button.pressed.connect(_show_page.bind("transactions"))
-	row.add_child(bookings_button)
+	for item in [
+		["⌂\nBudget", "dashboard"],
+		["▤\nFixkosten", "fixed_costs"],
+		["♧\nSparen", "savings"],
+		["▥\nBuchungen", "transactions"],
+	]:
+		var button := Button.new()
+		button.text = item[0]
+		button.custom_minimum_size.y = 72
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.add_theme_font_override("font", display_font)
+		button.add_theme_font_size_override("font_size", 14)
+		button.add_theme_color_override("font_color", Color("#d9c99d"))
+		button.add_theme_stylebox_override("normal", _style(Color.TRANSPARENT, 0))
+		button.add_theme_stylebox_override("hover", _style(Color("#0b3438"), 12, Color("#87662f")))
+		button.pressed.connect(_show_page.bind(item[1]))
+		mobile_nav_buttons[item[1]] = button
+		row.add_child(button)
 	return panel
 
 
@@ -916,6 +910,7 @@ func _build_fixed_costs_page() -> Control:
 	page.add_child(fixed_summary_row)
 
 	var list_panel := PanelContainer.new()
+	fixed_list_panel = list_panel
 	list_panel.add_theme_stylebox_override("panel", _style(Color.TRANSPARENT, 0))
 	list_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
 	list_panel.anchor_left = 0.158
@@ -976,6 +971,7 @@ func _build_fixed_costs_page() -> Control:
 
 func _build_book_navigation(page: Control, active_page: String) -> void:
 	var nav := VBoxContainer.new()
+	book_navigation_controls.append(nav)
 	nav.set_anchors_preset(Control.PRESET_FULL_RECT)
 	nav.anchor_left = 0.012
 	nav.anchor_top = 0.15
@@ -1015,6 +1011,7 @@ func _build_book_navigation(page: Control, active_page: String) -> void:
 		nav.add_child(button)
 
 	var utilities := VBoxContainer.new()
+	book_navigation_controls.append(utilities)
 	utilities.set_anchors_preset(Control.PRESET_FULL_RECT)
 	utilities.anchor_left = 0.008
 	utilities.anchor_top = 0.82
@@ -1290,7 +1287,9 @@ func _build_savings_page() -> Control:
 	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	page.add_child(art)
 
-	var header := HBoxContainer.new()
+	var header := BoxContainer.new()
+	header.vertical = false
+	savings_header = header
 	header.set_anchors_preset(Control.PRESET_FULL_RECT)
 	header.anchor_left = 0.115
 	header.anchor_top = 0.018
@@ -1357,6 +1356,7 @@ func _build_savings_page() -> Control:
 	page.add_child(savings_summary_row)
 
 	var list_panel := PanelContainer.new()
+	savings_list_panel = list_panel
 	list_panel.add_theme_stylebox_override("panel", _style(Color.TRANSPARENT, 0))
 	list_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
 	list_panel.anchor_left = 0.158
@@ -1644,7 +1644,9 @@ func _build_transactions_page() -> Control:
 	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	page.add_child(art)
 
-	var header := HBoxContainer.new()
+	var header := BoxContainer.new()
+	header.vertical = false
+	transactions_header = header
 	header.set_anchors_preset(Control.PRESET_FULL_RECT)
 	header.anchor_left = 0.115
 	header.anchor_top = 0.018
@@ -1714,6 +1716,7 @@ func _build_transactions_page() -> Control:
 	page.add_child(transaction_summary_row)
 
 	var list_panel := PanelContainer.new()
+	transactions_list_panel = list_panel
 	list_panel.add_theme_stylebox_override("panel", _style(Color.TRANSPARENT, 0))
 	list_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
 	list_panel.anchor_left = 0.158
@@ -3531,16 +3534,18 @@ func _apply_responsive_layout() -> void:
 	)
 	sidebar_panel.visible = not compact and not book_open
 	desktop_backdrop.visible = not compact
-	mobile_navigation.visible = compact and not book_open
+	mobile_navigation.visible = compact
 	if compact and app_shell.get_child(app_shell.get_child_count() - 1) != mobile_navigation:
 		app_shell.move_child(mobile_navigation, app_shell.get_child_count() - 1)
 	if is_instance_valid(app_local_status):
 		app_local_status.text = "● Lokal" if compact else "●  Sicher lokal gespeichert"
 		app_local_status.add_theme_font_size_override("font_size", 11 if compact else 12)
+	if is_instance_valid(app_bar):
+		app_bar.visible = not compact and not book_open
 	dashboard_header.vertical = compact
 	if is_instance_valid(dashboard_title):
-		dashboard_title.text = "Übersicht" if compact else "Deine Budgetwelt"
-		dashboard_title.add_theme_font_size_override("font_size", 27 if compact else 36)
+		dashboard_title.text = "Meine Budgetwelt" if compact else "Deine Budgetwelt"
+		dashboard_title.add_theme_font_size_override("font_size", 30 if compact else 36)
 	if is_instance_valid(month_selector_label):
 		month_selector_label.custom_minimum_size.x = 98 if compact else 130
 		month_selector_label.add_theme_font_size_override("font_size", 15 if compact else 18)
@@ -3554,12 +3559,12 @@ func _apply_responsive_layout() -> void:
 		world_view.set_compact_mode(compact)
 	if is_instance_valid(week_cards):
 		week_cards.vertical = compact
-	fixed_header.vertical = compact
-	fixed_summary_row.vertical = compact
+	fixed_header.vertical = false
+	fixed_summary_row.vertical = false
 	fixed_list_header.visible = not compact
 
 	world_view.custom_minimum_size = (
-		Vector2(0, 250) if compact
+		Vector2(0, 360) if compact
 		else Vector2(0, 500) if stacked_content
 		else Vector2(700, clampf(size.y - 260.0, 620.0, 900.0))
 	)
@@ -3596,13 +3601,16 @@ func _apply_responsive_layout() -> void:
 		var ingredient_row: BoxContainer = controls.row
 		ingredient_row.vertical = compact
 	if is_instance_valid(savings_summary_row):
-		savings_summary_row.vertical = compact
+		savings_summary_row.vertical = false
 	if is_instance_valid(transaction_summary_row):
-		transaction_summary_row.vertical = compact
+		transaction_summary_row.vertical = false
 	if is_instance_valid(transaction_list_header):
 		transaction_list_header.vertical = compact
 	if is_instance_valid(shopping_summary_row):
 		shopping_summary_row.vertical = compact
+
+	_apply_mobile_book_layout(compact)
+	_update_mobile_navigation()
 
 	if layout_changed:
 		_rebuild_fixed_cost_rows()
@@ -3612,6 +3620,143 @@ func _apply_responsive_layout() -> void:
 	call_deferred("_reset_dashboard_scroll")
 
 
+func _apply_mobile_book_layout(compact: bool) -> void:
+	for control: Control in book_navigation_controls:
+		control.visible = not compact
+
+	_configure_book_region(
+		fixed_header, fixed_summary_row, fixed_list_panel, compact,
+		Vector4(0.04, 0.015, 0.96, 0.135),
+		Vector4(0.03, 0.145, 0.97, 0.285),
+		Vector4(0.035, 0.30, 0.965, 0.985)
+	)
+	_configure_book_region(
+		savings_header, savings_summary_row, savings_list_panel, compact,
+		Vector4(0.04, 0.015, 0.96, 0.135),
+		Vector4(0.03, 0.145, 0.97, 0.285),
+		Vector4(0.035, 0.30, 0.965, 0.985)
+	)
+	_configure_book_region(
+		transactions_header, transaction_summary_row, transactions_list_panel, compact,
+		Vector4(0.04, 0.015, 0.96, 0.135),
+		Vector4(0.04, 0.145, 0.96, 0.275),
+		Vector4(0.035, 0.29, 0.965, 0.985)
+	)
+
+	_style_mobile_book_header(fixed_header, compact, "＋")
+	_style_mobile_book_header(savings_header, compact, "＋")
+	_style_mobile_book_header(transactions_header, compact, "＋")
+	_style_mobile_fixed_summaries(compact)
+	_style_mobile_simple_summaries(savings_summary_row, compact)
+
+	if is_instance_valid(transaction_summary_row):
+		for index in transaction_summary_row.get_child_count():
+			transaction_summary_row.get_child(index).visible = not compact or index == 3
+
+
+func _configure_book_region(
+	header: Control,
+	summary: Control,
+	list_panel: Control,
+	compact: bool,
+	mobile_header: Vector4,
+	mobile_summary: Vector4,
+	mobile_list: Vector4
+) -> void:
+	if not is_instance_valid(header) or not is_instance_valid(summary) or not is_instance_valid(list_panel):
+		return
+	var header_region := mobile_header if compact else Vector4(0.115, 0.018, 0.97, 0.145)
+	var summary_region := mobile_summary if compact else Vector4(0.128, 0.155, 0.872, 0.278)
+	var list_region := mobile_list if compact else Vector4(0.158, 0.325, 0.94, 0.905)
+	_set_anchor_region(header, header_region)
+	_set_anchor_region(summary, summary_region)
+	_set_anchor_region(list_panel, list_region)
+
+
+func _set_anchor_region(control: Control, region: Vector4) -> void:
+	control.anchor_left = region.x
+	control.anchor_top = region.y
+	control.anchor_right = region.z
+	control.anchor_bottom = region.w
+	control.offset_left = 0
+	control.offset_top = 0
+	control.offset_right = 0
+	control.offset_bottom = 0
+
+
+func _style_mobile_book_header(header: BoxContainer, compact: bool, mobile_add_text: String) -> void:
+	if not is_instance_valid(header) or header.get_child_count() < 4:
+		return
+	var titles := header.get_child(0) as VBoxContainer
+	var title := titles.get_child(0) as Label
+	var subtitle := titles.get_child(1) as Label
+	var back_button := header.get_child(header.get_child_count() - 2) as Button
+	var add_button := header.get_child(header.get_child_count() - 1) as Button
+	title.add_theme_font_size_override("font_size", 32 if compact else 46)
+	subtitle.add_theme_font_size_override("font_size", 14 if compact else 17)
+	subtitle.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	back_button.visible = not compact
+	add_button.text = mobile_add_text if compact else (
+		"＋  Fixkosten hinzufügen" if header == fixed_header
+		else "＋  Sparziel hinzufügen" if header == savings_header
+		else "＋  Buchung hinzufügen"
+	)
+	add_button.custom_minimum_size = Vector2(56, 50) if compact else Vector2(195, 42)
+
+
+func _style_mobile_fixed_summaries(compact: bool) -> void:
+	if not is_instance_valid(fixed_summary_row):
+		return
+	fixed_summary_row.add_theme_constant_override("separation", 6 if compact else 44)
+	for card: Control in fixed_summary_row.get_children():
+		var row := card.get_child(0) as HBoxContainer
+		row.add_theme_constant_override("separation", 2 if compact else 14)
+		row.get_child(0).visible = not compact
+		row.get_child(1).visible = not compact
+		var labels := row.get_child(2) as VBoxContainer
+		var title := labels.get_child(0) as Label
+		var value := labels.get_child(1) as Label
+		title.add_theme_font_size_override("font_size", 12 if compact else 17)
+		title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if compact else TextServer.AUTOWRAP_OFF
+		value.add_theme_font_size_override("font_size", 20 if compact else 30)
+
+
+func _style_mobile_simple_summaries(row: BoxContainer, compact: bool) -> void:
+	if not is_instance_valid(row):
+		return
+	row.add_theme_constant_override("separation", 6 if compact else 44)
+	for card: Control in row.get_children():
+		var style := _style(Color.TRANSPARENT, 0)
+		style.content_margin_left = 7 if compact else 42
+		style.content_margin_right = 5 if compact else 18
+		card.add_theme_stylebox_override("panel", style)
+		var labels := card.get_child(0) as VBoxContainer
+		(labels.get_child(0) as Label).add_theme_font_size_override("font_size", 12 if compact else 17)
+		(labels.get_child(1) as Label).add_theme_font_size_override("font_size", 19 if compact else 30)
+
+
+func _update_mobile_navigation(active_page: String = "") -> void:
+	if active_page.is_empty():
+		active_page = (
+			"fixed_costs" if is_instance_valid(fixed_costs_page) and fixed_costs_page.visible
+			else "savings" if is_instance_valid(savings_page) and savings_page.visible
+			else "transactions" if is_instance_valid(transactions_page) and transactions_page.visible
+			else "dashboard"
+		)
+	for key: String in mobile_nav_buttons:
+		var button: Button = mobile_nav_buttons[key]
+		var active := key == active_page
+		button.add_theme_color_override(
+			"font_color",
+			Color("#43e5d2") if active else Color("#d9c99d")
+		)
+		button.add_theme_stylebox_override(
+			"normal",
+			_style(Color("#0b3438cc"), 12, Color("#33d9c5")) if active
+			else _style(Color.TRANSPARENT, 0)
+		)
+
+
 func _show_page(page: String) -> void:
 	var book_page := page in ["fixed_costs", "savings", "transactions"]
 	dashboard_scroll.visible = page == "dashboard"
@@ -3619,15 +3764,16 @@ func _show_page(page: String) -> void:
 	savings_page.visible = page == "savings"
 	transactions_page.visible = page == "transactions"
 	if is_instance_valid(app_bar):
-		app_bar.visible = not book_page
+		app_bar.visible = not _compact_layout and not book_page
 	if is_instance_valid(sidebar_panel):
 		sidebar_panel.visible = not _compact_layout and not book_page
 	if is_instance_valid(mobile_navigation):
-		mobile_navigation.visible = _compact_layout and not book_page
+		mobile_navigation.visible = _compact_layout
 	if is_instance_valid(shopping_page):
 		shopping_page.visible = false
 	if is_instance_valid(meal_plan_page):
 		meal_plan_page.visible = false
+	_update_mobile_navigation(page)
 	if page == "fixed_costs":
 		_rebuild_fixed_cost_rows()
 	elif page == "savings":
