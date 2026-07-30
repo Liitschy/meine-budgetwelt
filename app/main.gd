@@ -1265,7 +1265,10 @@ func _rebuild_fixed_cost_rows() -> void:
 		var empty := Label.new()
 		empty.text = "Noch keine Fixkosten angelegt."
 		empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		empty.add_theme_color_override("font_color", COLORS.muted)
+		empty.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		empty.custom_minimum_size.y = 54 if _compact_layout else 0
+		_style_mobile_section_label(empty, _compact_layout)
 		fixed_cost_list.add_child(empty)
 		return
 
@@ -1633,9 +1636,9 @@ func _rebuild_savings_rows() -> void:
 		var empty := Label.new()
 		empty.text = "Noch kein Sparziel angelegt."
 		empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		empty.add_theme_color_override(
-			"font_color", Color("#e8ce91") if _compact_layout else Color("#5b432a")
-		)
+		empty.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		empty.custom_minimum_size.y = 54 if _compact_layout else 0
+		_style_mobile_section_label(empty, _compact_layout)
 		savings_list.add_child(empty)
 		return
 
@@ -2052,12 +2055,12 @@ func _rebuild_transaction_rows() -> void:
 			else "Für diesen Monat sind noch keine Buchungen vorhanden."
 		)
 		empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		empty.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		empty.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		empty.custom_minimum_size.x = 0
-		empty.add_theme_color_override(
-			"font_color", Color("#e8ce91") if _compact_layout else Color("#5b432a")
-		)
+		empty.custom_minimum_size.y = 62 if _compact_layout else 0
+		_style_mobile_section_label(empty, _compact_layout)
 		transaction_list.add_child(empty)
 		_update_transaction_filter_summary(all_transactions, weekly_only)
 		return
@@ -3936,31 +3939,27 @@ func _apply_mobile_book_layout(compact: bool) -> void:
 			"res://assets/ui/transactions_ledger_background.png"
 		)
 	if is_instance_valid(savings_list_title):
-		savings_list_title.add_theme_color_override(
-			"font_color", Color("#e8ce91") if compact else Color("#4b321b")
-		)
+		_style_mobile_section_label(savings_list_title, compact)
 	if is_instance_valid(transaction_list_title):
-		transaction_list_title.add_theme_color_override(
-			"font_color", Color("#e8ce91") if compact else Color("#4b321b")
-		)
+		_style_mobile_section_label(transaction_list_title, compact)
 
 	_configure_book_region(
 		fixed_header, fixed_summary_row, fixed_list_panel, compact,
 		Vector4(0.04, 0.015, 0.96, 0.135),
 		Vector4(0.03, 0.145, 0.97, 0.285),
-		Vector4(0.035, 0.30, 0.965, 0.985)
+		Vector4(0.035, 0.325, 0.965, 0.985)
 	)
 	_configure_book_region(
 		savings_header, savings_summary_row, savings_list_panel, compact,
 		Vector4(0.04, 0.015, 0.96, 0.135),
 		Vector4(0.03, 0.145, 0.97, 0.285),
-		Vector4(0.035, 0.30, 0.965, 0.985)
+		Vector4(0.035, 0.325, 0.965, 0.985)
 	)
 	_configure_book_region(
 		transactions_header, transaction_summary_row, transactions_list_panel, compact,
 		Vector4(0.04, 0.015, 0.96, 0.135),
 		Vector4(0.04, 0.145, 0.96, 0.275),
-		Vector4(0.035, 0.29, 0.965, 0.985)
+		Vector4(0.035, 0.315, 0.965, 0.985)
 	)
 
 	_style_mobile_book_header(fixed_header, compact, "＋")
@@ -4005,6 +4004,25 @@ func _set_anchor_region(control: Control, region: Vector4) -> void:
 	control.offset_bottom = 0
 
 
+func _style_mobile_section_label(label: Label, compact: bool) -> void:
+	label.add_theme_color_override(
+		"font_color", Color("#f0d99b") if compact else Color("#4b321b")
+	)
+	label.add_theme_color_override(
+		"font_outline_color", Color("#021318e8") if compact else Color.TRANSPARENT
+	)
+	label.add_theme_constant_override("outline_size", 4 if compact else 0)
+	var label_style := (
+		_style(Color("#031a20cc"), 10, Color("#9f7738"))
+		if compact else _style(Color.TRANSPARENT, 0)
+	)
+	label_style.content_margin_left = 10 if compact else 0
+	label_style.content_margin_right = 10 if compact else 0
+	label_style.content_margin_top = 5 if compact else 0
+	label_style.content_margin_bottom = 5 if compact else 0
+	label.add_theme_stylebox_override("normal", label_style)
+
+
 func _style_mobile_book_header(header: BoxContainer, compact: bool, mobile_add_text: String) -> void:
 	if not is_instance_valid(header) or header.get_child_count() < 4:
 		return
@@ -4035,6 +4053,14 @@ func _style_mobile_book_header(header: BoxContainer, compact: bool, mobile_add_t
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER if compact else HORIZONTAL_ALIGNMENT_LEFT
 	title.add_theme_font_size_override("font_size", 34 if compact else 46)
 	subtitle.add_theme_font_size_override("font_size", 16 if compact else 17)
+	title.add_theme_color_override(
+		"font_outline_color", Color("#021318f2") if compact else Color.TRANSPARENT
+	)
+	title.add_theme_constant_override("outline_size", 5 if compact else 0)
+	subtitle.add_theme_color_override(
+		"font_outline_color", Color("#021318f2") if compact else Color.TRANSPARENT
+	)
+	subtitle.add_theme_constant_override("outline_size", 4 if compact else 0)
 	if compact:
 		subtitle.text = MonthManager.get_active_month_name()
 		subtitle.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
