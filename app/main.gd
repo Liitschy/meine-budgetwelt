@@ -96,6 +96,9 @@ var transaction_day_input: SpinBox
 var confirmation_panel: PanelContainer
 var confirmation_message: Label
 var _confirmation_action := Callable()
+var restore_dialog: FileDialog
+var restore_confirmation: ConfirmationDialog
+var _pending_restore_path := ""
 var balance_panel: PanelContainer
 var balance_dialog: Control
 var balance_input: SpinBox
@@ -157,6 +160,7 @@ func _ready() -> void:
 	CustomRecipeManager.recipes_changed.connect(_on_custom_recipes_changed)
 	MonthManager.active_month_changed.connect(_on_active_month_changed)
 	UpdateManager.update_check_finished.connect(_on_update_check_finished)
+	_build_restore_dialog()
 	_apply_fixed_cost_summary(FixedCostManager.get_summary())
 	_apply_savings_summary(SavingsManager.get_summary())
 	_apply_transaction_summary(TransactionManager.get_active_summary())
@@ -589,6 +593,12 @@ func _build_sidebar() -> Control:
 	backup_button.pressed.connect(_create_data_backup)
 	column.add_child(backup_button)
 
+	var restore_button := Button.new()
+	restore_button.text = "↶  Daten wiederherstellen"
+	restore_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	restore_button.pressed.connect(_open_restore_dialog)
+	column.add_child(restore_button)
+
 	var update_button := Button.new()
 	update_button.text = "↻  Nach Updates suchen"
 	update_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -1020,6 +1030,12 @@ func _build_book_navigation(page: Control, active_page: String) -> void:
 	save_button.add_theme_stylebox_override("normal", _ornament_button_style(Color("#07191ad9")))
 	save_button.pressed.connect(_create_data_backup)
 	utilities.add_child(save_button)
+	var restore_button := Button.new()
+	restore_button.text = "↶  Wiederherstellen"
+	restore_button.add_theme_color_override("font_color", Color("#dfc98f"))
+	restore_button.add_theme_stylebox_override("normal", _ornament_button_style(Color("#07191ad9")))
+	restore_button.pressed.connect(_open_restore_dialog)
+	utilities.add_child(restore_button)
 	var update_button := Button.new()
 	update_button.text = "◌  Updates suchen"
 	update_button.add_theme_color_override("font_color", Color("#dfc98f"))
@@ -3928,6 +3944,56 @@ func _create_data_backup() -> void:
 	status_label.text = str(result.message)
 	if bool(result.success):
 		status_label.tooltip_text = str(result.path)
+
+
+func _build_restore_dialog() -> void:
+	restore_dialog = FileDialog.new()
+	restore_dialog.title = "Sicherung auswählen"
+	restore_dialog.file_mode = FileDialog.FILE_MODE_OPEN_DIR
+	restore_dialog.access = FileDialog.ACCESS_USERDATA
+	restore_dialog.use_native_dialog = false
+	restore_dialog.dir_selected.connect(_on_restore_directory_selected)
+	add_child(restore_dialog)
+
+	restore_confirmation = ConfirmationDialog.new()
+	restore_confirmation.title = "Daten wiederherstellen"
+	restore_confirmation.ok_button_text = "Wiederherstellen"
+	restore_confirmation.cancel_button_text = "Abbrechen"
+	restore_confirmation.confirmed.connect(_restore_selected_backup)
+	add_child(restore_confirmation)
+
+
+func _open_restore_dialog() -> void:
+	var backup_path := "user://backups"
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(backup_path))
+	restore_dialog.current_dir = backup_path
+	restore_dialog.popup_centered_ratio(0.72)
+
+
+func _on_restore_directory_selected(path: String) -> void:
+	_pending_restore_path = path
+	var backup_name := path.trim_suffix("/").get_file()
+	restore_confirmation.dialog_text = (
+		"Sicherung „%s“ wiederherstellen?\n\n" % backup_name
+		+ "Die aktuellen Daten werden vorher automatisch gesichert. "
+		+ "Danach startet die App neu."
+	)
+	restore_confirmation.popup_centered(Vector2i(540, 220))
+
+
+func _restore_selected_backup() -> void:
+	var result := StorageManager.restore_backup(_pending_restore_path)
+	_pending_restore_path = ""
+	status_label.text = str(result.message)
+	if not bool(result.get("success", false)):
+		return
+	status_label.tooltip_text = str(result.get("safety_backup_path", ""))
+	var executable_path := OS.get_executable_path()
+	if not OS.has_feature("editor") and FileAccess.file_exists(executable_path):
+		OS.create_process(executable_path, PackedStringArray())
+		get_tree().quit()
+		return
+	get_tree().reload_current_scene()
 
 
 func _on_transactions_changed(
