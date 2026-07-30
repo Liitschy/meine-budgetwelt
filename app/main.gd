@@ -3518,12 +3518,21 @@ func _update_month_labels() -> void:
 		fixed_cost_month_label.text = "Wiederkehrende Kosten für %s" % month_name
 
 
+static func _should_use_compact_layout(view_size: Vector2, is_web: bool) -> bool:
+	return view_size.x < 900.0 or (is_web and view_size.y > view_size.x)
+
+
+static func _should_stack_dashboard(view_size: Vector2, is_web: bool) -> bool:
+	return view_size.x < 1180.0 or (is_web and view_size.y > view_size.x)
+
+
 func _apply_responsive_layout() -> void:
 	if not is_node_ready():
 		return
 
-	var compact := size.x < 900.0
-	var stacked_content := size.x < 1180.0
+	var is_web := OS.has_feature("web")
+	var compact := _should_use_compact_layout(size, is_web)
+	var stacked_content := _should_stack_dashboard(size, is_web)
 	var layout_changed := compact != _compact_layout
 	_compact_layout = compact
 
