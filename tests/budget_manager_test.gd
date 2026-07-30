@@ -258,6 +258,17 @@ func _test_responsive_layout() -> void:
 	add_child(app)
 	await get_tree().process_frame
 
+	_assert_equal(
+		app._should_use_compact_layout(Vector2(1179, 2556), true),
+		true,
+		"iPhone Retina im Hochformat nutzt trotz hoher Pixelbreite das mobile Layout"
+	)
+	_assert_equal(
+		app._should_use_compact_layout(Vector2(2556, 1179), true),
+		false,
+		"Web-Landschaft mit ausreichender Breite darf das Desktoplayout nutzen"
+	)
+
 	app.size = Vector2(390, 844)
 	app._apply_responsive_layout()
 	await get_tree().process_frame
