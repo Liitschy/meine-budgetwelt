@@ -215,6 +215,7 @@ func _test_responsive_layout() -> void:
 
 	app.size = Vector2(390, 844)
 	app._apply_responsive_layout()
+	await get_tree().process_frame
 	_assert_equal(app._compact_layout, true, "Kompaktes Layout bei Mobilbreite")
 	_assert_equal(app.sidebar_panel.visible, false, "Seitenleiste mobil ausgeblendet")
 	_assert_equal(app.mobile_navigation.visible, true, "Mobile Navigation eingeblendet")
@@ -226,6 +227,8 @@ func _test_responsive_layout() -> void:
 	_assert_equal(app.dashboard_body.vertical, true, "Budgetinhalt mobil gestapelt")
 	_assert_equal(app.dashboard_body.get_child(0), app.world_view, "Landschaft bleibt mobil als Titelbild erhalten")
 	_assert_equal(app.world_view._compact_mode, true, "Landschaft nutzt mobil den aufgeräumten Modus")
+	_assert_equal(app.dashboard_page.size.x <= 390.0, true, "Dashboard bleibt vollständig in der Handybreite")
+	_assert_equal(app.summary_panel.size.x <= 390.0, true, "Finanzkarten werden rechts nicht abgeschnitten")
 	_assert_equal(app.fixed_summary_row.vertical, true, "Fixkostensummen mobil gestapelt")
 	_assert_equal(app.savings_summary_row.vertical, true, "Sparziele mobil gestapelt")
 	_assert_equal(app.transaction_summary_row.vertical, true, "Buchungen mobil gestapelt")
