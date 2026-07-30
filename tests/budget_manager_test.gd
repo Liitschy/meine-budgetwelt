@@ -218,8 +218,13 @@ func _test_responsive_layout() -> void:
 	_assert_equal(app._compact_layout, true, "Kompaktes Layout bei Mobilbreite")
 	_assert_equal(app.sidebar_panel.visible, false, "Seitenleiste mobil ausgeblendet")
 	_assert_equal(app.mobile_navigation.visible, true, "Mobile Navigation eingeblendet")
+	_assert_equal(
+		app.app_shell.get_child(app.app_shell.get_child_count() - 1),
+		app.mobile_navigation,
+		"Mobile Navigation sitzt am unteren Rand"
+	)
 	_assert_equal(app.dashboard_body.vertical, true, "Budgetinhalt mobil gestapelt")
-	_assert_equal(app.dashboard_body.get_child(0), app.summary_panel, "Monatsübersicht steht mobil vor der Landschaft")
+	_assert_equal(app.dashboard_body.get_child(0), app.world_view, "Landschaft bleibt mobil als Titelbild erhalten")
 	_assert_equal(app.world_view._compact_mode, true, "Landschaft nutzt mobil den aufgeräumten Modus")
 	_assert_equal(app.fixed_summary_row.vertical, true, "Fixkostensummen mobil gestapelt")
 	_assert_equal(app.savings_summary_row.vertical, true, "Sparziele mobil gestapelt")
@@ -231,6 +236,7 @@ func _test_responsive_layout() -> void:
 	_assert_equal(app.mobile_navigation.visible, false, "Mobile Navigation am Desktop verborgen")
 	_assert_equal(app.dashboard_body.vertical, false, "Budgetinhalt am Desktop nebeneinander")
 	_assert_equal(app.dashboard_body.get_child(0), app.world_view, "Landschaft steht am Desktop wieder links")
+	_assert_equal(app.dashboard_title.text, "Deine Budgetwelt", "Desktop-Titel bleibt unverändert")
 
 	var amount_input: SpinBox = app._create_savings_money_input()
 	app.add_child(amount_input)

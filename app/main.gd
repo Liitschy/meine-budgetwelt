@@ -45,6 +45,8 @@ var month_opening_balance: SpinBox
 var pending_month_id := ""
 var sidebar_panel: Control
 var mobile_navigation: Control
+var app_shell: VBoxContainer
+var app_local_status: Label
 var dashboard_header: BoxContainer
 var dashboard_title: Label
 var month_controls: HBoxContainer
@@ -215,6 +217,7 @@ func _build_interface() -> void:
 	add_child(background)
 
 	var shell := VBoxContainer.new()
+	app_shell = shell
 	shell.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	shell.add_theme_constant_override("separation", 0)
 	add_child(shell)
@@ -339,6 +342,7 @@ func _build_app_bar() -> Control:
 
 	var local_status := Label.new()
 	local_status.text = "●  Sicher lokal gespeichert"
+	app_local_status = local_status
 	local_status.add_theme_font_size_override("font_size", 12)
 	local_status.add_theme_color_override("font_color", COLORS.success)
 	row.add_child(local_status)
@@ -430,49 +434,46 @@ func _build_month_flow() -> Control:
 
 func _build_mobile_navigation() -> Control:
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size.y = 102
-	panel.add_theme_stylebox_override("panel", _style(COLORS.sidebar, 0))
-
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 4)
-	panel.add_child(column)
-
-	var brand := Label.new()
-	brand.text = "✦  Meine Budgetwelt"
-	brand.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	brand.add_theme_font_size_override("font_size", 16)
-	brand.add_theme_color_override("font_color", COLORS.text)
-	column.add_child(brand)
+	panel.custom_minimum_size.y = 76
+	panel.add_theme_stylebox_override("panel", _style(Color("#062a34"), 0, Color("#16515b")))
 
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 4)
-	column.add_child(row)
+	row.add_theme_constant_override("margin_left", 8)
+	row.add_theme_constant_override("margin_right", 8)
+	row.add_theme_constant_override("margin_top", 6)
+	row.add_theme_constant_override("margin_bottom", 6)
+	panel.add_child(row)
 
 	var dashboard_button := Button.new()
-	dashboard_button.text = "Welt"
-	dashboard_button.custom_minimum_size.y = 44
+	dashboard_button.text = "⌂\nÜbersicht"
+	dashboard_button.custom_minimum_size.y = 62
 	dashboard_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	dashboard_button.add_theme_font_size_override("font_size", 12)
 	dashboard_button.pressed.connect(_show_page.bind("dashboard"))
 	row.add_child(dashboard_button)
 
 	var costs_button := Button.new()
-	costs_button.text = "Fixkosten"
-	costs_button.custom_minimum_size.y = 44
+	costs_button.text = "▤\nFixkosten"
+	costs_button.custom_minimum_size.y = 62
 	costs_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	costs_button.add_theme_font_size_override("font_size", 12)
 	costs_button.pressed.connect(_show_page.bind("fixed_costs"))
 	row.add_child(costs_button)
 
 	var savings_button := Button.new()
-	savings_button.text = "Sparen"
-	savings_button.custom_minimum_size.y = 44
+	savings_button.text = "♧\nSparen"
+	savings_button.custom_minimum_size.y = 62
 	savings_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	savings_button.add_theme_font_size_override("font_size", 12)
 	savings_button.pressed.connect(_show_page.bind("savings"))
 	row.add_child(savings_button)
 
 	var bookings_button := Button.new()
-	bookings_button.text = "Buchen"
-	bookings_button.custom_minimum_size.y = 44
+	bookings_button.text = "≡\nBuchungen"
+	bookings_button.custom_minimum_size.y = 62
 	bookings_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bookings_button.add_theme_font_size_override("font_size", 12)
 	bookings_button.pressed.connect(_show_page.bind("transactions"))
 	row.add_child(bookings_button)
 	return panel
@@ -3105,9 +3106,15 @@ func _apply_responsive_layout() -> void:
 
 	sidebar_panel.visible = not compact
 	mobile_navigation.visible = compact
+	if compact and app_shell.get_child(app_shell.get_child_count() - 1) != mobile_navigation:
+		app_shell.move_child(mobile_navigation, app_shell.get_child_count() - 1)
+	if is_instance_valid(app_local_status):
+		app_local_status.text = "● Lokal" if compact else "●  Sicher lokal gespeichert"
+		app_local_status.add_theme_font_size_override("font_size", 11 if compact else 12)
 	dashboard_header.vertical = compact
 	if is_instance_valid(dashboard_title):
-		dashboard_title.add_theme_font_size_override("font_size", 29 if compact else 36)
+		dashboard_title.text = "Übersicht" if compact else "Deine Budgetwelt"
+		dashboard_title.add_theme_font_size_override("font_size", 27 if compact else 36)
 	if is_instance_valid(month_selector_label):
 		month_selector_label.custom_minimum_size.x = 98 if compact else 130
 		month_selector_label.add_theme_font_size_override("font_size", 15 if compact else 18)
@@ -3115,12 +3122,8 @@ func _apply_responsive_layout() -> void:
 		month_edit_button.text = "Einrichten" if compact else "Monat einrichten"
 		month_edit_button.custom_minimum_size.x = 104 if compact else 160
 	dashboard_body.vertical = stacked_content
-	if compact:
-		if dashboard_body.get_child(0) != summary_panel:
-			dashboard_body.move_child(summary_panel, 0)
-	else:
-		if dashboard_body.get_child(0) != world_view:
-			dashboard_body.move_child(world_view, 0)
+	if dashboard_body.get_child(0) != world_view:
+		dashboard_body.move_child(world_view, 0)
 	if world_view.has_method("set_compact_mode"):
 		world_view.set_compact_mode(compact)
 	if is_instance_valid(week_cards):
