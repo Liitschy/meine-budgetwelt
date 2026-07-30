@@ -2,9 +2,11 @@ extends Node
 
 const BudgetCalculator := preload("res://core/budget_calculator.gd")
 const FixedCostCalculator := preload("res://core/fixed_cost_calculator.gd")
+const FixedCostManagerScript := preload("res://core/fixed_cost_manager.gd")
 const MonthUtils := preload("res://core/month_utils.gd")
 const MainScene := preload("res://app/Main.tscn")
 const SavingsCalculator := preload("res://core/savings_calculator.gd")
+const SavingsManagerScript := preload("res://core/savings_manager.gd")
 const TransactionCalculator := preload("res://core/transaction_calculator.gd")
 const ShoppingCalculator := preload("res://core/shopping_calculator.gd")
 const MealSuggestionCatalog := preload("res://core/meal_suggestion_catalog.gd")
@@ -41,6 +43,26 @@ func _ready() -> void:
 	_assert_equal(fixed_summary.total, 1200.0, "Fixkosten gesamt")
 	_assert_equal(fixed_summary.paid, 700.0, "Bezahlte Fixkosten")
 	_assert_equal(fixed_summary.open, 500.0, "Unbezahlte Fixkosten")
+	var interval_summary := FixedCostCalculator.summarize([
+		{"amount": 100.0, "due_this_month": true, "paid_amount": 0.0},
+		{"amount": 400.0, "due_this_month": false, "paid_amount": 0.0},
+	])
+	_assert_equal(interval_summary.total, 100.0, "Nicht fällige Fixkosten belasten den Monat nicht")
+	_assert_equal(
+		FixedCostManagerScript.is_due_in_month("quarterly", 2, "2026-05"),
+		true,
+		"Quartalskosten sind alle drei Monate fällig"
+	)
+	_assert_equal(
+		FixedCostManagerScript.is_due_in_month("quarterly", 2, "2026-04"),
+		false,
+		"Quartalskosten bleiben in Zwischenmonaten unberücksichtigt"
+	)
+	_assert_equal(
+		FixedCostManagerScript.is_due_in_month("yearly", 11, "2026-11"),
+		true,
+		"Jährliche Fixkosten sind im gewählten Monat fällig"
+	)
 	var partial_fixed_summary := FixedCostCalculator.summarize([
 		{"amount": 120.0, "paid": false, "paid_amount": 104.0},
 	])
@@ -214,6 +236,7 @@ func _ready() -> void:
 		if str(day.mode) == "Normal kochen":
 			contains_normal_meal = true
 	_assert_equal(contains_normal_meal, true, "Normale Kochgerichte enthalten")
+	_test_empty_savings_goals_remain_empty()
 	await _test_responsive_layout()
 
 	if _failed:
@@ -221,6 +244,13 @@ func _ready() -> void:
 	else:
 		print("BudgetManager: alle Tests bestanden.")
 		get_tree().quit(0)
+
+
+func _test_empty_savings_goals_remain_empty() -> void:
+	var source := SavingsManagerScript._initial_goals_source([], true)
+	_assert_equal(source.size(), 0, "Gelöschte Sparziele bleiben nach Neustart leer")
+	var defaults := SavingsManagerScript._initial_goals_source([], false)
+	_assert_equal(defaults.size(), 1, "Beispielziel erscheint nur beim ersten Start")
 
 
 func _test_responsive_layout() -> void:

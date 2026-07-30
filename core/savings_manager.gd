@@ -18,9 +18,10 @@ var _goals: Array = []
 
 
 func _ready() -> void:
+	var has_saved_goals := StorageManager.has_savings_goals_data()
 	var saved := StorageManager.load_savings_goals()
-	_goals = _sanitize_goals(saved if not saved.is_empty() else DEFAULT_GOALS)
-	if saved.is_empty():
+	_goals = _sanitize_goals(_initial_goals_source(saved, has_saved_goals))
+	if not has_saved_goals:
 		StorageManager.save_savings_goals(_goals)
 
 
@@ -77,6 +78,10 @@ func _save_and_emit() -> bool:
 	var saved := StorageManager.save_savings_goals(_goals)
 	savings_goals_changed.emit(get_goals(), get_summary())
 	return saved
+
+
+static func _initial_goals_source(saved: Array, has_saved_goals: bool) -> Array:
+	return saved if has_saved_goals else DEFAULT_GOALS
 
 
 func _sanitize_goals(source: Array) -> Array:

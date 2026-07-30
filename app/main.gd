@@ -34,6 +34,8 @@ var cost_name_input: LineEdit
 var cost_category_input: OptionButton
 var cost_amount_input: SpinBox
 var cost_due_day_input: SpinBox
+var cost_frequency_input: OptionButton
+var cost_anchor_month_input: OptionButton
 var cost_dialog_title: Label
 var cost_save_button: Button
 var _editing_fixed_cost_id := ""
@@ -1158,7 +1160,13 @@ func _build_fixed_cost_row(cost: Dictionary) -> Control:
 	name.add_theme_color_override("font_color", Color("#332315"))
 	identity_text.add_child(name)
 	var recurring := Label.new()
-	recurring.text = "Monatlich"
+	recurring.text = {
+		"monthly": "Monatlich",
+		"quarterly": "Quartalsweise",
+		"yearly": "Jährlich",
+	}.get(str(cost.get("frequency", "monthly")), "Monatlich")
+	if not bool(cost.get("due_this_month", true)):
+		recurring.text += " · diesen Monat nicht fällig"
 	recurring.add_theme_color_override("font_color", Color("#725437"))
 	identity_text.add_child(recurring)
 	identity.add_child(identity_text)
@@ -1199,6 +1207,9 @@ func _build_fixed_cost_row(cost: Dictionary) -> Control:
 	var paid := CheckBox.new()
 	paid.text = "%s / %s" % [_money(paid_amount), _money(float(cost.amount))]
 	paid.button_pressed = bool(cost.paid)
+	paid.disabled = not bool(cost.get("due_this_month", true))
+	if paid.disabled:
+		paid.text = "Diesen Monat nicht fällig"
 	paid.tooltip_text = "Haken setzt den Betrag vollständig bezahlt oder wieder auf offen."
 	paid.add_theme_color_override("font_color", Color("#3e2b18"))
 	paid.add_theme_color_override("font_hover_color", Color("#24170c"))
@@ -1237,6 +1248,7 @@ func _build_fixed_cost_row(cost: Dictionary) -> Control:
 	payment.add_theme_color_override("font_color", Color("#e8cf8d"))
 	payment.add_theme_stylebox_override("normal", _ornament_button_style(Color("#183739")))
 	payment.pressed.connect(_open_fixed_payment.bind(str(cost.id)))
+	payment.disabled = not bool(cost.get("due_this_month", true))
 	actions.add_child(payment)
 
 	var edit := Button.new()
@@ -3150,7 +3162,7 @@ func _build_add_cost_panel() -> PanelContainer:
 	overlay.add_child(center)
 
 	var dialog := PanelContainer.new()
-	dialog.custom_minimum_size = Vector2(540, 530)
+	dialog.custom_minimum_size = Vector2(540, 680)
 	add_cost_dialog = dialog
 	dialog.add_theme_stylebox_override("panel", _style(COLORS.panel_soft, 22, COLORS.accent))
 	center.add_child(dialog)
@@ -3183,7 +3195,7 @@ func _build_add_cost_panel() -> PanelContainer:
 	cost_category_input.custom_minimum_size.y = 44
 	column.add_child(cost_category_input)
 
-	column.add_child(_field_label("Monatlicher Betrag"))
+	column.add_child(_field_label("Betrag bei Fälligkeit"))
 	cost_amount_input = SpinBox.new()
 	cost_amount_input.min_value = 0.0
 	cost_amount_input.max_value = 1000000.0
@@ -3192,6 +3204,22 @@ func _build_add_cost_panel() -> PanelContainer:
 	cost_amount_input.custom_minimum_size.y = 44
 	_prepare_amount_input(cost_amount_input)
 	column.add_child(cost_amount_input)
+
+	column.add_child(_field_label("Zahlungsrhythmus"))
+	cost_frequency_input = OptionButton.new()
+	cost_frequency_input.add_item("Monatlich")
+	cost_frequency_input.add_item("Quartalsweise")
+	cost_frequency_input.add_item("Jährlich")
+	cost_frequency_input.custom_minimum_size.y = 44
+	cost_frequency_input.item_selected.connect(_on_cost_frequency_changed)
+	column.add_child(cost_frequency_input)
+
+	column.add_child(_field_label("Erster Fälligkeitsmonat"))
+	cost_anchor_month_input = OptionButton.new()
+	for month_name: String in MonthUtils.MONTH_NAMES:
+		cost_anchor_month_input.add_item(month_name)
+	cost_anchor_month_input.custom_minimum_size.y = 44
+	column.add_child(cost_anchor_month_input)
 
 	column.add_child(_field_label("Fälligkeit im Monat"))
 	cost_due_day_input = SpinBox.new()
@@ -3625,6 +3653,9 @@ func _open_add_cost() -> void:
 	cost_category_input.select(0)
 	cost_amount_input.value = 0.0
 	cost_due_day_input.value = 1
+	cost_frequency_input.select(0)
+	cost_anchor_month_input.select(_active_month_number() - 1)
+	_on_cost_frequency_changed(0)
 	add_cost_panel.visible = true
 	cost_name_input.grab_focus()
 
@@ -3643,6 +3674,13 @@ func _open_edit_cost(cost_id: String) -> void:
 				break
 		cost_amount_input.value = float(cost.amount)
 		cost_due_day_input.value = int(cost.due_day)
+		cost_frequency_input.select({
+			"monthly": 0,
+			"quarterly": 1,
+			"yearly": 2,
+		}.get(str(cost.get("frequency", "monthly")), 0))
+		cost_anchor_month_input.select(int(cost.get("anchor_month", 1)) - 1)
+		_on_cost_frequency_changed(cost_frequency_input.selected)
 		add_cost_panel.visible = true
 		cost_name_input.grab_focus()
 		cost_name_input.select_all()
@@ -3651,13 +3689,19 @@ func _open_edit_cost(cost_id: String) -> void:
 
 func _save_cost() -> void:
 	var category := cost_category_input.get_item_text(cost_category_input.selected)
+	var frequency: String = ["monthly", "quarterly", "yearly"][cost_frequency_input.selected]
+	var anchor_month := cost_anchor_month_input.selected + 1
+	var active_month_id := MonthManager.get_active_month_id()
 	var saved := false
 	if _editing_fixed_cost_id.is_empty():
 		saved = FixedCostManager.add_cost(
 			cost_name_input.text,
 			category,
 			cost_amount_input.value,
-			int(cost_due_day_input.value)
+			int(cost_due_day_input.value),
+			frequency,
+			anchor_month,
+			active_month_id
 		)
 	else:
 		saved = FixedCostManager.update_cost(
@@ -3665,7 +3709,10 @@ func _save_cost() -> void:
 			cost_name_input.text,
 			category,
 			cost_amount_input.value,
-			int(cost_due_day_input.value)
+			int(cost_due_day_input.value),
+			frequency,
+			anchor_month,
+			active_month_id
 		)
 	if saved:
 		add_cost_panel.visible = false
@@ -3673,6 +3720,21 @@ func _save_cost() -> void:
 		status_label.text = "✓ Fixkosten wurden lokal gespeichert."
 	else:
 		cost_name_input.placeholder_text = "Bitte Bezeichnung und Betrag eintragen"
+
+
+func _active_month_number() -> int:
+	var parts := MonthManager.get_active_month_id().split("-")
+	return clampi(int(parts[1]), 1, 12) if parts.size() == 2 else 1
+
+
+func _on_cost_frequency_changed(index: int) -> void:
+	if is_instance_valid(cost_anchor_month_input):
+		cost_anchor_month_input.disabled = index == 0
+		cost_anchor_month_input.tooltip_text = (
+			"Bei monatlichen Fixkosten ist kein Startmonat erforderlich."
+			if index == 0
+			else "Dieser Monat bestimmt den ersten Fälligkeitstermin."
+		)
 
 
 func _toggle_fixed_cost(paid: bool, cost_id: String) -> void:
@@ -4050,6 +4112,10 @@ func _rebuild_upcoming_costs() -> void:
 		child.queue_free()
 
 	var costs := FixedCostManager.get_costs()
+	costs = costs.filter(
+		func(cost: Dictionary) -> bool:
+			return bool(cost.get("due_this_month", true))
+	)
 	costs.sort_custom(
 		func(first: Dictionary, second: Dictionary) -> bool:
 			if bool(first.get("paid", false)) != bool(second.get("paid", false)):
@@ -4114,7 +4180,10 @@ func _refresh(snapshot: Dictionary) -> void:
 	if is_instance_valid(world_view):
 		var world_snapshot := snapshot.duplicate(true)
 		world_snapshot["balance"] = float(snapshot.current_balance)
-		world_snapshot["fixed_costs"] = FixedCostManager.get_costs()
+		world_snapshot["fixed_costs"] = FixedCostManager.get_costs().filter(
+			func(cost: Dictionary) -> bool:
+				return bool(cost.get("due_this_month", true))
+		)
 		world_view.set_snapshot(world_snapshot)
 	for key: String in summary_values:
 		var display_value := (
