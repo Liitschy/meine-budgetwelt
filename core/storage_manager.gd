@@ -149,6 +149,69 @@ func create_backup() -> Dictionary:
 	}
 
 
+func restore_backup(directory_path: String) -> Dictionary:
+	var backup_directory := directory_path
+	if not backup_directory.begins_with("user://"):
+		backup_directory = ProjectSettings.localize_path(directory_path)
+
+	if not backup_directory.begins_with("user://backups/"):
+		return {
+			"success": false,
+			"message": "Bitte wähle eine Sicherung aus dem Backup-Ordner.",
+		}
+
+	var valid_files: Array[String] = []
+	for target_path: String in DATA_FILES:
+		var source_path := "%s/%s" % [backup_directory, target_path.get_file()]
+		if not FileAccess.file_exists(source_path):
+			continue
+		var source_file := FileAccess.open(source_path, FileAccess.READ)
+		if source_file == null or JSON.parse_string(source_file.get_as_text()) == null:
+			return {
+				"success": false,
+				"message": "Die ausgewählte Sicherung enthält eine ungültige Datendatei.",
+			}
+		valid_files.append(target_path)
+
+	if valid_files.is_empty():
+		return {
+			"success": false,
+			"message": "Im ausgewählten Ordner wurden keine Sicherungsdaten gefunden.",
+		}
+
+	var safety_backup := create_backup()
+	if not bool(safety_backup.get("success", false)) and _has_current_data():
+		return {
+			"success": false,
+			"message": "Vor der Wiederherstellung konnte keine Sicherheitssicherung erstellt werden.",
+		}
+
+	for target_path: String in valid_files:
+		var source_path := "%s/%s" % [backup_directory, target_path.get_file()]
+		var copy_error := DirAccess.copy_absolute(
+			ProjectSettings.globalize_path(source_path),
+			ProjectSettings.globalize_path(target_path)
+		)
+		if copy_error != OK:
+			return {
+				"success": false,
+				"message": "Die Sicherung konnte nicht vollständig wiederhergestellt werden.",
+			}
+
+	return {
+		"success": true,
+		"safety_backup_path": str(safety_backup.get("path", "")),
+		"message": "%d Datendateien wurden wiederhergestellt." % valid_files.size(),
+	}
+
+
+func _has_current_data() -> bool:
+	for path: String in DATA_FILES:
+		if FileAccess.file_exists(path):
+			return true
+	return false
+
+
 func _load_json(path: String) -> Variant:
 	if not FileAccess.file_exists(path):
 		return null
