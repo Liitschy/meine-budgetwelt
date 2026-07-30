@@ -44,6 +44,15 @@ jobs:
           printf '{\n  "version": "%s",\n  "download_url": "%s"\n}\n' \
             "$VERSION" "$DOWNLOAD_URL" > web/update-manifest.json
 
+      - name: Cache-sicheren Versionslink erzeugen
+        shell: bash
+        run: |
+          VERSION="$(sed -n 's/^config\/version="\([^"]*\)"/\1/p' project.godot)"
+          TEMP_WEB="$(mktemp -d)"
+          cp -a web/. "${TEMP_WEB}/"
+          mkdir -p "web/v${VERSION}"
+          cp -a "${TEMP_WEB}/." "web/v${VERSION}/"
+
       - name: GitHub Pages konfigurieren
         uses: actions/configure-pages@v5
 
