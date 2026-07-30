@@ -40,6 +40,10 @@ func load_fixed_costs() -> Array:
 	return []
 
 
+func has_fixed_costs_data() -> bool:
+	return FileAccess.file_exists(FIXED_COSTS_FILE)
+
+
 func save_fixed_costs(costs: Array) -> bool:
 	return _save_json(FIXED_COSTS_FILE, costs)
 
@@ -60,6 +64,10 @@ func load_savings_goals() -> Array:
 	if parsed is Array:
 		return parsed
 	return []
+
+
+func has_savings_goals_data() -> bool:
+	return FileAccess.file_exists(SAVINGS_GOALS_FILE)
 
 
 func save_savings_goals(goals: Array) -> bool:

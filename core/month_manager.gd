@@ -53,7 +53,7 @@ func switch_to_month(month_id: String, opening_balance: float = -1.0) -> bool:
 
 	_store_current_month()
 	if not has_month(month_id):
-		_history.months[month_id] = _create_following_month(opening_balance)
+		_history.months[month_id] = _create_following_month(month_id, opening_balance)
 
 	_history.active_month = month_id
 	StorageManager.save_month_history(_history)
@@ -75,7 +75,7 @@ func _migrate_current_data() -> void:
 	StorageManager.save_month_history(_history)
 
 
-func _create_following_month(opening_balance: float) -> Dictionary:
+func _create_following_month(month_id: String, opening_balance: float) -> Dictionary:
 	var budget := BudgetManager.get_data()
 	if opening_balance >= 0.0:
 		budget.balance = opening_balance
@@ -84,6 +84,11 @@ func _create_following_month(opening_balance: float) -> Dictionary:
 	for cost: Dictionary in costs:
 		cost.paid = false
 		cost.paid_amount = 0.0
+		cost.due_this_month = FixedCostManager.is_due_in_month(
+			str(cost.get("frequency", "monthly")),
+			int(cost.get("anchor_month", 1)),
+			month_id
+		)
 
 	return {
 		"budget": budget,

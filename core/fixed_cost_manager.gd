@@ -47,9 +47,10 @@ var _costs: Array = []
 
 
 func _ready() -> void:
+	var has_saved_costs := StorageManager.has_fixed_costs_data()
 	var saved := StorageManager.load_fixed_costs()
-	_costs = _sanitize_costs(saved if not saved.is_empty() else DEFAULT_COSTS)
-	if saved.is_empty():
+	_costs = _sanitize_costs(saved if has_saved_costs else DEFAULT_COSTS)
+	if not has_saved_costs:
 		StorageManager.save_fixed_costs(_costs)
 
 
@@ -61,7 +62,15 @@ func get_summary() -> Dictionary:
 	return FixedCostCalculator.summarize(_costs)
 
 
-func add_cost(name: String, category: String, amount: float, due_day: int) -> bool:
+func add_cost(
+	name: String,
+	category: String,
+	amount: float,
+	due_day: int,
+	frequency: String = "monthly",
+	anchor_month: int = 1,
+	month_id: String = ""
+) -> bool:
 	var clean_name := name.strip_edges()
 	if clean_name.is_empty() or amount <= 0.0:
 		return false
@@ -72,6 +81,9 @@ func add_cost(name: String, category: String, amount: float, due_day: int) -> bo
 		"category": category.strip_edges() if not category.strip_edges().is_empty() else "Sonstiges",
 		"amount": amount,
 		"due_day": clampi(due_day, 1, 31),
+		"frequency": _sanitize_frequency(frequency),
+		"anchor_month": clampi(anchor_month, 1, 12),
+		"due_this_month": is_due_in_month(frequency, anchor_month, month_id),
 		"paid": false,
 		"paid_amount": 0.0,
 	})
@@ -105,7 +117,10 @@ func update_cost(
 	name: String,
 	category: String,
 	amount: float,
-	due_day: int
+	due_day: int,
+	frequency: String = "monthly",
+	anchor_month: int = 1,
+	month_id: String = ""
 ) -> bool:
 	var clean_name := name.strip_edges()
 	if clean_name.is_empty() or amount <= 0.0:
@@ -118,6 +133,12 @@ func update_cost(
 			cost.paid_amount = minf(float(cost.get("paid_amount", 0.0)), amount)
 			cost.paid = float(cost.paid_amount) >= amount
 			cost.due_day = clampi(due_day, 1, 31)
+			cost.frequency = _sanitize_frequency(frequency)
+			cost.anchor_month = clampi(anchor_month, 1, 12)
+			cost.due_this_month = is_due_in_month(frequency, anchor_month, month_id)
+			if not bool(cost.due_this_month):
+				cost.paid = false
+				cost.paid_amount = 0.0
 			return _save_and_emit()
 	return false
 
@@ -157,6 +178,9 @@ func _sanitize_costs(source: Array) -> Array:
 			"category": str(item.get("category", "Sonstiges")),
 			"amount": amount,
 			"due_day": clampi(int(item.get("due_day", 1)), 1, 31),
+			"frequency": _sanitize_frequency(str(item.get("frequency", "monthly"))),
+			"anchor_month": clampi(int(item.get("anchor_month", 1)), 1, 12),
+			"due_this_month": bool(item.get("due_this_month", true)),
 			"paid": bool(item.get("paid", false)),
 			"paid_amount": clampf(
 				float(item.get(
@@ -168,3 +192,22 @@ func _sanitize_costs(source: Array) -> Array:
 			),
 		})
 	return clean
+
+
+static func is_due_in_month(frequency: String, anchor_month: int, month_id: String) -> bool:
+	if frequency == "monthly" or month_id.is_empty():
+		return true
+	var parts := month_id.split("-")
+	if parts.size() != 2:
+		return true
+	var month := clampi(int(parts[1]), 1, 12)
+	var anchor := clampi(anchor_month, 1, 12)
+	if frequency == "yearly":
+		return month == anchor
+	if frequency == "quarterly":
+		return posmod(month - anchor, 3) == 0
+	return true
+
+
+static func _sanitize_frequency(value: String) -> String:
+	return value if value in ["monthly", "quarterly", "yearly"] else "monthly"

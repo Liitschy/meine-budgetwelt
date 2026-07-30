@@ -8,6 +8,8 @@ static func summarize(costs: Array) -> Dictionary:
 	for cost: Variant in costs:
 		if not cost is Dictionary:
 			continue
+		if not bool(cost.get("due_this_month", true)):
+			continue
 		var amount := maxf(float(cost.get("amount", 0.0)), 0.0)
 		total += amount
 		var paid_amount := float(cost.get(
