@@ -282,7 +282,18 @@ func _test_responsive_layout() -> void:
 		"Mobile Navigation sitzt am unteren Rand"
 	)
 	_assert_equal(app.dashboard_body.vertical, true, "Budgetinhalt mobil gestapelt")
-	_assert_equal(app.dashboard_body.get_child(0), app.world_view, "Landschaft bleibt mobil als Titelbild erhalten")
+	_assert_equal(
+		app.dashboard_body.get_child(0),
+		app.mobile_dashboard_metrics,
+		"Die beiden großen Budgetkarten stehen mobil über der Landschaft"
+	)
+	_assert_equal(
+		app.dashboard_body.get_child(1),
+		app.world_view,
+		"Landschaft bleibt mobil als zentrales Hauptmotiv erhalten"
+	)
+	_assert_equal(app.summary_panel.visible, false, "Kleine Desktop-Kennzahlenliste ist mobil verborgen")
+	_assert_equal(app.mobile_dashboard_actions.visible, true, "Mobile Aktionskarten sind sichtbar")
 	_assert_equal(app.world_view._compact_mode, true, "Landschaft nutzt mobil den aufgeräumten Modus")
 	_assert_equal(app.dashboard_page.size.x <= 390.0, true, "Dashboard bleibt vollständig in der Handybreite")
 	_assert_equal(app.summary_panel.size.x <= 390.0, true, "Finanzkarten werden rechts nicht abgeschnitten")
