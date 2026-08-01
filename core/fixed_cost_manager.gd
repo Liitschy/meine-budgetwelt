@@ -47,11 +47,17 @@ var _costs: Array = []
 
 
 func _ready() -> void:
+	reload_from_storage(false)
+
+
+func reload_from_storage(emit_change: bool = true) -> void:
 	var has_saved_costs := StorageManager.has_fixed_costs_data()
 	var saved := StorageManager.load_fixed_costs()
 	_costs = _sanitize_costs(saved if has_saved_costs else DEFAULT_COSTS)
 	if not has_saved_costs:
 		StorageManager.save_fixed_costs(_costs)
+	if emit_change:
+		fixed_costs_changed.emit(get_costs(), get_summary())
 
 
 func get_costs() -> Array:

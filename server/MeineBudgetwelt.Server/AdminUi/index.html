@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#03131f">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <title>Administration · Meine Budgetwelt</title>
+  <link rel="stylesheet" href="/admin/admin.css">
+  <script src="/admin/admin.js" defer></script>
+</head>
+<body>
+  <svg class="symbol-library" aria-hidden="true">
+    <symbol id="icon-home" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8v9a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></symbol>
+    <symbol id="icon-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+    <symbol id="icon-groups" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-4-4h-1M16 3.2a4 4 0 0 1 0 7.6"/></symbol>
+    <symbol id="icon-mail" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></symbol>
+    <symbol id="icon-server" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="7" rx="2"/><rect x="3" y="14" width="18" height="7" rx="2"/><path d="M7 6.5h.01M7 17.5h.01M11 6.5h7M11 17.5h7"/></symbol>
+    <symbol id="icon-update" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></symbol>
+    <symbol id="icon-plus-user" viewBox="0 0 24 24"><path d="M15 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M8 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M19 8v6M16 11h6"/></symbol>
+    <symbol id="icon-lock" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="icon-unlock" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 7.5-2"/></symbol>
+    <symbol id="icon-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="icon-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="icon-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+    <symbol id="icon-logout" viewBox="0 0 24 24"><path d="M10 17l5-5-5-5M15 12H3M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/></symbol>
+  </svg>
+
+  <main id="login-view" class="login-shell">
+    <section class="login-art" aria-label="Meine Budgetwelt">
+      <div class="brand-mark"><span class="brand-orbit">✦</span><span>Meine<br>Budgetwelt</span></div>
+      <div class="login-art-copy">
+        <p class="eyebrow">Private Serververwaltung</p>
+        <h1>Deine Welt.<br>Deine Daten.</h1>
+        <p>Sicher synchronisiert zwischen Desktop und PWA.</p>
+      </div>
+    </section>
+    <section class="login-panel glass-card">
+      <div class="login-heading">
+        <p class="eyebrow">Administration</p>
+        <h2>Willkommen zurück</h2>
+        <p>Melde dich mit deinem Administratorkonto an.</p>
+      </div>
+      <form id="login-form" class="form-stack" autocomplete="on">
+        <label>E-Mail
+          <input id="login-email" name="email" type="email" autocomplete="username" required>
+        </label>
+        <label>Kennwort
+          <span class="password-field">
+            <input id="login-password" name="password" type="password" minlength="8" autocomplete="current-password" required>
+            <button class="icon-button password-toggle" type="button" data-password-target="login-password" aria-label="Kennwort anzeigen">
+              <svg><use href="#icon-eye"></use></svg>
+            </button>
+          </span>
+        </label>
+        <label class="check-row"><input id="login-remember" type="checkbox"> Angemeldet bleiben</label>
+        <p id="login-error" class="form-error" role="alert"></p>
+        <button class="primary-button wide-button" type="submit">Sicher anmelden</button>
+      </form>
+      <p class="privacy-note"><svg><use href="#icon-lock"></use></svg> Keine öffentliche Registrierung · Zugriff nur für freigeschaltete Konten</p>
+    </section>
+  </main>
+
+  <div id="admin-app" class="admin-shell" hidden>
+    <aside class="sidebar">
+      <div class="sidebar-brand"><span class="brand-orbit">✦</span><span>Meine<br>Budgetwelt</span></div>
+      <p class="sidebar-caption">Administration</p>
+      <nav class="primary-nav" aria-label="Administration">
+        <button class="nav-item active" data-view="overview"><svg><use href="#icon-home"></use></svg><span>Übersicht</span></button>
+        <button class="nav-item" data-view="users"><svg><use href="#icon-users"></use></svg><span>Benutzer</span></button>
+        <button class="nav-item" data-view="groups"><svg><use href="#icon-groups"></use></svg><span>Budgetgruppen</span></button>
+        <button class="nav-item" data-view="invitations"><svg><use href="#icon-mail"></use></svg><span>Einladungen</span><b id="invite-badge" class="nav-badge" hidden>0</b></button>
+        <button class="nav-item desktop-only" data-view="server"><svg><use href="#icon-server"></use></svg><span>Serverstatus</span><i class="online-dot"></i></button>
+        <button class="nav-item desktop-only" data-view="updates"><svg><use href="#icon-update"></use></svg><span>Updates</span></button>
+      </nav>
+      <div class="sidebar-account">
+        <span id="sidebar-avatar" class="avatar small">A</span>
+        <span><strong id="sidebar-name">Admin</strong><small>Administrator</small></span>
+        <button id="logout-button" class="icon-button" type="button" aria-label="Abmelden"><svg><use href="#icon-logout"></use></svg></button>
+      </div>
+    </aside>
+
+    <section class="workspace">
+      <header class="workspace-header">
+        <div>
+          <p class="eyebrow">Administration</p>
+          <h1 id="greeting">Guten Tag</h1>
+        </div>
+        <div class="header-actions">
+          <span class="server-pill"><i class="online-dot"></i><span>Server online</span></span>
+          <button id="mobile-menu-button" class="icon-button mobile-menu" type="button" aria-label="Weitere Bereiche"><svg><use href="#icon-menu"></use></svg></button>
+        </div>
+      </header>
+
+      <section id="view-overview" class="view active-view" data-view-panel="overview">
+        <div class="hero-landscape" aria-hidden="true"></div>
+        <div class="metric-grid">
+          <article class="metric-card glass-card"><svg><use href="#icon-users"></use></svg><div><strong id="metric-users">–</strong><span>Benutzer</span><small id="metric-active">– aktiv</small></div></article>
+          <article class="metric-card glass-card"><svg><use href="#icon-mail"></use></svg><div><strong id="metric-invites">–</strong><span>Einladung offen</span><small>48 Stunden gültig</small></div></article>
+          <article class="metric-card glass-card"><svg><use href="#icon-server"></use></svg><div><strong class="metric-text">Server online</strong><span class="turquoise">Synchronisation aktiv</span><small id="metric-version">Version –</small></div></article>
+        </div>
+        <div class="overview-grid">
+          <article class="glass-card content-card">
+            <header class="card-heading"><div><p class="eyebrow">Konten</p><h2>Benutzer</h2></div><button class="secondary-button" type="button" data-open-user-dialog><svg><use href="#icon-plus-user"></use></svg>Neues Benutzerkonto</button></header>
+            <div id="overview-users" class="compact-user-list"></div>
+          </article>
+          <article class="glass-card content-card server-summary">
+            <header class="card-heading"><div><p class="eyebrow">System</p><h2>Serverstatus</h2></div><i class="online-dot large"></i></header>
+            <dl>
+              <div><dt>Status</dt><dd class="turquoise">Server online</dd></div>
+              <div><dt>Letzte Prüfung</dt><dd id="last-health-check">–</dd></div>
+              <div><dt>Budgetgruppen</dt><dd id="overview-group-count">–</dd></div>
+              <div><dt>Datenbank</dt><dd id="overview-database">–</dd></div>
+            </dl>
+          </article>
+        </div>
+      </section>
+
+      <section id="view-users" class="view" data-view-panel="users" hidden>
+        <header class="section-heading"><div><p class="eyebrow">Kontenverwaltung</p><h2>Benutzer</h2><p>Konten anlegen, Administratorrechte sehen und Zugänge sperren.</p></div><button class="primary-button" type="button" data-open-user-dialog><svg><use href="#icon-plus-user"></use></svg>Neues Benutzerkonto</button></header>
+        <div id="users-list" class="user-list"></div>
+      </section>
+
+      <section id="view-groups" class="view" data-view-panel="groups" hidden>
+        <header class="section-heading"><div><p class="eyebrow">Gemeinsame Daten</p><h2>Budgetgruppen</h2><p>Bestimme, welche Konten dieselbe Budgetwelt synchronisieren.</p></div></header>
+        <form id="group-form" class="inline-form glass-card">
+          <label>Neue Budgetgruppe<input id="group-name" type="text" minlength="2" maxlength="80" placeholder="z. B. Familie" required></label>
+          <button class="primary-button" type="submit">Gruppe anlegen</button>
+        </form>
+        <div id="groups-list" class="groups-grid"></div>
+      </section>
+
+      <section id="view-invitations" class="view" data-view-panel="invitations" hidden>
+        <header class="section-heading"><div><p class="eyebrow">Geschützter Zugang</p><h2>Einladungen</h2><p>Einmallinks sind 48 Stunden gültig und können nur einmal verwendet werden.</p></div></header>
+        <form id="invitation-form" class="form-grid glass-card">
+          <label>Name<input id="invite-name" type="text" maxlength="80" required></label>
+          <label>E-Mail<input id="invite-email" type="email" required></label>
+          <label>Budgetgruppe<select id="invite-group"><option value="">Keine Zuordnung</option></select></label>
+          <label>Rolle<select id="invite-role"><option value="member">Mitglied</option><option value="manager">Verwalter</option><option value="owner">Eigentümer</option></select></label>
+          <button class="primary-button" type="submit"><svg><use href="#icon-mail"></use></svg>Einladung senden</button>
+        </form>
+        <div id="invitations-list" class="invitation-list"></div>
+      </section>
+
+      <section id="view-server" class="view" data-view-panel="server" hidden>
+        <header class="section-heading"><div><p class="eyebrow">Eigener Dienst</p><h2>Serverstatus</h2><p>Der Budgetwelt-Dienst läuft isoliert und ausschließlich hinter Caddy.</p></div></header>
+        <div class="status-grid">
+          <article class="glass-card status-card"><span class="status-icon good"><svg><use href="#icon-server"></use></svg></span><h3>Dienst</h3><strong id="server-service">–</strong><small>Loopback · kein öffentlicher Datenbankport</small></article>
+          <article class="glass-card status-card"><span class="status-icon good"><svg><use href="#icon-update"></use></svg></span><h3>Version</h3><strong id="server-version">–</strong><small>Installierter Serverstand</small></article>
+          <article class="glass-card status-card"><span class="status-icon good"><svg><use href="#icon-lock"></use></svg></span><h3>Datenbank</h3><strong id="server-database">–</strong><small>Eigene SQLite-Datei</small></article>
+        </div>
+        <button id="refresh-health" class="secondary-button" type="button"><svg><use href="#icon-update"></use></svg>Status neu prüfen</button>
+      </section>
+
+      <section id="view-updates" class="view" data-view-panel="updates" hidden>
+        <header class="section-heading"><div><p class="eyebrow">Wartung</p><h2>Serverupdates</h2><p>Der Server prüft selbstständig den signierten Budgetwelt-Updatekanal.</p></div></header>
+        <article class="glass-card update-card">
+          <span id="update-status-icon" class="status-icon good"><svg><use href="#icon-update"></use></svg></span>
+          <div><h3 id="update-status-title">Signierter Updatekanal aktiv</h3><p id="update-status-description">Geprüft wird beim Serverstart sowie täglich. Vor jeder Installation entsteht automatisch eine Datensicherung; bei einem fehlerhaften Start wird die bisherige Programmversion wiederhergestellt.</p><strong id="update-current-version">Aktuelle Version: –</strong></div>
+        </article>
+      </section>
+    </section>
+
+    <nav class="mobile-bottom-nav" aria-label="Mobile Administration">
+      <button class="nav-item active" data-view="overview"><svg><use href="#icon-home"></use></svg><span>Übersicht</span></button>
+      <button class="nav-item" data-view="users"><svg><use href="#icon-users"></use></svg><span>Nutzer</span></button>
+      <button class="nav-item" data-view="groups"><svg><use href="#icon-groups"></use></svg><span>Gruppen</span></button>
+      <button class="nav-item" data-view="invitations"><svg><use href="#icon-menu"></use></svg><span>Mehr</span></button>
+    </nav>
+  </div>
+
+  <dialog id="user-dialog" class="glass-dialog">
+    <form id="user-form" method="dialog">
+      <header><div><p class="eyebrow">Konto anlegen</p><h2>Neues Benutzerkonto</h2></div><button class="icon-button" type="button" data-close-user-dialog aria-label="Schließen"><svg><use href="#icon-close"></use></svg></button></header>
+      <label>Name<input id="user-name" type="text" maxlength="80" autocomplete="name" required></label>
+      <label>E-Mail<input id="user-email" type="email" autocomplete="email" required></label>
+      <label>Kennwort<span class="password-field"><input id="user-password" type="password" minlength="8" autocomplete="new-password" required><button class="icon-button password-toggle" type="button" data-password-target="user-password" aria-label="Kennwort anzeigen"><svg><use href="#icon-eye"></use></svg></button></span><small>Mindestens 8 Zeichen</small></label>
+      <label class="check-row"><input id="user-admin" type="checkbox"> Systemadministrator</label>
+      <p id="user-error" class="form-error" role="alert"></p>
+      <footer><button class="ghost-button" type="button" data-close-user-dialog>Abbrechen</button><button class="primary-button" type="submit">Konto erstellen</button></footer>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

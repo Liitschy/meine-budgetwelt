@@ -1,5 +1,8 @@
 .godot/
-build/
+build/*
+!build/.gdignore
 exports/
 *.tmp
 web/
+**/bin/
+**/obj/

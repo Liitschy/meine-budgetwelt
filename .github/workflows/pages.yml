@@ -1,8 +1,6 @@
 name: Web-App auf GitHub Pages veröffentlichen
 
 on:
-  push:
-    branches: ["main"]
   workflow_dispatch:
 
 permissions:
@@ -16,6 +14,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: ${{ vars.PWA_AUTH_ENABLED == 'true' }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -40,9 +39,10 @@ jobs:
         shell: bash
         run: |
           VERSION="$(sed -n 's/^config\/version="\([^"]*\)"/\1/p' project.godot)"
-          DOWNLOAD_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}/Budget-und-Wocheneinkauf-${VERSION}.exe"
-          printf '{\n  "version": "%s",\n  "download_url": "%s"\n}\n' \
-            "$VERSION" "$DOWNLOAD_URL" > web/update-manifest.json
+          DOWNLOAD_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}/Meine-Budgetwelt-Setup-${VERSION}.exe"
+          SHA256_URL="${DOWNLOAD_URL%.exe}.sha256"
+          printf '{\n  "version": "%s",\n  "download_url": "%s",\n  "sha256_url": "%s"\n}\n' \
+            "$VERSION" "$DOWNLOAD_URL" "$SHA256_URL" > web/update-manifest.json
 
       - name: Cache-sicheren Versionslink erzeugen
         shell: bash

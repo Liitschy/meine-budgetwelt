@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource path="res://tests/sync_client_e2e.gd" type="Script" id="1_sync"]
+
+[node name="SyncClientE2E" type="Node"]
+script = ExtResource("1_sync")

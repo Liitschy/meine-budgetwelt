@@ -1,0 +1,118 @@
+name: Budgetwelt-Server freigeben
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Serverversion aus der Projektdatei, zum Beispiel 0.1.0"
+        required: true
+        type: string
+      confirmation:
+        description: "Zur Freigabe exakt SERVER FREIGEBEN eingeben"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: ${{ inputs.confirmation == 'SERVER FREIGEBEN' }}
+    runs-on: windows-latest
+
+    steps:
+      - name: Repository laden
+        uses: actions/checkout@v4
+
+      - name: .NET 10 installieren
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Godot mit Exportvorlagen installieren
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.7.1
+          use-dotnet: false
+          include-templates: true
+
+      - name: NSIS installieren
+        shell: pwsh
+        run: choco install nsis --yes --no-progress
+
+      - name: Version und Signierschlüssel prüfen
+        shell: pwsh
+        env:
+          SERVER_UPDATE_SIGNING_KEY_XML: ${{ secrets.SERVER_UPDATE_SIGNING_KEY_XML }}
+        run: |
+          [xml]$project = Get-Content -LiteralPath "server/MeineBudgetwelt.Server/MeineBudgetwelt.Server.csproj" -Raw
+          $projectVersion = [string]$project.Project.PropertyGroup.Version
+          if ($projectVersion -ne "${{ inputs.version }}") {
+              throw "Eingabe ${{ inputs.version }} passt nicht zur Serverversion $projectVersion."
+          }
+          if ($env:SERVER_UPDATE_SIGNING_KEY_XML -notmatch '<RSAKeyValue>') {
+              throw "GitHub-Secret SERVER_UPDATE_SIGNING_KEY_XML fehlt."
+          }
+
+      - name: Server-Installer bauen und prüfen
+        shell: pwsh
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\build-server-installer.ps1
+
+      - name: Signiertes Update-Manifest erzeugen
+        id: package
+        shell: pwsh
+        env:
+          SERVER_UPDATE_SIGNING_KEY_XML: ${{ secrets.SERVER_UPDATE_SIGNING_KEY_XML }}
+        run: |
+          $version = "${{ inputs.version }}"
+          $installer = (Resolve-Path "build/server/Meine-Budgetwelt-Server-Setup-$version.exe").Path
+          $keyPath = Join-Path $env:RUNNER_TEMP "server-update-private-key.xml"
+          $installerUrl = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/server-v$version/Meine-Budgetwelt-Server-Setup-$version.exe"
+          $manifest = Join-Path (Split-Path $installer) "server-update-manifest.json"
+          try {
+              [IO.File]::WriteAllText($keyPath, $env:SERVER_UPDATE_SIGNING_KEY_XML, [Text.UTF8Encoding]::new($false))
+              powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\New-ServerUpdateManifest.ps1 `
+                -Version $version `
+                -InstallerPath $installer `
+                -InstallerUrl $installerUrl `
+                -PrivateKeyPath $keyPath `
+                -OutputPath $manifest
+          }
+          finally {
+              Remove-Item -LiteralPath $keyPath -Force -ErrorAction SilentlyContinue
+          }
+          "installer=$installer" >> $env:GITHUB_OUTPUT
+          "manifest=$manifest" >> $env:GITHUB_OUTPUT
+          "hash=$installer.sha256" >> $env:GITHUB_OUTPUT
+
+      - name: Versionierten Serverstand veröffentlichen
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = "${{ inputs.version }}"
+          gh release create "server-v$version" `
+            "${{ steps.package.outputs.installer }}" `
+            "${{ steps.package.outputs.hash }}" `
+            --repo "$env:GITHUB_REPOSITORY" `
+            --title "Meine Budgetwelt Server $version" `
+            --notes "Signierter Budgetwelt-Serverstand $version." `
+            --latest=false
+
+      - name: Stabilen signierten Updatekanal umschalten
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view server-updates --repo "$env:GITHUB_REPOSITORY" 2>$null
+          if ($LASTEXITCODE -ne 0) {
+              gh release create server-updates `
+                --repo "$env:GITHUB_REPOSITORY" `
+                --title "Meine Budgetwelt Server – Updatekanal" `
+                --notes "Dieser Kanal enthält ausschließlich das aktuell freigegebene, kryptografisch signierte Servermanifest." `
+                --latest=false
+          }
+          gh release upload server-updates "${{ steps.package.outputs.manifest }}" `
+            --repo "$env:GITHUB_REPOSITORY" `
+            --clobber

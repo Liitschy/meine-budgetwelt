@@ -18,11 +18,17 @@ var _goals: Array = []
 
 
 func _ready() -> void:
+	reload_from_storage(false)
+
+
+func reload_from_storage(emit_change: bool = true) -> void:
 	var has_saved_goals := StorageManager.has_savings_goals_data()
 	var saved := StorageManager.load_savings_goals()
 	_goals = _sanitize_goals(_initial_goals_source(saved, has_saved_goals))
 	if not has_saved_goals:
 		StorageManager.save_savings_goals(_goals)
+	if emit_change:
+		savings_goals_changed.emit(get_goals(), get_summary())
 
 
 func get_goals() -> Array:

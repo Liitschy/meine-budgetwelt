@@ -7,10 +7,17 @@ var _months: Dictionary = {}
 
 
 func _ready() -> void:
-	var saved := StorageManager.load_meal_plans()
-	_months = saved.get("months", {}) if saved.get("months", {}) is Dictionary else {}
+	reload_from_storage(false)
+
 	MonthManager.active_month_changed.connect(_on_context_changed)
 	ShoppingManager.active_week_changed.connect(_on_week_changed)
+
+
+func reload_from_storage(emit_change: bool = true) -> void:
+	var saved := StorageManager.load_meal_plans()
+	_months = saved.get("months", {}) if saved.get("months", {}) is Dictionary else {}
+	if emit_change:
+		plan_changed.emit(get_plan())
 
 
 func get_plan() -> Array:

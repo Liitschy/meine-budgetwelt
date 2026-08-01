@@ -15,6 +15,9 @@ const CustomRecipeManagerScript := preload("res://core/custom_recipe_manager.gd"
 const QuantityCalculator := preload("res://core/quantity_calculator.gd")
 const WeeklyNeedCalculator := preload("res://core/weekly_need_calculator.gd")
 const PackPlanner := preload("res://core/pack_planner.gd")
+const StorageManagerScript := preload("res://core/storage_manager.gd")
+const SyncManagerScript := preload("res://core/sync_manager.gd")
+const UpdateManagerScript := preload("res://core/update_manager.gd")
 
 var _failed := false
 
@@ -237,6 +240,11 @@ func _ready() -> void:
 			contains_normal_meal = true
 	_assert_equal(contains_normal_meal, true, "Normale Kochgerichte enthalten")
 	_test_empty_savings_goals_remain_empty()
+	_test_backup_root_validation()
+	_test_storage_backup_roundtrip()
+	_test_sync_snapshot_roundtrip()
+	_test_sync_server_url_validation()
+	_test_update_validation()
 	await _test_responsive_layout()
 
 	if _failed:
@@ -251,6 +259,275 @@ func _test_empty_savings_goals_remain_empty() -> void:
 	_assert_equal(source.size(), 0, "Gelöschte Sparziele bleiben nach Neustart leer")
 	var defaults := SavingsManagerScript._initial_goals_source([], false)
 	_assert_equal(defaults.size(), 1, "Beispielziel erscheint nur beim ersten Start")
+
+
+func _test_backup_root_validation() -> void:
+	_assert_equal(
+		StorageManagerScript.is_valid_backup_root("budget_data.json", {}),
+		true,
+		"Budget-Sicherung akzeptiert ein Objekt"
+	)
+	_assert_equal(
+		StorageManagerScript.is_valid_backup_root("budget_data.json", []),
+		false,
+		"Budget-Sicherung lehnt einen falschen Wurzeltyp ab"
+	)
+	_assert_equal(
+		StorageManagerScript.is_valid_backup_root("savings_goals.json", []),
+		true,
+		"Leere Sparzielliste bleibt als gültige Sicherung erhalten"
+	)
+	_assert_equal(
+		StorageManagerScript.is_valid_backup_root("savings_goals.json", {}),
+		false,
+		"Sparziel-Sicherung lehnt einen falschen Wurzeltyp ab"
+	)
+
+
+func _test_storage_backup_roundtrip() -> void:
+	var test_budget := {
+		"balance": 4321.09,
+		"weekly_grocery_budget": 88.0,
+		"test_marker": "backup-roundtrip",
+	}
+	_assert_equal(
+		StorageManager.save_budget_data(test_budget),
+		true,
+		"Testbudget für Sicherung gespeichert"
+	)
+	_assert_equal(
+		StorageManager.save_savings_goals([]),
+		true,
+		"Leere Sparzielliste für Sicherung gespeichert"
+	)
+
+	var first_backup := StorageManager.create_backup()
+	var second_backup := StorageManager.create_backup()
+	_assert_equal(first_backup.get("success", false), true, "Erste Datensicherung erstellt")
+	_assert_equal(second_backup.get("success", false), true, "Zweite Datensicherung erstellt")
+	_assert_equal(
+		str(first_backup.get("path", "")) != str(second_backup.get("path", "")),
+		true,
+		"Sicherungen derselben Sekunde erhalten getrennte Ordner"
+	)
+
+	StorageManager.save_budget_data({"balance": 1.0, "test_marker": "changed"})
+	StorageManager.save_savings_goals([{
+		"id": "temporary",
+		"name": "Nur im Test",
+		"target_amount": 10.0,
+		"saved_amount": 1.0,
+		"monthly_contribution": 1.0,
+	}])
+	var restore_result := StorageManager.restore_backup(str(first_backup.get("path", "")))
+	_assert_equal(restore_result.get("success", false), true, "Datensicherung wiederhergestellt")
+	_assert_equal(
+		StorageManager.load_budget_data().get("test_marker", ""),
+		"backup-roundtrip",
+		"Budgetdaten stammen nach Wiederherstellung aus der Sicherung"
+	)
+	_assert_equal(
+		StorageManager.load_savings_goals().size(),
+		0,
+		"Leere Sparzielliste bleibt nach Wiederherstellung leer"
+	)
+	_assert_equal(
+		not str(restore_result.get("safety_backup_path", "")).is_empty(),
+		true,
+		"Vor Wiederherstellung wurde eine Sicherheitssicherung angelegt"
+	)
+
+	var invalid_directory := "user://backups/invalid-root-type"
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(invalid_directory))
+	var invalid_file := FileAccess.open(
+		"%s/budget_data.json" % invalid_directory,
+		FileAccess.WRITE
+	)
+	_assert_equal(invalid_file != null, true, "Ungültige Testsicherung angelegt")
+	if invalid_file != null:
+		invalid_file.store_string("[]")
+		invalid_file.close()
+	var invalid_restore := StorageManager.restore_backup(invalid_directory)
+	_assert_equal(
+		invalid_restore.get("success", true),
+		false,
+		"Wiederherstellung mit falschem JSON-Wurzeltyp wird abgelehnt"
+	)
+
+
+func _test_sync_snapshot_roundtrip() -> void:
+	var snapshot := StorageManager.export_sync_snapshot()
+	_assert_equal(
+		StorageManagerScript.is_valid_sync_snapshot(snapshot),
+		true,
+		"Vollständiger lokaler Datenstand ist synchronisierbar"
+	)
+	var incomplete := snapshot.duplicate(true)
+	incomplete.files.erase("shopping.json")
+	_assert_equal(
+		StorageManagerScript.is_valid_sync_snapshot(incomplete),
+		false,
+		"Unvollständiger Server-Datenstand wird abgelehnt"
+	)
+	var wrong_root := snapshot.duplicate(true)
+	wrong_root.files["transactions.json"] = []
+	_assert_equal(
+		StorageManagerScript.is_valid_sync_snapshot(wrong_root),
+		false,
+		"Server-Datendatei mit falschem Wurzeltyp wird abgelehnt"
+	)
+
+	var imported := snapshot.duplicate(true)
+	imported.files["budget_data.json"] = {
+		"balance": 4321.09,
+		"test_marker": "sync-roundtrip",
+	}
+	var result := StorageManager.import_sync_snapshot(imported)
+	_assert_equal(result.get("success", false), true, "Server-Datenstand importiert")
+	_assert_equal(
+		StorageManager.load_budget_data().get("test_marker", ""),
+		"sync-roundtrip",
+		"Importierter Datenstand liegt lokal vor"
+	)
+	_assert_equal(
+		not str(result.get("safety_backup_path", "")).is_empty(),
+		true,
+		"Synchronisation legt vorher eine Sicherheitssicherung an"
+	)
+
+
+func _test_sync_server_url_validation() -> void:
+	_assert_equal(
+		SyncManagerScript.is_valid_server_url("https://budget.example.de"),
+		true,
+		"HTTPS-Serveradresse wird akzeptiert"
+	)
+	_assert_equal(
+		SyncManagerScript.is_valid_server_url("http://127.0.0.1:48732"),
+		true,
+		"Lokaler Testserver darf HTTP verwenden"
+	)
+	_assert_equal(
+		SyncManagerScript.is_valid_server_url("http://budget.example.de"),
+		false,
+		"Entfernter Server ohne HTTPS wird abgelehnt"
+	)
+	_assert_equal(
+		SyncManagerScript.is_valid_server_url("https://budget.example.de/fremder-pfad"),
+		false,
+		"Serveradresse mit unerwartetem Pfad wird abgelehnt"
+	)
+
+
+func _test_update_validation() -> void:
+	var version := "0.40.0"
+	var download_url := (
+		"https://github.com/unique1986/meine-budgetwelt/releases/download/"
+		+ "v0.40.0/Meine-Budgetwelt-Setup-0.40.0.exe"
+	)
+	var sha256_url := "%s.sha256" % download_url.trim_suffix(".exe")
+	var manifest := UpdateManagerScript.validate_manifest({
+		"version": version,
+		"download_url": download_url,
+		"sha256_url": sha256_url,
+	})
+	_assert_equal(manifest.get("valid", false), true, "Offizielles Update-Manifest akzeptiert")
+	_assert_equal(
+		UpdateManagerScript.is_valid_release_urls(
+			version,
+			download_url.replace("unique1986", "fremdes-konto"),
+			sha256_url
+		),
+		false,
+		"Installer eines fremden Repositorys wird abgelehnt"
+	)
+	_assert_equal(
+		UpdateManagerScript.validate_manifest({
+			"version": version,
+			"download_url": download_url,
+		}).get("valid", true),
+		false,
+		"Manifest ohne SHA-256-Adresse wird abgelehnt"
+	)
+	var expected_hash := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	_assert_equal(
+		UpdateManagerScript.extract_sha256(
+			"%s  Meine-Budgetwelt-Setup-0.40.0.exe\n" % expected_hash
+		),
+		expected_hash,
+		"SHA-256-Dateiformat wird gelesen"
+	)
+	_assert_equal(
+		UpdateManagerScript.extract_sha256("nicht-eine-pruefsumme"),
+		"",
+		"Ungültige SHA-256-Prüfsumme wird abgelehnt"
+	)
+	var hash_test_path := "user://update-hash-test.bin"
+	var hash_test_file := FileAccess.open(hash_test_path, FileAccess.WRITE)
+	_assert_equal(hash_test_file != null, true, "Testdatei für SHA-256-Prüfung angelegt")
+	if hash_test_file != null:
+		hash_test_file.store_buffer("budgetwelt-update-test".to_utf8_buffer())
+		hash_test_file.close()
+	_assert_equal(
+		UpdateManagerScript.file_matches_sha256(
+			hash_test_path,
+			"9de8a61f85214bd604fde02d5cc4882dcab41bf26120714015bb153c9ba2f589"
+		),
+		true,
+		"Heruntergeladene Datei besteht die passende SHA-256-Prüfung"
+	)
+	_assert_equal(
+		UpdateManagerScript.file_matches_sha256(
+			hash_test_path,
+			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+		),
+		false,
+		"Datei mit abweichender SHA-256-Prüfsumme wird abgelehnt"
+	)
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(hash_test_path))
+	_assert_equal(
+		UpdateManagerScript.is_newer_version("0.40.0", "0.39.2"),
+		true,
+		"Neuere Update-Version wird erkannt"
+	)
+	_assert_equal(
+		UpdateManagerScript.is_newer_version("0.39.2-beta", "0.39.2"),
+		false,
+		"Ungültige Versionsnummer wird nicht als Update akzeptiert"
+	)
+	var example_local_app_data := "C:/Users/Test/AppData/Local"
+	_assert_equal(
+		UpdateManagerScript.is_expected_installed_executable(
+			"C:/Users/Test/AppData/Local/Programs/Meine Budgetwelt/Meine-Budgetwelt.exe",
+			example_local_app_data
+		),
+		true,
+		"Automatisches Update erkennt die regulär installierte Windows-App"
+	)
+	_assert_equal(
+		UpdateManagerScript.is_expected_installed_executable(
+			"C:/Portable/Meine-Budgetwelt.exe",
+			example_local_app_data
+		),
+		false,
+		"Portable App wird nicht unbeaufsichtigt überschrieben"
+	)
+	var automatic_script := UpdateManagerScript.AUTOMATIC_UPDATE_SCRIPT_CONTENTS
+	_assert_equal(
+		automatic_script.contains("-ArgumentList @('/S')"),
+		true,
+		"Automatischer Updater startet das verifizierte Setup still"
+	)
+	_assert_equal(
+		automatic_script.contains("Get-Process -Id $ParentProcessId"),
+		true,
+		"Automatischer Updater wartet auf das Ende der laufenden App"
+	)
+	_assert_equal(
+		automatic_script.contains("Start-Process -FilePath $ApplicationPath"),
+		true,
+		"Automatischer Updater startet die App nach dem Setup erneut"
+	)
 
 
 func _test_responsive_layout() -> void:
@@ -295,6 +572,11 @@ func _test_responsive_layout() -> void:
 	_assert_equal(app.summary_panel.visible, false, "Kleine Desktop-Kennzahlenliste ist mobil verborgen")
 	_assert_equal(app.mobile_dashboard_actions.visible, true, "Mobile Aktionskarten sind sichtbar")
 	_assert_equal(app.world_view._compact_mode, true, "Landschaft nutzt mobil den aufgeräumten Modus")
+	_assert_equal(
+		app.startup_status_card.custom_minimum_size.x <= 366.0,
+		true,
+		"Start-/Updatebildschirm bleibt mit Seitenabstand in der Handybreite"
+	)
 	_assert_equal(app.dashboard_page.size.x <= 390.0, true, "Dashboard bleibt vollständig in der Handybreite")
 	_assert_equal(app.summary_panel.size.x <= 390.0, true, "Finanzkarten werden rechts nicht abgeschnitten")
 	_assert_equal(app.fixed_summary_row.vertical, false, "Fixkostensummen mobil nebeneinander")
@@ -312,7 +594,11 @@ func _test_responsive_layout() -> void:
 	_assert_equal(app.mobile_navigation.visible, false, "Mobile Navigation am Desktop verborgen")
 	_assert_equal(app.dashboard_body.vertical, false, "Budgetinhalt am Desktop nebeneinander")
 	_assert_equal(app.dashboard_body.get_child(0), app.world_view, "Landschaft steht am Desktop wieder links")
-	_assert_equal(app.dashboard_title.text, "Deine Budgetwelt", "Desktop-Titel bleibt unverändert")
+	_assert_equal(
+		app.dashboard_title.text.begins_with("Guten "),
+		true,
+		"Desktop-Titel verwendet eine tageszeitabhängige Begrüßung"
+	)
 
 	var amount_input: SpinBox = app._create_savings_money_input()
 	app.add_child(amount_input)

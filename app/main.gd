@@ -18,6 +18,7 @@ const COLORS := {
 	"warning": Color("#ef9a5d"),
 	"success": Color("#85dfa0"),
 }
+const BOOK_ART_SIZE := Vector2(1672.0, 941.0)
 
 var world_view: Control
 var summary_values: Dictionary = {}
@@ -118,6 +119,37 @@ var _confirmation_action := Callable()
 var restore_dialog: FileDialog
 var restore_confirmation: ConfirmationDialog
 var _pending_restore_path := ""
+var login_panel: Control
+var login_backdrop: Control
+var login_margin: MarginContainer
+var login_card: PanelContainer
+var login_layout: BoxContainer
+var login_title: Label
+var login_name_row: Control
+var login_name_input: LineEdit
+var login_email_input: LineEdit
+var login_password_input: LineEdit
+var login_invitation_row: Control
+var login_invitation_input: LineEdit
+var login_remember_row: Control
+var login_remember_input: CheckBox
+var login_forgot_button: Button
+var login_submit_button: Button
+var login_mode_button: Button
+var login_status_label: Label
+var login_server_label: Label
+var account_button: Button
+var _registration_mode := false
+var startup_status_panel: Control
+var startup_status_card: PanelContainer
+var startup_update_status: Label
+var startup_update_action: Button
+var update_confirmation: ConfirmationDialog
+var _pending_update_url := ""
+var _pending_update_sha256_url := ""
+var _pending_update_version := ""
+var _startup_update_check_active := false
+var _automatic_update_active := false
 var balance_panel: PanelContainer
 var balance_dialog: Control
 var balance_input: SpinBox
@@ -180,7 +212,12 @@ func _ready() -> void:
 	CustomRecipeManager.recipes_changed.connect(_on_custom_recipes_changed)
 	MonthManager.active_month_changed.connect(_on_active_month_changed)
 	UpdateManager.update_check_finished.connect(_on_update_check_finished)
+	UpdateManager.update_download_status.connect(_on_update_download_status)
+	SyncManager.session_changed.connect(_on_account_session_changed)
+	SyncManager.sync_status_changed.connect(_on_sync_status_changed)
+	SyncManager.sync_conflict.connect(_on_sync_conflict)
 	_build_restore_dialog()
+	_build_update_confirmation_dialog()
 	_apply_fixed_cost_summary(FixedCostManager.get_summary())
 	_apply_savings_summary(SavingsManager.get_summary())
 	_apply_transaction_summary(TransactionManager.get_active_summary())
@@ -196,13 +233,19 @@ func _ready() -> void:
 	resized.connect(_apply_responsive_layout)
 	_apply_responsive_layout()
 	call_deferred("_reset_dashboard_scroll")
+	if get_tree().current_scene == self:
+		call_deferred("_begin_account_startup")
+		call_deferred("_begin_startup_update_check")
 
 
 func _configure_web_content_scale() -> void:
 	if not OS.has_feature("web"):
 		return
-	var css_width := int(JavaScriptBridge.eval("Math.round(window.innerWidth)", true))
-	var css_height := int(JavaScriptBridge.eval("Math.round(window.innerHeight)", true))
+	var browser_window: JavaScriptObject = JavaScriptBridge.get_interface("window")
+	if browser_window == null:
+		return
+	var css_width := int(browser_window.innerWidth)
+	var css_height := int(browser_window.innerHeight)
 	if css_width < 280 or css_height < 480:
 		return
 	var window := get_window()
@@ -394,6 +437,450 @@ func _build_interface() -> void:
 	fixed_payment_panel.visible = false
 	add_child(fixed_payment_panel)
 
+	startup_status_panel = _build_startup_status_panel()
+	startup_status_panel.visible = false
+	add_child(startup_status_panel)
+
+	login_panel = _build_login_panel()
+	login_panel.visible = true
+	add_child(login_panel)
+
+
+func _build_login_panel() -> Control:
+	var backdrop := Control.new()
+	login_backdrop = backdrop
+	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
+	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+	var island := TextureRect.new()
+	island.texture = load("res://assets/world/budget_world_island.png")
+	island.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	island.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	island.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	island.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	backdrop.add_child(island)
+
+	var tint := ColorRect.new()
+	tint.color = Color("#00131db8")
+	tint.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	tint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	backdrop.add_child(tint)
+
+	var margin := MarginContainer.new()
+	login_margin = margin
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	for side in ["margin_left", "margin_right"]:
+		margin.add_theme_constant_override(side, 36)
+	margin.add_theme_constant_override("margin_top", 28)
+	margin.add_theme_constant_override("margin_bottom", 28)
+	backdrop.add_child(margin)
+
+	login_layout = BoxContainer.new()
+	margin.add_child(login_layout)
+	var card_center := CenterContainer.new()
+	card_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card_center.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	login_layout.add_child(card_center)
+
+	login_card = PanelContainer.new()
+	login_card.custom_minimum_size = Vector2(440, 0)
+	var glass := _style(Color("#062832e8"), 28, Color("#72e1d0aa"))
+	glass.content_margin_left = 34
+	glass.content_margin_right = 34
+	glass.content_margin_top = 30
+	glass.content_margin_bottom = 30
+	glass.shadow_color = Color("#00070bbf")
+	glass.shadow_size = 24
+	login_card.add_theme_stylebox_override("panel", glass)
+	card_center.add_child(login_card)
+
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 12)
+	login_card.add_child(column)
+	var brand := Label.new()
+	brand.text = "MEINE BUDGETWELT"
+	brand.add_theme_font_size_override("font_size", 13)
+	brand.add_theme_color_override("font_color", COLORS.accent)
+	column.add_child(brand)
+	login_title = Label.new()
+	login_title.text = "Willkommen zurück"
+	login_title.add_theme_font_override("font", display_font)
+	login_title.add_theme_font_size_override("font_size", 34)
+	column.add_child(login_title)
+	var hint := Label.new()
+	hint.text = "Melde dich an, damit Desktop und PWA denselben sicheren Datenstand verwenden."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_color_override("font_color", COLORS.muted)
+	column.add_child(hint)
+	login_server_label = Label.new()
+	login_server_label.add_theme_font_size_override("font_size", 12)
+	login_server_label.add_theme_color_override("font_color", COLORS.success)
+	column.add_child(login_server_label)
+	_update_login_server_label()
+
+	login_name_input = LineEdit.new()
+	login_name_input.placeholder_text = "Name"
+	login_name_input.custom_minimum_size.y = 48
+	login_name_row = login_name_input
+	login_name_row.visible = false
+	column.add_child(login_name_row)
+	login_email_input = LineEdit.new()
+	login_email_input.placeholder_text = "E-Mail-Adresse"
+	login_email_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_EMAIL_ADDRESS
+	login_email_input.custom_minimum_size.y = 48
+	column.add_child(login_email_input)
+	login_password_input = LineEdit.new()
+	login_password_input.placeholder_text = "Kennwort – mindestens 8 Zeichen"
+	login_password_input.secret = true
+	login_password_input.custom_minimum_size.y = 48
+	login_password_input.text_submitted.connect(func(_text: String) -> void: _submit_account_form())
+	column.add_child(login_password_input)
+	login_invitation_input = LineEdit.new()
+	login_invitation_input.placeholder_text = "Einladungscode"
+	login_invitation_input.custom_minimum_size.y = 48
+	login_invitation_row = login_invitation_input
+	login_invitation_row.visible = false
+	column.add_child(login_invitation_row)
+
+	login_remember_row = BoxContainer.new()
+	var preferences := login_remember_row as BoxContainer
+	login_remember_input = CheckBox.new()
+	login_remember_input.text = "Angemeldet bleiben"
+	preferences.add_child(login_remember_input)
+	var preference_spacer := Control.new()
+	preference_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	preferences.add_child(preference_spacer)
+	var show_password := CheckBox.new()
+	show_password.text = "Kennwort anzeigen"
+	show_password.toggled.connect(
+		func(visible_password: bool) -> void:
+			login_password_input.secret = not visible_password
+	)
+	preferences.add_child(show_password)
+	column.add_child(preferences)
+
+	login_forgot_button = Button.new()
+	login_forgot_button.text = "Kennwort vergessen?"
+	login_forgot_button.flat = true
+	login_forgot_button.alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	login_forgot_button.pressed.connect(_request_login_password_reset)
+	column.add_child(login_forgot_button)
+	login_status_label = Label.new()
+	login_status_label.text = "Bitte mit deinem Konto anmelden."
+	login_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	login_status_label.add_theme_color_override("font_color", COLORS.muted)
+	column.add_child(login_status_label)
+	login_submit_button = Button.new()
+	login_submit_button.text = "Sicher anmelden"
+	login_submit_button.custom_minimum_size.y = 52
+	login_submit_button.add_theme_color_override("font_color", Color("#03252a"))
+	login_submit_button.add_theme_stylebox_override("normal", _style(COLORS.accent, 14))
+	login_submit_button.add_theme_stylebox_override("hover", _style(Color("#75ead9"), 14))
+	login_submit_button.pressed.connect(_submit_account_form)
+	column.add_child(login_submit_button)
+	login_mode_button = Button.new()
+	login_mode_button.text = "Konto mit Einladung erstellen"
+	login_mode_button.flat = true
+	login_mode_button.pressed.connect(_toggle_registration_mode)
+	column.add_child(login_mode_button)
+
+	var art_space := Control.new()
+	art_space.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	login_layout.add_child(art_space)
+	backdrop.resized.connect(_apply_login_layout)
+	return backdrop
+
+
+func _begin_account_startup() -> void:
+	login_panel.visible = true
+	_update_login_server_label()
+	login_status_label.text = "Gespeicherte Sitzung wird sicher geprüft …"
+	var result := await SyncManager.restore_session()
+	if bool(result.get("success", false)):
+		login_panel.visible = false
+		_apply_account_identity(SyncManager.current_user)
+	else:
+		login_status_label.text = "Bitte mit deinem Konto anmelden."
+
+
+func _submit_account_form() -> void:
+	if _registration_mode:
+		await _perform_registration()
+	else:
+		await _perform_login()
+
+
+func _perform_login() -> void:
+	login_submit_button.disabled = true
+	login_status_label.text = "Anmeldung und Synchronisation werden geprüft …"
+	var result := await SyncManager.login(
+		login_email_input.text,
+		login_password_input.text,
+		login_remember_input.button_pressed
+	)
+	login_password_input.clear()
+	login_submit_button.disabled = false
+	login_status_label.text = str(result.get("message", "Anmeldung fehlgeschlagen."))
+	if bool(result.get("success", false)):
+		login_panel.visible = false
+		_apply_account_identity(SyncManager.current_user)
+
+
+func _perform_registration() -> void:
+	if login_name_input.text.strip_edges().is_empty() or login_email_input.text.strip_edges().is_empty():
+		login_status_label.text = "Bitte Name und E-Mail-Adresse vollständig eingeben."
+		return
+	login_submit_button.disabled = true
+	login_status_label.text = "Konto wird über die Einladung erstellt …"
+	var password := login_password_input.text
+	var result := await SyncManager.register_with_invitation(
+		login_name_input.text,
+		password,
+		login_invitation_input.text
+	)
+	if bool(result.get("success", false)):
+		result = await SyncManager.login(
+			login_email_input.text,
+			password,
+			login_remember_input.button_pressed
+		)
+	login_password_input.clear()
+	login_submit_button.disabled = false
+	login_status_label.text = str(result.get("message", "Konto konnte nicht erstellt werden."))
+	if bool(result.get("success", false)):
+		login_panel.visible = false
+		_apply_account_identity(SyncManager.current_user)
+
+
+func _request_login_password_reset() -> void:
+	if login_email_input.text.strip_edges().is_empty():
+		login_status_label.text = "Bitte zuerst deine E-Mail-Adresse eintragen."
+		return
+	login_forgot_button.disabled = true
+	var result := await SyncManager.request_password_reset(login_email_input.text)
+	login_forgot_button.disabled = false
+	login_status_label.text = str(result.get("message", "Die Anfrage ist fehlgeschlagen."))
+
+
+func _toggle_registration_mode() -> void:
+	_registration_mode = not _registration_mode
+	login_name_row.visible = _registration_mode
+	login_invitation_row.visible = _registration_mode
+	login_forgot_button.visible = not _registration_mode
+	login_title.text = "Konto erstellen" if _registration_mode else "Willkommen zurück"
+	login_submit_button.text = "Konto sicher erstellen" if _registration_mode else "Sicher anmelden"
+	login_mode_button.text = "Zurück zur Anmeldung" if _registration_mode else "Konto mit Einladung erstellen"
+	login_status_label.text = (
+		"Für diese private Budgetwelt wird der Einladungscode des Administrators benötigt."
+		if _registration_mode
+		else "Bitte mit deinem Konto anmelden."
+	)
+
+
+func _update_login_server_label() -> void:
+	if not is_instance_valid(login_server_label):
+		return
+	var server_target := SyncManager.server_url.trim_prefix("https://").trim_prefix("http://")
+	login_server_label.text = "●  Serverziel: %s" % server_target
+
+
+func _on_account_session_changed(user: Dictionary) -> void:
+	_apply_account_identity(user)
+
+
+func _apply_account_identity(user: Dictionary) -> void:
+	if is_instance_valid(account_button):
+		account_button.text = str(user.get("displayName", "Konto")) if not user.is_empty() else "Anmelden"
+	_update_account_greeting()
+
+
+func _update_account_greeting() -> void:
+	if not is_instance_valid(dashboard_title):
+		return
+	var hour := int(Time.get_time_dict_from_system().hour)
+	var greeting := "Guten Morgen" if hour < 11 else "Guten Tag" if hour < 18 else "Guten Abend"
+	var name := str(SyncManager.current_user.get("displayName", "")).strip_edges()
+	dashboard_title.text = "%s, %s" % [greeting, name] if not name.is_empty() else greeting
+
+
+func _logout_account() -> void:
+	await SyncManager.logout()
+	login_panel.visible = true
+	login_panel.move_to_front()
+	login_status_label.text = "Du wurdest sicher abgemeldet."
+
+
+func _on_sync_status_changed(status: String, message: String) -> void:
+	if is_instance_valid(app_local_status):
+		app_local_status.text = "●  %s" % message
+		app_local_status.add_theme_color_override(
+			"font_color",
+			COLORS.success if status == "synced" else COLORS.warning if status in ["syncing", "conflict"] else COLORS.muted
+		)
+	if is_instance_valid(status_label):
+		status_label.text = message
+
+
+func _on_sync_conflict(_current: Dictionary) -> void:
+	status_label.text = "Neuere Serverdaten wurden geschützt. Bitte vor dem Weiterarbeiten aktualisieren."
+
+
+func _apply_login_layout() -> void:
+	if not is_instance_valid(login_layout):
+		return
+	var available_size := login_backdrop.size if is_instance_valid(login_backdrop) else size
+	var compact := available_size.x < 760.0 or available_size.y > available_size.x
+	var outer_margin := 12 if compact else 36
+	for side in ["margin_left", "margin_right"]:
+		login_margin.add_theme_constant_override(side, outer_margin)
+	login_margin.add_theme_constant_override("margin_top", 16 if compact else 28)
+	login_margin.add_theme_constant_override("margin_bottom", 16 if compact else 28)
+	login_layout.vertical = compact
+	login_card.custom_minimum_size.x = minf(
+		440.0,
+		maxf(available_size.x - float(outer_margin * 2), 240.0)
+	)
+	var glass := login_card.get_theme_stylebox("panel") as StyleBoxFlat
+	if glass != null:
+		var content_margin := 24.0 if compact else 34.0
+		glass.content_margin_left = content_margin
+		glass.content_margin_right = content_margin
+	login_title.add_theme_font_size_override("font_size", 29 if compact else 34)
+	(login_remember_row as BoxContainer).vertical = compact
+
+
+func _build_startup_status_panel() -> Control:
+	var backdrop := ColorRect.new()
+	backdrop.color = Color("#02151ef5")
+	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	backdrop.add_child(center)
+
+	startup_status_card = PanelContainer.new()
+	var panel := startup_status_card
+	panel.add_theme_stylebox_override("panel", _style(Color("#07333c"), 22, COLORS.accent))
+	center.add_child(panel)
+
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 18)
+	panel.add_child(column)
+
+	var title := Label.new()
+	title.text = "Meine Budgetwelt startet"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	title.add_theme_font_override("font", display_font)
+	title.add_theme_font_size_override("font_size", 30)
+	column.add_child(title)
+
+	var version := Label.new()
+	version.text = "Version %s" % UpdateManager.get_current_version()
+	version.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	version.add_theme_color_override("font_color", COLORS.muted)
+	column.add_child(version)
+
+	startup_update_status = Label.new()
+	startup_update_status.text = "Update-Status wird vorbereitet …"
+	startup_update_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	startup_update_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	startup_update_status.add_theme_font_size_override("font_size", 17)
+	column.add_child(startup_update_status)
+
+	startup_update_action = Button.new()
+	startup_update_action.text = "Bitte warten …"
+	startup_update_action.disabled = true
+	startup_update_action.custom_minimum_size.y = 48
+	startup_update_action.pressed.connect(_on_startup_update_action)
+	column.add_child(startup_update_action)
+	backdrop.resized.connect(_resize_startup_status_panel.bind(backdrop, panel, title))
+	call_deferred("_resize_startup_status_panel", backdrop, panel, title)
+	return backdrop
+
+
+func _resize_startup_status_panel(backdrop: Control, panel: Control, title: Label) -> void:
+	var panel_width := maxf(0.0, minf(520.0, backdrop.size.x - 24.0))
+	var compact := panel_width < 440.0
+	panel.custom_minimum_size = Vector2(panel_width, 310.0 if compact else 260.0)
+	title.add_theme_font_size_override("font_size", 26 if compact else 30)
+
+
+func _build_update_confirmation_dialog() -> void:
+	update_confirmation = ConfirmationDialog.new()
+	update_confirmation.title = "Update sicher installieren"
+	update_confirmation.ok_button_text = "Herunterladen und prüfen"
+	update_confirmation.cancel_button_text = "Später"
+	update_confirmation.dialog_text = (
+		"Der offizielle Setup-Installer und seine SHA-256-Prüfsumme werden geladen.\n"
+		+ "Nur bei erfolgreicher Prüfung wird vorher eine Datensicherung erstellt "
+		+ "und anschließend der Installer gestartet."
+	)
+	update_confirmation.confirmed.connect(_open_confirmed_update)
+	add_child(update_confirmation)
+
+
+func _begin_startup_update_check() -> void:
+	if OS.has_feature("web"):
+		_startup_update_check_active = false
+		startup_status_panel.visible = true
+		startup_status_panel.move_to_front()
+		startup_update_status.text = "PWA-Updates werden beim Start sicher über den Server geladen."
+		startup_update_action.text = "Zur Anmeldung"
+		startup_update_action.disabled = false
+		return
+	_startup_update_check_active = true
+	startup_status_panel.visible = true
+	startup_status_panel.move_to_front()
+	startup_update_status.text = "Updates werden geprüft …"
+	startup_update_action.text = "Prüfung überspringen"
+	startup_update_action.disabled = false
+	UpdateManager.check_for_updates()
+
+
+func _request_manual_update_check() -> void:
+	_automatic_update_active = false
+	status_label.text = "Updates werden geprüft …"
+	UpdateManager.check_for_updates()
+
+
+func _on_startup_update_action() -> void:
+	if _startup_update_check_active:
+		startup_status_panel.visible = false
+		_show_required_login_if_needed()
+		return
+	if not _pending_update_url.is_empty():
+		update_confirmation.popup_centered(Vector2i(mini(520, int(size.x) - 24), 230))
+		return
+	startup_status_panel.visible = false
+	_show_required_login_if_needed()
+
+
+func _show_required_login_if_needed() -> void:
+	if not SyncManager.is_logged_in():
+		login_panel.visible = true
+		login_panel.move_to_front()
+
+
+func _open_confirmed_update() -> void:
+	if (
+		_pending_update_version.is_empty()
+		or _pending_update_url.is_empty()
+		or _pending_update_sha256_url.is_empty()
+	):
+		return
+	startup_status_panel.visible = true
+	startup_status_panel.move_to_front()
+	startup_update_status.text = "Der sichere Update-Download wird vorbereitet …"
+	startup_update_action.text = "Bitte warten …"
+	startup_update_action.disabled = true
+	_automatic_update_active = false
+	UpdateManager.download_update(
+		_pending_update_version,
+		_pending_update_url,
+		_pending_update_sha256_url
+	)
+
 
 func _build_app_bar() -> Control:
 	var bar := PanelContainer.new()
@@ -421,11 +908,18 @@ func _build_app_bar() -> Control:
 	row.add_child(spacer)
 
 	var local_status := Label.new()
-	local_status.text = "●  Sicher lokal gespeichert"
+	local_status.text = "●  Anmeldung erforderlich"
 	app_local_status = local_status
 	local_status.add_theme_font_size_override("font_size", 12)
 	local_status.add_theme_color_override("font_color", COLORS.success)
 	row.add_child(local_status)
+
+	account_button = Button.new()
+	account_button.text = "Konto"
+	account_button.flat = true
+	account_button.tooltip_text = "Konto abmelden"
+	account_button.pressed.connect(_logout_account)
+	row.add_child(account_button)
 	return bar
 
 
@@ -754,7 +1248,7 @@ func _build_sidebar() -> Control:
 	var update_button := Button.new()
 	update_button.text = "↻  Nach Updates suchen"
 	update_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	update_button.pressed.connect(UpdateManager.check_for_updates)
+	update_button.pressed.connect(_request_manual_update_check)
 	column.add_child(update_button)
 
 	status_label = Label.new()
@@ -1053,9 +1547,9 @@ func _build_fixed_costs_page() -> Control:
 	fixed_summary_row.vertical = false
 	fixed_summary_row.add_theme_constant_override("separation", 44)
 	fixed_summary_row.set_anchors_preset(Control.PRESET_FULL_RECT)
-	fixed_summary_row.anchor_left = 0.128
+	fixed_summary_row.anchor_left = 0.132
 	fixed_summary_row.anchor_top = 0.155
-	fixed_summary_row.anchor_right = 0.872
+	fixed_summary_row.anchor_right = 0.826
 	fixed_summary_row.anchor_bottom = 0.278
 	fixed_summary_row.offset_left = 8
 	fixed_summary_row.offset_top = 0
@@ -1196,7 +1690,7 @@ func _build_book_navigation(page: Control, active_page: String) -> void:
 	update_button.text = "◌  Updates suchen"
 	update_button.add_theme_color_override("font_color", Color("#dfc98f"))
 	update_button.add_theme_stylebox_override("normal", _ornament_button_style(Color("#07191ad9")))
-	update_button.pressed.connect(UpdateManager.check_for_updates)
+	update_button.pressed.connect(_request_manual_update_check)
 	utilities.add_child(update_button)
 
 
@@ -3787,8 +4281,9 @@ func _apply_responsive_layout() -> void:
 		return
 
 	var is_web := OS.has_feature("web")
-	var compact := _should_use_compact_layout(size, is_web)
-	var stacked_content := _should_stack_dashboard(size, is_web)
+	var responsive_size := _responsive_view_size()
+	var compact := _should_use_compact_layout(responsive_size, is_web)
+	var stacked_content := _should_stack_dashboard(responsive_size, is_web)
 	var layout_changed := compact != _compact_layout
 	_compact_layout = compact
 
@@ -3803,7 +4298,6 @@ func _apply_responsive_layout() -> void:
 	if compact and app_shell.get_child(app_shell.get_child_count() - 1) != mobile_navigation:
 		app_shell.move_child(mobile_navigation, app_shell.get_child_count() - 1)
 	if is_instance_valid(app_local_status):
-		app_local_status.text = "● Lokal" if compact else "●  Sicher lokal gespeichert"
 		app_local_status.add_theme_font_size_override("font_size", 11 if compact else 12)
 	if is_instance_valid(app_bar):
 		app_bar.visible = not compact and not book_open
@@ -3817,8 +4311,9 @@ func _apply_responsive_layout() -> void:
 			HORIZONTAL_ALIGNMENT_CENTER if compact else HORIZONTAL_ALIGNMENT_LEFT
 		)
 	if is_instance_valid(dashboard_title):
-		dashboard_title.text = "Meine Budgetwelt" if compact else "Deine Budgetwelt"
+		_update_account_greeting()
 		dashboard_title.add_theme_font_size_override("font_size", 38 if compact else 36)
+	_apply_login_layout()
 	if is_instance_valid(month_selector_label):
 		month_selector_label.custom_minimum_size.x = 150 if compact else 130
 		month_selector_label.add_theme_font_override("font", display_font)
@@ -3853,14 +4348,14 @@ func _apply_responsive_layout() -> void:
 	world_view.custom_minimum_size = (
 		Vector2(0, 320) if compact
 		else Vector2(0, 500) if stacked_content
-		else Vector2(700, clampf(size.y - 260.0, 620.0, 900.0))
+		else Vector2(700, clampf(responsive_size.y - 260.0, 620.0, 900.0))
 	)
 	summary_panel.custom_minimum_size.x = 0 if stacked_content else 345
 
 	dashboard_header.custom_minimum_size.y = 0 if compact else 74
 	fixed_header.custom_minimum_size.y = 0 if compact else 82
 
-	var dialog_width := maxf(size.x - 32.0, 280.0)
+	var dialog_width := maxf(responsive_size.x - 32.0, 280.0)
 	if is_instance_valid(add_cost_dialog):
 		add_cost_dialog.custom_minimum_size.x = minf(540.0, dialog_width)
 	if is_instance_valid(balance_dialog):
@@ -3883,7 +4378,10 @@ func _apply_responsive_layout() -> void:
 		recipe_dialog.custom_minimum_size.x = minf(620.0, dialog_width)
 	if is_instance_valid(custom_recipe_dialog):
 		custom_recipe_dialog.custom_minimum_size.x = minf(780.0, dialog_width)
-		custom_recipe_dialog.custom_minimum_size.y = minf(720.0, maxf(size.y - 32.0, 520.0))
+		custom_recipe_dialog.custom_minimum_size.y = minf(
+			720.0,
+			maxf(responsive_size.y - 32.0, 520.0)
+		)
 	for controls: Dictionary in custom_recipe_ingredient_controls:
 		var ingredient_row: BoxContainer = controls.row
 		ingredient_row.vertical = compact
@@ -3920,6 +4418,28 @@ func _apply_responsive_layout() -> void:
 		_rebuild_transaction_rows()
 		_rebuild_shopping_rows()
 	call_deferred("_reset_dashboard_scroll")
+
+
+func _responsive_view_size() -> Vector2:
+	var viewport_size := get_viewport_rect().size
+	if not OS.has_feature("web"):
+		return size
+	var browser_window: JavaScriptObject = JavaScriptBridge.get_interface("window")
+	if browser_window == null:
+		return viewport_size
+	var visual_viewport: JavaScriptObject = browser_window.visualViewport
+	if visual_viewport != null:
+		var visual_size := Vector2(
+			float(visual_viewport.width),
+			float(visual_viewport.height)
+		)
+		if visual_size.x > 0.0 and visual_size.y > 0.0:
+			return visual_size
+	var window_size := Vector2(
+		float(browser_window.innerWidth),
+		float(browser_window.innerHeight)
+	)
+	return window_size if window_size.x > 0.0 and window_size.y > 0.0 else viewport_size
 
 
 func _apply_mobile_book_layout(compact: bool) -> void:
@@ -3986,11 +4506,23 @@ func _configure_book_region(
 	if not is_instance_valid(header) or not is_instance_valid(summary) or not is_instance_valid(list_panel):
 		return
 	var header_region := mobile_header if compact else Vector4(0.115, 0.018, 0.97, 0.145)
-	var summary_region := mobile_summary if compact else Vector4(0.128, 0.155, 0.872, 0.278)
+	var summary_region := mobile_summary if compact else Vector4(0.132, 0.155, 0.826, 0.278)
 	var list_region := mobile_list if compact else Vector4(0.158, 0.325, 0.94, 0.905)
-	_set_anchor_region(header, header_region)
-	_set_anchor_region(summary, summary_region)
-	_set_anchor_region(list_panel, list_region)
+	if compact:
+		_set_anchor_region(header, header_region)
+		_set_anchor_region(summary, summary_region)
+		_set_anchor_region(list_panel, list_region)
+	else:
+		var page := header.get_parent() as Control
+		var page_size := page.size if page != null else size
+		if page_size.x <= 0.0 or page_size.y <= 0.0:
+			page_size = size
+		if _is_wide_book_layout(page_size):
+			_set_book_art_region(header, Vector4(0.115, 0.282, 0.97, 0.323))
+		else:
+			_set_anchor_region(header, header_region)
+		_set_book_art_region(summary, summary_region)
+		_set_book_art_region(list_panel, list_region)
 
 
 func _set_anchor_region(control: Control, region: Vector4) -> void:
@@ -4002,6 +4534,53 @@ func _set_anchor_region(control: Control, region: Vector4) -> void:
 	control.offset_top = 0
 	control.offset_right = 0
 	control.offset_bottom = 0
+
+
+func _set_book_art_region(control: Control, region: Vector4) -> void:
+	var page := control.get_parent() as Control
+	if page == null:
+		_set_anchor_region(control, region)
+		return
+	var page_size := page.size
+	if page_size.x <= 0.0 or page_size.y <= 0.0:
+		page_size = size
+	if page_size.x <= 0.0 or page_size.y <= 0.0:
+		_set_anchor_region(control, region)
+		return
+	var art_scale := maxf(
+		page_size.x / BOOK_ART_SIZE.x,
+		page_size.y / BOOK_ART_SIZE.y
+	)
+	var art_size := BOOK_ART_SIZE * art_scale
+	var art_origin := (page_size - art_size) * 0.5
+	control.anchor_left = 0.0
+	control.anchor_top = 0.0
+	control.anchor_right = 0.0
+	control.anchor_bottom = 0.0
+	control.offset_left = art_origin.x + region.x * art_size.x
+	control.offset_top = art_origin.y + region.y * art_size.y
+	control.offset_right = art_origin.x + region.z * art_size.x
+	control.offset_bottom = art_origin.y + region.w * art_size.y
+
+
+func _is_wide_book_layout(page_size: Vector2) -> bool:
+	return page_size.y > 0.0 and page_size.x / page_size.y >= 1.95
+
+
+func _desktop_book_ui_scale(page_size: Vector2) -> float:
+	if page_size.x <= 0.0 or page_size.y <= 0.0:
+		return 1.0
+	return clampf(
+		minf(page_size.x / BOOK_ART_SIZE.x, page_size.y / BOOK_ART_SIZE.y),
+		0.78,
+		1.08
+	)
+
+
+func _book_art_cover_scale(page_size: Vector2) -> float:
+	if page_size.x <= 0.0 or page_size.y <= 0.0:
+		return 1.0
+	return maxf(page_size.x / BOOK_ART_SIZE.x, page_size.y / BOOK_ART_SIZE.y)
 
 
 func _style_mobile_section_label(label: Label, compact: bool) -> void:
@@ -4037,6 +4616,12 @@ func _style_mobile_book_header(header: BoxContainer, compact: bool, mobile_add_t
 	var spacer := header.get_meta("responsive_spacer") as Control
 	var back_button := header.get_meta("responsive_back") as Button
 	var add_button := header.get_meta("responsive_add") as Button
+	var header_page := header.get_parent() as Control
+	var header_page_size := header_page.size if header_page != null else size
+	if header_page_size.x <= 0.0 or header_page_size.y <= 0.0:
+		header_page_size = size
+	var wide_desktop := not compact and _is_wide_book_layout(header_page_size)
+	var desktop_scale := 1.0 if compact else _desktop_book_ui_scale(header_page_size)
 	if compact:
 		header.move_child(back_button, 0)
 		header.move_child(titles, 1)
@@ -4051,8 +4636,14 @@ func _style_mobile_book_header(header: BoxContainer, compact: bool, mobile_add_t
 	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL if compact else Control.SIZE_SHRINK_BEGIN
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER if compact else HORIZONTAL_ALIGNMENT_LEFT
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER if compact else HORIZONTAL_ALIGNMENT_LEFT
-	title.add_theme_font_size_override("font_size", 34 if compact else 46)
-	subtitle.add_theme_font_size_override("font_size", 16 if compact else 17)
+	title.add_theme_font_size_override(
+		"font_size",
+		34 if compact else roundi((30 if wide_desktop else 46) * desktop_scale)
+	)
+	subtitle.visible = not wide_desktop
+	subtitle.add_theme_font_size_override(
+		"font_size", 16 if compact else roundi(17 * desktop_scale)
+	)
 	title.add_theme_color_override(
 		"font_outline_color", Color("#021318f2") if compact else Color.TRANSPARENT
 	)
@@ -4075,9 +4666,14 @@ func _style_mobile_book_header(header: BoxContainer, compact: bool, mobile_add_t
 		subtitle.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	back_button.visible = true
 	back_button.text = "‹" if compact else "←  Zur Budgetwelt"
-	back_button.custom_minimum_size = Vector2(54, 54) if compact else Vector2(150, 42)
+	back_button.custom_minimum_size = (
+		Vector2(54, 54) if compact
+		else Vector2(150, 42) * desktop_scale
+	)
 	back_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	back_button.add_theme_font_size_override("font_size", 34 if compact else 15)
+	back_button.add_theme_font_size_override(
+		"font_size", 34 if compact else roundi(15 * desktop_scale)
+	)
 	if compact:
 		back_button.add_theme_stylebox_override(
 			"normal", _style(Color("#07191def"), 27, Color("#b98b42"))
@@ -4087,9 +4683,14 @@ func _style_mobile_book_header(header: BoxContainer, compact: bool, mobile_add_t
 		else "＋  Sparziel hinzufügen" if header == savings_header
 		else "＋  Buchung hinzufügen"
 	)
-	add_button.custom_minimum_size = Vector2(54, 54) if compact else Vector2(195, 42)
+	add_button.custom_minimum_size = (
+		Vector2(54, 54) if compact
+		else Vector2(195, 42) * desktop_scale
+	)
 	add_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	add_button.add_theme_font_size_override("font_size", 30 if compact else 15)
+	add_button.add_theme_font_size_override(
+		"font_size", 30 if compact else roundi(15 * desktop_scale)
+	)
 	if compact:
 		add_button.add_theme_stylebox_override(
 			"normal", _style(Color("#dfbd6a"), 27, Color("#f2d78d"))
@@ -4099,8 +4700,17 @@ func _style_mobile_book_header(header: BoxContainer, compact: bool, mobile_add_t
 func _style_mobile_fixed_summaries(compact: bool) -> void:
 	if not is_instance_valid(fixed_summary_row):
 		return
-	fixed_summary_row.add_theme_constant_override("separation", 6 if compact else 44)
+	var summary_page := fixed_summary_row.get_parent() as Control
+	var summary_page_size := summary_page.size if summary_page != null else size
+	if summary_page_size.x <= 0.0 or summary_page_size.y <= 0.0:
+		summary_page_size = size
+	var desktop_scale := 1.0 if compact else _desktop_book_ui_scale(summary_page_size)
+	fixed_summary_row.add_theme_constant_override(
+		"separation",
+		6 if compact else roundi(61 * _book_art_cover_scale(summary_page_size))
+	)
 	for card: Control in fixed_summary_row.get_children():
+		card.custom_minimum_size.y = 92 if compact else 112.0 * desktop_scale
 		card.clip_contents = compact
 		card.add_theme_stylebox_override(
 			"panel",
@@ -4108,16 +4718,31 @@ func _style_mobile_fixed_summaries(compact: bool) -> void:
 			if compact else _style(Color.TRANSPARENT, 0)
 		)
 		var row := card.get_child(0) as HBoxContainer
-		row.add_theme_constant_override("separation", 4 if compact else 14)
-		row.get_child(0).visible = not compact
-		row.get_child(1).visible = not compact
-		(row.get_child(1) as Control).custom_minimum_size = (
-			Vector2(34, 34) if compact else Vector2(62, 62)
+		row.alignment = BoxContainer.ALIGNMENT_CENTER
+		row.add_theme_constant_override(
+			"separation", 4 if compact else roundi(14 * desktop_scale)
 		)
-		((row.get_child(1) as Control).get_child(0) as Control).custom_minimum_size = (
-			Vector2(34, 34) if compact else Vector2(62, 62)
+		var plaque_inset := row.get_child(0) as Control
+		plaque_inset.visible = false
+		plaque_inset.custom_minimum_size.x = 30.0 * desktop_scale
+		var emblem_panel := row.get_child(1) as Control
+		emblem_panel.visible = not compact
+		emblem_panel.custom_minimum_size = (
+			Vector2(34, 34) if compact else Vector2(62, 62) * desktop_scale
+		)
+		var emblem := emblem_panel.get_child(0) as Label
+		emblem.custom_minimum_size = (
+			Vector2(34, 34) if compact else Vector2(62, 62) * desktop_scale
+		)
+		emblem.add_theme_font_size_override(
+			"font_size", 30 if compact else roundi(30 * desktop_scale)
 		)
 		var labels := row.get_child(2) as VBoxContainer
+		labels.size_flags_horizontal = (
+			Control.SIZE_EXPAND_FILL if compact else Control.SIZE_SHRINK_CENTER
+		)
+		labels.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		labels.alignment = BoxContainer.ALIGNMENT_CENTER
 		labels.custom_minimum_size.x = 0
 		var title := labels.get_child(0) as Label
 		var value := labels.get_child(1) as Label
@@ -4127,17 +4752,29 @@ func _style_mobile_fixed_summaries(compact: bool) -> void:
 				else "Noch offen" if card == fixed_summary_row.get_child(1)
 				else "Danach frei"
 			)
-		title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER if compact else HORIZONTAL_ALIGNMENT_LEFT
-		value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER if compact else HORIZONTAL_ALIGNMENT_LEFT
-		title.add_theme_font_size_override("font_size", 13 if compact else 17)
+		title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		title.add_theme_font_size_override(
+			"font_size", 13 if compact else roundi(17 * desktop_scale)
+		)
 		title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if compact else TextServer.AUTOWRAP_OFF
-		value.add_theme_font_size_override("font_size", 20 if compact else 30)
+		value.add_theme_font_size_override(
+			"font_size", 20 if compact else roundi(30 * desktop_scale)
+		)
 
 
 func _style_mobile_simple_summaries(row: BoxContainer, compact: bool) -> void:
 	if not is_instance_valid(row):
 		return
-	row.add_theme_constant_override("separation", 6 if compact else 44)
+	var summary_page := row.get_parent() as Control
+	var summary_page_size := summary_page.size if summary_page != null else size
+	if summary_page_size.x <= 0.0 or summary_page_size.y <= 0.0:
+		summary_page_size = size
+	var desktop_scale := 1.0 if compact else _desktop_book_ui_scale(summary_page_size)
+	row.add_theme_constant_override(
+		"separation",
+		6 if compact else roundi(61 * _book_art_cover_scale(summary_page_size))
+	)
 	for index in row.get_child_count():
 		var card := row.get_child(index) as Control
 		card.clip_contents = compact
@@ -4151,6 +4788,9 @@ func _style_mobile_simple_summaries(row: BoxContainer, compact: bool) -> void:
 		style.content_margin_bottom = 8 if compact else 0
 		card.add_theme_stylebox_override("panel", style)
 		var labels := card.get_child(0) as VBoxContainer
+		labels.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		labels.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		labels.alignment = BoxContainer.ALIGNMENT_CENTER
 		labels.custom_minimum_size.x = 0
 		var title := labels.get_child(0) as Label
 		var value := labels.get_child(1) as Label
@@ -4158,14 +4798,14 @@ func _style_mobile_simple_summaries(row: BoxContainer, compact: bool) -> void:
 			title.text = ["Gespart", "Noch bis Ziel", "Monatlich"][index]
 		title.clip_text = compact
 		title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-		title.horizontal_alignment = (
-			HORIZONTAL_ALIGNMENT_CENTER if compact else HORIZONTAL_ALIGNMENT_LEFT
+		title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		title.add_theme_font_size_override(
+			"font_size", 13 if compact else roundi(17 * desktop_scale)
 		)
-		value.horizontal_alignment = (
-			HORIZONTAL_ALIGNMENT_CENTER if compact else HORIZONTAL_ALIGNMENT_LEFT
+		value.add_theme_font_size_override(
+			"font_size", 20 if compact else roundi(30 * desktop_scale)
 		)
-		title.add_theme_font_size_override("font_size", 13 if compact else 17)
-		value.add_theme_font_size_override("font_size", 20 if compact else 30)
 
 
 func _update_mobile_navigation(active_page: String = "") -> void:
@@ -4812,17 +5452,109 @@ func _refresh(snapshot: Dictionary) -> void:
 
 
 func _on_update_check_finished(result: Dictionary) -> void:
-	status_label.text = str(result.get("message", "Update-Prüfung abgeschlossen."))
-	if str(result.get("status", "")) != "update_available":
+	var message := str(result.get("message", "Update-Prüfung abgeschlossen."))
+	var status := str(result.get("status", ""))
+	status_label.text = message
+	_pending_update_url = ""
+	_pending_update_sha256_url = ""
+	_pending_update_version = ""
+	var was_startup_check := _startup_update_check_active
+	_startup_update_check_active = false
+	if status != "update_available":
+		_automatic_update_active = false
+		if was_startup_check:
+			startup_update_status.text = message
+			startup_update_action.text = "Zur App"
+			startup_update_action.disabled = false
 		return
+	var version := str(result.get("version", "")).strip_edges()
 	var download_url := str(result.get("download_url", "")).strip_edges()
-	if download_url.begins_with("https://github.com/Liitschy/meine-budgetwelt/releases/"):
-		status_label.text = "Neue Version %s gefunden – Download wird geöffnet." % str(
-			result.get("version", "")
+	var sha256_url := str(result.get("sha256_url", "")).strip_edges()
+	if UpdateManager.is_valid_release_urls(version, download_url, sha256_url):
+		_pending_update_version = version
+		_pending_update_url = download_url
+		_pending_update_sha256_url = sha256_url
+		var available_message := "Neue Version %s ist verfügbar." % str(
+			version
 		)
-		OS.shell_open(download_url)
+		status_label.text = available_message
+		if was_startup_check and UpdateManager.can_install_automatically():
+			_automatic_update_active = true
+			startup_update_status.text = (
+				"Version %s wird automatisch heruntergeladen und sicher geprüft …" % version
+			)
+			startup_update_action.text = "Automatisches Update läuft …"
+			startup_update_action.disabled = true
+			UpdateManager.download_update(version, download_url, sha256_url)
+		elif was_startup_check:
+			startup_update_status.text = available_message
+			startup_update_action.text = "Update herunterladen"
+			startup_update_action.disabled = false
+		else:
+			update_confirmation.popup_centered(Vector2i(mini(520, int(size.x) - 24), 230))
 	else:
 		status_label.text = "Neue Version gefunden, aber der Download-Link ist ungültig."
+		if was_startup_check:
+			startup_update_status.text = status_label.text
+			startup_update_action.text = "Zur App"
+			startup_update_action.disabled = false
+
+
+func _on_update_download_status(result: Dictionary) -> void:
+	var status := str(result.get("status", ""))
+	var message := str(result.get("message", "Der Update-Vorgang wurde beendet."))
+	status_label.text = message
+	startup_status_panel.visible = true
+	startup_status_panel.move_to_front()
+	startup_update_status.text = message
+
+	if status in ["checking_checksum", "downloading", "busy"]:
+		startup_update_action.text = "Bitte warten …"
+		startup_update_action.disabled = true
+		return
+
+	if status != "ready":
+		_automatic_update_active = false
+		startup_update_action.text = "Erneut versuchen"
+		startup_update_action.disabled = false
+		return
+
+	var backup := StorageManager.create_backup()
+	var backup_ready := (
+		bool(backup.get("success", false))
+		or bool(backup.get("nothing_to_backup", false))
+	)
+	if not backup_ready:
+		_automatic_update_active = false
+		status_label.text = "Das Update wurde nicht gestartet: %s" % str(
+			backup.get("message", "Die Datensicherung ist fehlgeschlagen.")
+		)
+		startup_update_status.text = status_label.text
+		startup_update_action.text = "Zur App"
+		startup_update_action.disabled = false
+		return
+
+	var installer_path := str(result.get("installer_path", ""))
+	var automatic_install := (
+		_automatic_update_active and UpdateManager.can_install_automatically()
+	)
+	if not UpdateManager.launch_verified_installer(installer_path, automatic_install):
+		_automatic_update_active = false
+		status_label.text = "Der geprüfte Installer konnte nicht gestartet werden."
+		startup_update_status.text = status_label.text
+		startup_update_action.text = "Zur App"
+		startup_update_action.disabled = false
+		return
+
+	_automatic_update_active = false
+	status_label.text = "Das geprüfte Update wurde gestartet."
+	startup_update_status.text = (
+		"Das Update wird automatisch installiert. "
+		+ "Meine Budgetwelt startet danach selbstständig neu."
+		if automatic_install
+		else "Der geprüfte Installer wurde gestartet. Die App wird jetzt geschlossen."
+	)
+	get_tree().quit()
 
 
 func _style(

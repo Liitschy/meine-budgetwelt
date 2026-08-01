@@ -24,30 +24,131 @@ Fixkosten und einen kompakten Monatsfluss vom Kontostand bis zum Sparziel.
 - Wochenausgaben erfassen und das verbleibende Wochenbudget sehen;
 - vergangene Monate wieder aufrufen;
 - lokale Datenspeicherung und Sicherungen;
-- Update-Prüfung über GitHub Pages mit sicherem Download aus GitHub Releases.
+- Update-Prüfung über ein GitHub-Release-Manifest mit sicherem Setup-Download.
 
 Der frühere Wocheneinkauf und Speiseplan sind nicht mehr Teil der sichtbaren
 Anwendung. Bereits vorhandene Einkaufsdaten werden nicht ungefragt gelöscht.
 
-## Windows-Testversion
+## Verbindliche Weiterentwicklung
 
-Die portable Testversion liegt unter:
+Nach der aktuellen Fehlerbereinigung werden folgende Funktionen kontrolliert
+neu aufgebaut:
 
-`build/windows/Budget-und-Wocheneinkauf.exe`
+- KI-gestützte Wochenplanung mit OpenAI für Rezepte, Einkaufsliste,
+  Resteverwertung und die Einhaltung des Wochenbudgets;
+- dauerhaft sichtbarer Wocheneinkauf, Rezeptbereich und Sieben-Tage-Speiseplan
+  mit voraussichtlichen Kosten pro Rezept, Tag und Woche;
+- ausschließlich lesender Bankabruf über GoCardless Bank Account Data nach
+  einem ausdrücklichen Knopfdruck;
+- zwingender serverseitiger Login für die PWA mit höchstens wenigen
+  ausdrücklich freigeschalteten Benutzern und ohne öffentliche Registrierung;
+- gemeinsamer, selbst gehosteter Datenbestand für Windows-App und PWA über
+  einen isolierten Budgetwelt-Serverdienst auf dem eigenen Root-Server;
+- Import neuer Buchungen mit Dublettenprüfung und Bestätigung;
+- automatische Updateprüfung beim Start mit sichtbarem Start-/Statusbildschirm
+  sowie autonomem, geprüftem Windows-Update und Neustart;
+- eine geführte, deutschsprachige Windows-Installation über eine kompakte
+  `Meine-Budgetwelt-Setup-<Version>.exe` statt einer portablen Datei als
+  regulärem Endnutzer-Download;
+- weiterhin vollständige manuelle Nutzung ohne Bankverbindung.
 
-Eine Installation ist nicht erforderlich.
+Die genaue Reihenfolge und die Sicherheitsgrenzen stehen in
+[`docs/ROADMAP.md`](docs/ROADMAP.md).
+
+Wichtig: Die bisher öffentliche PWA 0.39.2 auf GitHub Pages wurde am
+31. Juli 2026 deaktiviert. Der Workflow veröffentlicht nicht automatisch und
+benötigt zusätzlich die ausdrückliche Freigabevariable
+`PWA_AUTH_ENABLED=true`. Vor der nächsten PWA-Veröffentlichung wird ein echter
+serverseitiger Zugangsschutz umgesetzt; eine reine Passwortabfrage im Browser
+reicht nicht.
+
+Der lokale Budgetwelt-Server liegt unter `server/MeineBudgetwelt.Server`.
+Es wird als eigenständige Windows-EXE veröffentlicht, bindet standardmäßig nur
+an `127.0.0.1:48732` und verwendet ausschließlich eine eigene eingebettete
+SQLite-Datei. Bestehende Datenbanken und Datenbankdienste werden nicht
+verändert.
+
+Der Kontenkern kann inzwischen das erste Administratorkonto sicher
+initialisieren, getrennte PWA- und Desktop-Sitzungen ausstellen, Benutzer
+sperren und gemeinsame Budgetgruppen verwalten. Ein automatisierter
+Durchstichtest prüft Anmeldung, Benutzeranlage, Gruppenzuordnung und die
+sofortige Wirkung einer Kontosperre.
+
+Einladungen und die Kennwortwiederherstellung sind ebenfalls serverseitig
+umgesetzt: zeitlich begrenzte Einmallinks werden ausschließlich über
+konfiguriertes TLS-geschütztes SMTP versendet. Eine Kennwortänderung widerruft
+alle alten Sitzungen. Im automatisierten Test werden die Nachrichten in einem
+isolierten Abholverzeichnis geprüft; reale SMTP-Zugangsdaten sind nicht im
+Repository enthalten.
+
+Der lokale Entwicklungsstand verbindet inzwischen Windows-App und PWA mit
+diesem Server. Beide verwenden dasselbe Konto, dieselbe Budgetgruppe und einen
+versionierten Snapshot der acht fachlichen Datendateien. Ein automatisierter
+Durchstichtest über zwei getrennte Godot-Clients prüft Änderungen in beide
+Richtungen und den Schutz gegen veraltetes Überschreiben. Der Server liefert
+außerdem den PWA-Export unter derselben Herkunft wie die geschützte API aus.
+Ein echter Browserlauf hat Anmeldung, persönliche Begrüßung,
+Synchronisationsstatus und Sitzungswiederherstellung nach Neuladen bestätigt.
+Der Windows-Client verwendet im Produktionsbuild standardmäßig
+`https://budget.leno.info`; die PWA verwendet automatisch ihre eigene Herkunft.
+Der separate Glas-Anmeldebildschirm wurde zusätzlich in einer echten
+390 × 844-Pixel-Browseransicht ohne horizontales Abschneiden geprüft.
+
+Der installierbare Serverdienst, die responsive Admin-Oberfläche und das
+autonome kryptografisch signierte Serverupdate sind lokal umgesetzt. Ein
+vollständiger erhöhter Windows-Test hat Erstinstallation, eigenen Dienst,
+Updateaufgabe, Admin-Anmeldung, Datensicherung, Update, erneuten gesunden Start
+und Deinstallation geprüft. `budget.leno.info` ist in Server und Caddy-Fragment
+vorbereitet; die Installation auf dem echten Root-Server, HTTPS-Abnahme und
+Abnahme auf realen Mobilgeräten stehen noch aus. Es wurde noch nichts
+veröffentlicht.
+
+Vollständige lokale Prüfungen:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-project.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-server.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-client-server.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-pwa.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-server-updater.ps1
+# benötigt für den isolierten Windows-Diensttest ein administratives Fenster
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-server-installer.ps1
+```
+
+## Windows-Testversion und geplanter Installer
+
+Die rohe portable Godot-EXE unter `build/windows` ist nur ein internes
+Entwicklungs- und Testartefakt. Der lokale Entwicklungsstand erzeugt eine
+kompakte, installierbare Setup-EXE. Der Installer führt verständlich durch Installation,
+Aktualisierung, Reparatur und Deinstallation. Eine Desktopverknüpfung ist
+optional; der Startmenü-Eintrag wird automatisch angelegt. Persönliche Daten
+liegen außerhalb des Programmordners und bleiben bei Updates erhalten.
+
+Der lokale Probelauf komprimiert die rund 114,5 MB große Godot-App auf eine
+Setup-Datei von rund 31,9 MB. Installation, Start und Deinstallation wurden in
+einem getrennten Testverzeichnis erfolgreich geprüft.
 
 ## Updates
 
-Der Button **Nach Updates suchen** liest die veröffentlichte Versionsdatei
-unter GitHub Pages. Wenn eine neuere Version verfügbar ist, öffnet die App
-den offiziellen Windows-Download aus den GitHub Releases dieses Projekts.
+Die veröffentlichte Version 0.39.2 liest die Versionsdatei noch über den Button
+**Nach Updates suchen**. Ab dem lokalen Entwicklungsstand 0.39.3 prüft die App
+beim Start automatisch. Eine regulär installierte Windows-App lädt nur den
+offiziellen Setup-Installer und dessen SHA-256-Datei aus den GitHub Releases
+dieses Projekts, verwirft abweichende Downloads, erstellt eine Datensicherung,
+schließt sich kontrolliert, installiert das Update still und startet danach
+neu. Portable Entwicklungs-EXEs werden nicht automatisch überschrieben. Die
+0.39.3 muss einmal manuell installiert werden; danach können künftige
+veröffentlichte Versionen autonom übernommen werden.
 
 Ein Tag im Format `v1.2.3` muss zur Versionsnummer in `project.godot` passen.
-Der Workflow `Windows-Version veröffentlichen` erzeugt anschließend
-automatisch die portable EXE und eine SHA-256-Prüfsumme.
+Der Workflow `Windows-Version veröffentlichen` erzeugt die interne Godot-App,
+verpackt sie mit NSIS als
+`Meine-Budgetwelt-Setup-<Version>.exe` und veröffentlicht nur diesen Installer
+mit seiner SHA-256-Prüfsumme.
 
 ## Datenschutz
 
-Alle Budget- und Buchungsdaten werden ausschließlich lokal auf diesem PC
-gespeichert. Es besteht keine Online-Banking- oder KI-Verbindung.
+Version 0.39.2 speichert Budget- und Buchungsdaten ausschließlich lokal und
+enthält noch keine Online-Banking- oder KI-Verbindung. Die geplanten OpenAI-
+und GoCardless-Funktionen verwenden geschützte Backenddienste; API-Schlüssel,
+PIN und TAN dürfen niemals in der App oder im Repository gespeichert werden.

@@ -22,10 +22,17 @@ var _data: Dictionary = DEFAULT_DATA.duplicate(true)
 
 
 func _ready() -> void:
+	reload_from_storage(false)
+
+
+func reload_from_storage(emit_change: bool = true) -> void:
+	_data = DEFAULT_DATA.duplicate(true)
 	var saved := StorageManager.load_budget_data()
 	for key: String in DEFAULT_DATA:
 		if saved.has(key):
 			_data[key] = maxf(float(saved[key]), 0.0)
+	if emit_change:
+		budget_changed.emit(get_snapshot())
 
 
 func update_budget(values: Dictionary) -> bool:

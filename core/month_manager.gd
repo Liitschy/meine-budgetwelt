@@ -15,18 +15,30 @@ var _applying_month := false
 
 
 func _ready() -> void:
+	reload_from_storage(false)
+
+	BudgetManager.budget_changed.connect(_on_budget_changed)
+	FixedCostManager.fixed_costs_changed.connect(_on_fixed_costs_changed)
+
+
+func reload_from_storage(emit_change: bool = true) -> void:
+	_history = {
+		"schema_version": SCHEMA_VERSION,
+		"active_month": "",
+		"months": {},
+	}
 	var saved := StorageManager.load_month_history()
 	if _is_valid_history(saved):
 		_history = saved
 	else:
 		_migrate_current_data()
 
-	BudgetManager.budget_changed.connect(_on_budget_changed)
-	FixedCostManager.fixed_costs_changed.connect(_on_fixed_costs_changed)
-
 	var active_id := str(_history.active_month)
 	if _history.months.has(active_id):
 		_apply_month(active_id)
+	if emit_change:
+		active_month_changed.emit(active_id, MonthUtils.display_name(active_id))
+		history_changed.emit()
 
 
 func get_active_month_id() -> String:

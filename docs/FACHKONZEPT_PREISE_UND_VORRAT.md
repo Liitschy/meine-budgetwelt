@@ -10,6 +10,22 @@ bereits vorhandene Vorräte.
 Alle vor dem Einkauf angezeigten Preise sind Schätzwerte. Nach dem Einkauf kann
 der tatsächliche Kassenbetrag erfasst werden.
 
+## Verbindlicher Produktbestandteil
+
+Die KI-gestützte Planung mit OpenAI ist ein fester Bestandteil des
+Zielprodukts. Sie wird nach der technischen Fehlerbereinigung und der
+Stabilisierung der lokalen Planungslogik umgesetzt.
+
+Die KI erstellt Vorschläge, aber sie ist nicht die Quelle der verbindlichen
+Budgetberechnung. Wochenbudget, Sicherheitspuffer, Packungskosten und
+Allergieprüfungen werden zusätzlich durch deterministische lokale Logik
+validiert. Ein Plan darf erst übernommen werden, wenn diese Prüfung erfolgreich
+war.
+
+Wocheneinkauf, Rezepte und Speiseplan sind dauerhaft sichtbare Bereiche der
+Anwendung. Sie werden nicht als versteckte Altmodule oder reine Hintergrundlogik
+geführt.
+
 ## Preisgrundlage
 
 - Ausgangspunkt sind realistische Durchschnittspreise deutscher Supermärkte und
@@ -108,6 +124,22 @@ Für die Planung können gespeichert werden:
 
 Gesundheitsrelevante Einschränkungen haben immer Vorrang vor Preis und Komfort.
 
+## OpenAI-Integration und Datenminimierung
+
+- OpenAI wird über einen geschützten Backenddienst und nicht direkt aus der PWA
+  oder Windows-EXE aufgerufen.
+- Die Antwort wird in einem festen strukturierten Schema für Tage, Rezepte,
+  Zutaten, Einkaufsliste und Schätzkosten angefordert.
+- Übermittelt werden nur die vom Benutzer bestätigten Planungsangaben.
+- Vollständige Kontoumsätze, IBAN, Kontoinhaber und Bankzugangsdaten gehören
+  nicht zu den KI-Eingaben.
+- Ein aus manuellen oder importierten Buchungen abgeleitetes Wochenbudget wird
+  nur als Betrag und nur nach Bestätigung verwendet.
+- API-Schlüssel werden weder im Repository noch in lokalen Sicherungen
+  gespeichert.
+- Bei Nichterreichbarkeit bleiben vorhandene Pläne und eine manuelle Planung
+  nutzbar; die KI-Planung bleibt dennoch Teil des verbindlichen Zielumfangs.
+
 ## Ablauf eines Wocheneinkaufs
 
 1. Wochenbudget festlegen.
@@ -121,6 +153,8 @@ Gesundheitsrelevante Einschränkungen haben immer Vorrang vor Preis und Komfort.
 
 Die Anwendung zeigt bei jeder Planung:
 
+- voraussichtliche Kosten jedes Rezepts;
+- voraussichtliche Tageskosten;
 - geschätzte Einkaufssumme;
 - verbleibenden Sicherheitspuffer;
 - vollständiges Wochenbudget;
@@ -128,6 +162,11 @@ Die Anwendung zeigt bei jeder Planung:
 - angenommene Eigenmarken;
 - neu zu kaufende Packungen;
 - voraussichtliche Restmengen.
+
+Die Wochenansicht stellt Planungsziel, voraussichtliche Gesamtkosten,
+Sicherheitspuffer und erwarteten Restbetrag unmittelbar nebeneinander dar.
+Nach dem Einkauf werden Schätzwert und tatsächlicher Kassenbetrag getrennt
+angezeigt.
 
 Vorgesehener Hinweis:
 
@@ -143,4 +182,6 @@ Packungsgröße speichern. Diese persönlichen Werte erhalten bei zukünftigen
 Planungen Vorrang vor allgemeinen Durchschnittspreisen, sofern sie noch
 ausreichend aktuell sind.
 
-Finanzdaten werden nicht automatisch an einen KI-Dienst übermittelt.
+Finanzdaten werden nicht automatisch an einen KI-Dienst übermittelt. Für die
+Planung werden ausschließlich notwendige, bestätigte Eingaben und abgeleitete
+Budgetwerte verwendet.

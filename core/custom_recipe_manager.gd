@@ -6,7 +6,13 @@ var _recipes: Array = []
 
 
 func _ready() -> void:
+	reload_from_storage(false)
+
+
+func reload_from_storage(emit_change: bool = true) -> void:
 	_recipes = StorageManager.load_custom_recipes()
+	if emit_change:
+		recipes_changed.emit(get_recipes())
 
 
 func get_recipes() -> Array:

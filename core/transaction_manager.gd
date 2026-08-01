@@ -8,9 +8,19 @@ var _months: Dictionary = {}
 
 
 func _ready() -> void:
+	reload_from_storage(false)
+
+	MonthManager.active_month_changed.connect(_on_active_month_changed)
+
+
+func reload_from_storage(emit_change: bool = true) -> void:
 	var saved := StorageManager.load_transactions()
 	_months = saved.get("months", {}) if saved.get("months", {}) is Dictionary else {}
-	MonthManager.active_month_changed.connect(_on_active_month_changed)
+	if emit_change:
+		active_transactions_changed.emit(
+			get_active_transactions(),
+			get_active_summary()
+		)
 
 
 func get_active_transactions() -> Array:

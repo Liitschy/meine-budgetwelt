@@ -1,0 +1,58 @@
+name: Projektqualität prüfen
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository laden
+        uses: actions/checkout@v4
+
+      - name: .NET installieren
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Server-Abhängigkeiten wiederherstellen
+        run: dotnet restore server/MeineBudgetwelt.Server/MeineBudgetwelt.Server.csproj --locked-mode
+
+      - name: Server bauen und Warnungen prüfen
+        run: dotnet build server/MeineBudgetwelt.Server/MeineBudgetwelt.Server.csproj --configuration Release --no-restore
+
+      - name: Godot installieren
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.7.1
+          use-dotnet: false
+          include-templates: false
+
+      - name: Assets importieren
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --editor --import --path . 2>&1 | tee godot-import.log
+          if grep -E '(^|[[:space:]])(SCRIPT ERROR|ERROR):' godot-import.log; then
+            echo "Godot-Import enthält Engine- oder Skriptfehler."
+            exit 1
+          fi
+
+      - name: Godot-Tests ausführen
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --scene res://tests/TestRunner.tscn 2>&1 | tee godot-tests.log
+          if grep -E '(^|[[:space:]])(SCRIPT ERROR|ERROR):' godot-tests.log; then
+            echo "Godot-Testlauf enthält Engine- oder Skriptfehler."
+            exit 1
+          fi
+
+      - name: Diff-Format prüfen
+        run: git diff --check

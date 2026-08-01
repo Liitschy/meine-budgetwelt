@@ -10,9 +10,16 @@ var _active_week := 1
 
 
 func _ready() -> void:
+	reload_from_storage(false)
+
+	MonthManager.active_month_changed.connect(_on_active_month_changed)
+
+
+func reload_from_storage(emit_change: bool = true) -> void:
 	var saved := StorageManager.load_shopping_data()
 	_months = saved.get("months", {}) if saved.get("months", {}) is Dictionary else {}
-	MonthManager.active_month_changed.connect(_on_active_month_changed)
+	if emit_change:
+		_emit_current()
 
 
 func get_active_week() -> int:

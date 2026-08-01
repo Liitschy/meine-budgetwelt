@@ -7,7 +7,7 @@ config_version=5
 
 config/name="Budget & Wocheneinkauf"
 config/description="Einfache lokale Budgetplanung"
-config/version="0.39.2"
+config/version="0.39.3"
 config/icon="res://assets/app_icon.svg"
 run/main_scene="res://app/Main.tscn"
 
@@ -22,6 +22,7 @@ TransactionManager="*res://core/transaction_manager.gd"
 ShoppingManager="*res://core/shopping_manager.gd"
 MealPlanManager="*res://core/meal_plan_manager.gd"
 CustomRecipeManager="*res://core/custom_recipe_manager.gd"
+SyncManager="*res://core/sync_manager.gd"
 UpdateManager="*res://core/update_manager.gd"
 
 [display]
@@ -40,4 +41,8 @@ environment/defaults/default_clear_color=Color(0.015, 0.075, 0.098, 1)
 
 [application_update]
 
-manifest_url="https://liitschy.github.io/meine-budgetwelt/update-manifest.json"
+manifest_url="https://github.com/unique1986/meine-budgetwelt/releases/latest/download/update-manifest.json"
+
+[application_sync]
+
+server_url="https://budget.leno.info"

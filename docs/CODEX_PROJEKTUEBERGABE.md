@@ -1,6 +1,7 @@
 # Codex-Projektübergabe: Meine Budgetwelt
 
-Stand: Version **0.39.2** vom 30. Juli 2026
+Stand: lokaler Entwicklungsstand **0.39.3** vom 1. August 2026;
+zuletzt veröffentlicht ist **0.39.2**
 
 Diese Datei enthält den aktuellen Projektstand und kann zusammen mit dem
 Repository an einen neuen Codex-Task übergeben werden. Repository-Code und
@@ -11,17 +12,30 @@ aktuelle Tests haben bei Widersprüchen Vorrang vor älteren Chatverläufen.
 Den folgenden Text kann man vollständig in einen neuen Codex-Task kopieren:
 
 > Arbeite am Projekt „Meine Budgetwelt“ im Repository
-> `https://github.com/Liitschy/meine-budgetwelt`.
+> `https://github.com/unique1986/meine-budgetwelt`.
 >
 > Lies vor jeder Änderung zuerst
 > `docs/CODEX_PROJEKTUEBERGABE.md`, `README.md`, den aktuellen Git-Status und
-> die betroffenen Dateien. Die App wird mit Godot 4.7.1 entwickelt und als
-> portable Windows-App sowie als PWA für iPhone und Android veröffentlicht.
+> die betroffenen Dateien. Die App wird mit Godot 4.7.1 entwickelt und für
+> Endnutzer als installierbare Windows-Setup-EXE sowie als PWA für iPhone und
+> Android veröffentlicht. Die portable Windows-Datei ist nur ein internes
+> Entwicklungs- und Testartefakt.
 >
 > Bewahre alle vorhandenen Funktionen, lokalen Finanzdaten und das bestehende
-> Datenformat. Es gibt ausdrücklich keine Online-Banking-Anbindung und keine
-> KI-Verbindung. Der frühere Wocheneinkauf und Speiseplan sind nicht Teil der
-> sichtbaren Anwendung.
+> Datenformat. Version 0.39.2 besitzt noch keine Bank- oder KI-Verbindung und
+> zeigt den früheren Wocheneinkauf nicht an. Die verbindliche Roadmap unter
+> `docs/ROADMAP.md` führt nach der Fehlerbereinigung eine OpenAI-gestützte
+> Wochenplanung und einen ausschließlich lesenden, manuell ausgelösten
+> GoCardless-Bankabruf ein. Wocheneinkauf, Rezepte und Speiseplan werden dabei
+> wieder dauerhaft sichtbar und zeigen voraussichtliche Kosten. Zusätzlich wird
+> bei jedem Start automatisch nach Updates gesucht und der Status auf einem
+> Start-/Statusbildschirm angezeigt. Die regulär installierte Windows-App lädt,
+> prüft und installiert neue Versionen selbständig und startet danach neu. Die
+> PWA benötigt vor jeder weiteren
+> Veröffentlichung zwingend einen serverseitigen Login für höchstens wenige
+> freigeschaltete Konten; eine Client-PIN ist kein Schutz. Implementiere
+> niemals Zahlungen und speichere keine PIN, TAN oder Anbieter-Geheimnisse im
+> Client.
 >
 > Das festgelegte Design ist eine magische Budgetlandschaft mit dunklem
 > Navy-/Petrol-Hintergrund, leuchtendem türkisfarbenem Wasser, goldenen
@@ -47,8 +61,10 @@ die ihre Daten manuell eintragen möchten. Die App soll auf einen Blick zeigen:
 - Sparziele;
 - Einnahmen und Ausgaben.
 
-Die App ist kein Bankprogramm. Sie ruft keine Kontodaten ab und verarbeitet
-keine PIN, TAN oder Zugangsdaten.
+Die aktuelle Version ist kein Bankprogramm und ruft noch keine Kontodaten ab.
+Die Roadmap ergänzt später einen ausschließlich lesenden Abruf über GoCardless.
+Die App verarbeitet auch dann keine PIN, TAN oder Banking-Passwörter und löst
+keine Zahlungen aus.
 
 ## 3. Aktueller sichtbarer Funktionsumfang
 
@@ -98,20 +114,29 @@ keine PIN, TAN oder Zugangsdaten.
 - manuelle Datensicherung in einen Zeitstempel-Ordner;
 - Wiederherstellung einer Sicherung;
 - automatische Sicherheitssicherung vor einer Wiederherstellung;
-- Update-Prüfung über ein Manifest auf GitHub Pages;
+- Update-Prüfung über ein Manifest im neuesten GitHub Release;
 - Windows-Downloads über GitHub Releases.
 
-## 4. Nicht mehr Bestandteil der sichtbaren App
+Der reguläre Windows-Download wird vor der nächsten Endnutzerversion von der
+portablen App-EXE auf eine komprimierte, deutschsprachige NSIS-Setup-EXE
+umgestellt. Buildskript und Release-Workflow sind im lokalen Entwicklungsstand
+umgesetzt. Sie installiert benutzerbezogen, legt einen Startmenü-Eintrag an,
+bietet eine optionale Desktopverknüpfung und unterstützt Update sowie
+Deinstallation. Vor Updates wird gesichert; lokale Budgetdaten bleiben
+standardmäßig erhalten. Reparatur, Versionsupdate, Downgrade-Schutz und
+Rückfall auf die bisherige Programmdatei sind umgesetzt und isoliert geprüft.
+
+## 4. In Version 0.39.2 nicht Bestandteil der sichtbaren App
 
 Der frühere Bereich „Wocheneinkauf“ mit Rezepten, Speiseplan, KI-Vorschlägen,
 Vorratsschrank und Schichtarbeit wurde bewusst entfernt.
 
 Einige ältere interne Module und Datendateien für Einkauf, Rezepte und
 Speisepläne existieren weiterhin. Sie werden zur Datenverträglichkeit nicht
-ungefragt gelöscht, sollen aber ohne neuen ausdrücklichen Auftrag nicht wieder
-in der Oberfläche erscheinen.
+ungefragt gelöscht. Die Roadmap beauftragt ihre kontrollierte Prüfung und den
+Neuaufbau einer Wochenplanung nach Abschluss der Fehlerbereinigung.
 
-Ebenfalls nicht vorhanden:
+Im veröffentlichten Stand 0.39.2 ebenfalls noch nicht vorhanden:
 
 - Online-Banking;
 - Kontosynchronisierung;
@@ -119,6 +144,69 @@ Ebenfalls nicht vorhanden:
 - OpenAI- oder andere KI-API;
 - Serverkonto oder Benutzeranmeldung;
 - automatische Update-Installation.
+
+OpenAI-Wochenplanung, verbindlicher PWA-Login und read-only-GoCardless-Abruf
+sind inzwischen verbindlicher Zielumfang. Ebenso verbindlich sind der sichtbare
+Wocheneinkauf mit Rezepten, Speiseplan und Schätzkosten sowie die automatische
+Updateprüfung beim Start. Die Synchronisierung ist inzwischen verbindlich:
+Windows-App und PWA verwenden dieselben Serverkonten, Budgetgruppen und
+fachlichen Daten auf einem eigenen Budgetwelt-Dienst des Root-Servers. Die
+regulär installierte Windows-App wird nach Manifest- und SHA-256-Prüfung
+autonom aktualisiert; portable Entwicklungs-EXEs werden nicht automatisch
+überschrieben.
+
+Das erste isolierte Servergrundgerüst liegt unter
+`server/MeineBudgetwelt.Server`. Es veröffentlicht eine eigenständig
+lauffähige `Meine-Budgetwelt-Server.exe`, bindet standardmäßig nur an
+`127.0.0.1:48732`, verwendet eine eigene SQLite-Datei und besitzt einen
+geprüften Gesundheitsendpunkt. Der Release-Build und ein isolierter Starttest
+sind bestanden; der NuGet-Abhängigkeitsbaum enthält zum Prüfzeitpunkt keine
+bekannte Schwachstelle.
+
+Im lokalen, noch unveröffentlichten Entwicklungsstand sind auf diesem Kern
+außerdem bereits umgesetzt und isoliert geprüft:
+
+- einmalige Anlage des ersten Systemadministrators ohne Kennwort in der
+  Befehlszeile;
+- getrennte sichere Sitzungen für PWA und Desktop;
+- Benutzeranlage, Aktivierung und Sperrung mit Sitzungswiderruf;
+- gemeinsame Budgetgruppen mit den Rollen `owner`, `manager` und
+  `member`;
+- 48 Stunden gültige, einmal verwendbare Einladungen mit optionaler
+  Budgetgruppenzuordnung;
+- 30 Minuten gültige Kennwort-Resetlinks über TLS-geschütztes SMTP und
+  Sitzungswiderruf nach erfolgreicher Änderung;
+- Begrenzung fehlgeschlagener Anmeldeversuche pro Client-IP.
+- serverseitig validierte, versionierte Synchronisation aller acht fachlichen
+  Datendateien mit Konfliktschutz;
+- Desktop-Anmeldung mit verschlüsselt lokal gespeichertem, serverseitig
+  widerrufbarem Sitzungstoken;
+- separate PWA-Anmeldung im freigegebenen Glas-Design mit sicherem Sitzungscookie;
+- standardmäßiges Desktop-Serverziel `https://budget.leno.info`, während die
+  PWA automatisch dieselbe Herkunft wie ihre Serverauslieferung verwendet;
+- responsiver separater Anmeldebildschirm, im echten 390 × 844-Pixel-
+  Browserlauf vollständig und ohne horizontales Abschneiden geprüft;
+- persönliche tageszeitabhängige Begrüßung und sichtbarer Synchronisationsstatus;
+- PWA-Auslieferung durch denselben Server und dieselbe Herkunft wie die API;
+- automatischer Durchstichtest Server → Client A → Client B → Client A;
+- echter Browserlauf mit PWA-Anmeldung und Sitzungswiederherstellung nach
+  Neuladen;
+- reproduzierbarer PWA-Exporttest einschließlich Sicherheitsheadern,
+  MIME-Typen, Cookie-Eigenschaften und unauthentifiziertem API-Zugriffsschutz.
+- responsive Admin-Oberfläche im freigegebenen Glas-Design für Benutzer,
+  Sperren, Budgetgruppen, Rollen, Einladungen und Serverstatus;
+- autonome Serverupdate-Aufgabe nach Systemstart und täglich, mit RSA-signiertem
+  Manifest, SHA-256, Versionsschutz, Datensicherung und vollständigem
+  Programm-Rückfall;
+- vorbereitete Serverkonfiguration und Caddy-Prüffassung für
+  `https://budget.leno.info` mit internem Upstream `127.0.0.1:48732`.
+
+Der installierbare Windows-Serverdienst ist im lokalen Entwicklungsstand
+umgesetzt und durch einen erhöhten vollständigen Setup-/Dienst-/Admin-/Update-/
+Deinstallationslauf geprüft. Noch offen sind die Installation auf dem echten
+Root-Server, die Validierung und Aktivierung der bereitgestellten Caddy-
+Ergänzung, die öffentliche HTTPS-Abnahme sowie die Abnahme auf echten
+Mobilgeräten. Es wurde noch kein Serverrelease veröffentlicht.
 
 ## 5. Verbindliche Designrichtung
 
@@ -143,6 +231,13 @@ Ebenfalls nicht vorhanden:
 - Inhalte müssen im Vollbild die verfügbare Fläche sinnvoll nutzen;
 - keine winzigen, weit auseinandergezogenen Bedienelemente.
 
+Die drei am 31. Juli 2026 erzeugten Vorschaubilder für Desktop-Login,
+Mobil-Login und angemeldete Startseite wurden ausdrücklich als exakte
+Zielrichtung freigegeben. Die vorhandene zentrale Budgetwelt-Illustration
+bleibt unverändert; Navigation, Anmeldung und Zusammenfassung erhalten den
+gezeigten dunklen Glas-Stil. Die Überschrift wird durch `Guten Morgen`,
+`Guten Tag` oder `Guten Abend` plus Nutzername ersetzt.
+
 ### iPhone und andere Mobilgeräte
 
 - Hochformat;
@@ -166,7 +261,8 @@ Ebenfalls nicht vorhanden:
 - Landschaftsansicht: `ui/budget_world_view.gd`
 - Renderer: GL Compatibility
 - Desktop-Viewport: 1440 × 900
-- aktuelle Version: 0.39.2
+- lokaler Entwicklungsstand: 0.39.3
+- zuletzt veröffentlichte Version: 0.39.2
 
 Wichtige Autoloads aus `project.godot`:
 
@@ -238,8 +334,12 @@ Wichtige Regeln:
 - Sicherungen validieren JSON-Dateien vor der Wiederherstellung;
 - vor dem Überschreiben aktueller Daten wird eine Sicherheitssicherung erzeugt.
 
-Die PWA speichert lokal im Browserbereich des jeweiligen Geräts. Windows- und
-iPhone-Daten werden derzeit nicht miteinander synchronisiert.
+Die PWA und die Windows-App halten weiterhin eine lokale Offline-Kopie im
+Speicherbereich des jeweiligen Geräts. Im lokalen Entwicklungsstand werden die
+acht fachlichen Datendateien nach Anmeldung über dieselbe Budgetgruppe des
+eigenen Servers in beide Richtungen synchronisiert. Der Serverstand ist dabei
+versioniert; ein veralteter Client darf neuere Daten nicht unbemerkt
+überschreiben.
 
 ## 9. Budgetregeln
 
@@ -279,10 +379,21 @@ kompakten Ansicht werden die Landschaft und Glaskarten verwendet.
 Vor jeder Übergabe mindestens:
 
 ```powershell
-$godot = 'C:\Godot\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64_console.exe'
-& $godot --headless --path . --scene res://tests/TestRunner.tscn
-git diff --check
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-project.ps1
 ```
+
+Für den aktuellen Server-/Synchronisationsblock zusätzlich:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-server.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-client-server.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-pwa.ps1
+```
+
+Der Prüflauf importiert bei einem frischen Checkout zuerst alle Assets, führt
+danach die Testszene und `git diff --check` aus und wertet Ressourcen- oder
+Skriptfehler auch dann als Fehlschlag, wenn Godot selbst Exitcode 0 liefert.
+Ein abweichender Godot-Pfad kann mit `-GodotPath` übergeben werden.
 
 Windows-Export:
 
@@ -307,15 +418,14 @@ Zusätzlich visuell prüfen:
 
 Repository:
 
-`https://github.com/Liitschy/meine-budgetwelt`
+`https://github.com/unique1986/meine-budgetwelt`
 
-Aktuelle PWA:
-
-`https://liitschy.github.io/meine-budgetwelt/v0.39.2/`
+PWA-Status: **GitHub Pages am 31. Juli 2026 deaktiviert; keine öffentliche
+PWA bis zur Abnahme des serverseitigen Logins.**
 
 Aktuelle Windows-Version:
 
-`https://github.com/Liitschy/meine-budgetwelt/releases/download/v0.39.2/Budget-und-Wocheneinkauf-0.39.2.exe`
+`https://github.com/unique1986/meine-budgetwelt/releases/download/v0.39.2/Budget-und-Wocheneinkauf-0.39.2.exe`
 
 Veröffentlichungsablauf:
 
@@ -325,21 +435,32 @@ Veröffentlichungsablauf:
 4. Änderungen auf einem Arbeitsbranch committen und per Pull Request nach
    `main` bringen;
 5. für die Windows-Version einen passenden Tag wie `v0.39.3` erstellen;
-6. Push auf `main` baut automatisch die PWA;
-7. Push des Versionstags baut automatisch EXE und SHA-256-Datei;
-8. beide GitHub-Actions abwarten und Links mit HTTP 200 prüfen.
+6. eine PWA erst nach Abnahme des serverseitigen Logins und nur über den
+   geschützten manuellen Workflow freigeben;
+7. Push des Versionstags baut automatisch Setup-EXE, SHA-256-Datei und
+   Update-Manifest;
+8. die jeweils freigegebenen GitHub-Actions abwarten und Links mit HTTP 200
+   prüfen.
 
 Versionsnummer, Git-Tag und Dateiname müssen übereinstimmen.
 
 ## 13. Bekannte Einschränkungen
 
-- keine Cloud- oder Gerätesynchronisierung;
-- PWA- und Windows-Daten sind getrennt;
-- keine Codesignatur für die Windows-EXE;
-- keine automatische Installation neuer Windows-Versionen;
+- die lokale Server-/Gerätesynchronisierung ist implementiert, aber noch nicht
+  auf dem Root-Server mit öffentlicher HTTPS-Domain installiert;
+- die sichtbare Admin-Oberfläche und das autonome signierte Serverupdate sind
+  lokal vollständig geprüft, aber noch nicht auf dem Root-Server installiert
+  oder veröffentlicht;
+- keine Codesignatur für die Windows-Dateien; der neue Installer ist lokal
+  getestet, aber noch nicht veröffentlicht;
+- automatische Client-Updateprüfung und -installation sowie der autonome RSA-
+  und SHA-256-geprüfte Serveraktualisierungsablauf sind lokal umgesetzt, aber
+  noch nicht veröffentlicht;
 - die PWA kann auf dem iPhone durch Safari-/Service-Worker-Caches kurzzeitig
   eine alte Version zeigen; deshalb existieren versionierte PWA-Links;
-- lokale Web-Exports benötigen die zu Godot 4.7.1 passenden Exportvorlagen;
+- die normalen Godot-4.7.1-Web-Exportvorlagen sind lokal installiert und der
+  PWA-Export ist automatisiert geprüft; reale iPhone-/Android-Geräte bleiben
+  vor Veröffentlichung abzunehmen;
 - ein Teil der Oberfläche wird zentral in der großen Datei `app/main.gd`
   erzeugt und sollte langfristig vorsichtig in kleinere UI-Komponenten
   zerlegt werden;
@@ -354,8 +475,10 @@ Versionsnummer, Git-Tag und Dateiname müssen übereinstimmen.
 5. Mobil und Windows nicht mit identischen starren Größen behandeln.
 6. Finanzlogik nicht in mehreren UI-Funktionen duplizieren.
 7. Bestehende IDs und gespeicherte JSON-Felder nicht ohne Migration umbenennen.
-8. Keine Bank-, Cloud- oder KI-Verbindung ohne neuen ausdrücklichen Auftrag.
-9. Keine entfernten Einkaufsfunktionen ohne ausdrücklichen Auftrag reaktivieren.
+8. OpenAI und GoCardless nur innerhalb der Grenzen von `docs/ROADMAP.md`
+   implementieren; keine Geheimnisse oder Bankzugangsdaten im Client.
+9. Einkaufs- und Rezeptfunktionen erst nach der Fehlerbereinigung kontrolliert
+   gemäß Roadmap reaktivieren und bestehende Daten kompatibel halten.
 10. Keine Commits, Tags, Pushes oder Releases ohne ausdrücklichen Benutzerwunsch.
 11. Nach Änderungen Tests, `git diff --check` und einen risikogerechten Export
     ausführen.
@@ -374,3 +497,26 @@ Versionsnummer, Git-Tag und Dateiname müssen übereinstimmen.
 
 Diese beiden Importdateien gehörten nicht zur Übergabe und dürfen nicht
 ungeprüft verworfen, gestaget oder committed werden.
+
+## 16. Verbindliche Roadmap ab 31. Juli 2026
+
+Die weitere Reihenfolge ist in `docs/ROADMAP.md` festgelegt:
+
+1. Fehlerbereinigung und belastbare Tests;
+2. automatische Updateprüfung und -installation beim Start mit sichtbarem
+   Start-/Statusbildschirm und benutzerfreundlichem Setup-Installer;
+3. eigener isolierter Serverdienst, Konten, Admin-Oberfläche und gemeinsame
+   Synchronisation für Windows-App und PWA;
+4. zwingender serverseitiger PWA-Login ohne öffentliche Registrierung;
+5. sichtbarer Wocheneinkauf, Rezepte und Speiseplan mit Schätzkosten;
+6. feste OpenAI-KI-Planung für Budget, Rezepte und Einkauf;
+7. read-only-GoCardless-Import auf Knopfdruck;
+8. gemeinsame Integration, kostenlose Codesignaturprüfung, Geräteprüfung und
+   erst danach Veröffentlichung.
+
+Die KI-Planung ist nicht optional. Die Bankanbindung bleibt strikt lesend;
+Überweisungen und andere Zahlungsauslösungen sind ausgeschlossen. Der
+serverseitige PWA-Login ist ebenfalls nicht optional; bis zu seiner Abnahme
+darf keine neue PWA veröffentlicht werden. Die zuvor öffentliche
+GitHub-Pages-PWA wurde nach der Übertragung des Repositorys auf `unique1986`
+am 31. Juli 2026 deaktiviert.
