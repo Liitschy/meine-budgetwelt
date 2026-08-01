@@ -133,9 +133,11 @@ Startablauf erweitert.
 
 Die regulär installierte **Windows-Client-App** aktualisiert sich nach einer
 gültigen Manifest- und SHA-256-Prüfung autonom. Die erste Installation von
-0.39.3 muss noch einmal manuell erfolgen, weil die bereits veröffentlichte
-0.39.2 den neuen Aktualisierungscode nicht nachträglich erhalten kann. Danach
-laufen Download, Sicherung, stille Installation und Neustart selbständig. Der
+0.39.3 musste einmal manuell erfolgen, weil 0.39.2 den neuen
+Aktualisierungscode nicht nachträglich erhalten konnte. Ab 0.39.4 zeigt ein
+eigener Budgetwelt-Ladebildschirm den echten Fortschritt der Daten-, Konto-,
+Update- und Oberflächenprüfung; Downloadfortschritt, SHA-256-Prüfung,
+Datensicherung, stille Installation und Neustart laufen selbständig. Der
 getrennte Root-Serverdienst wird gemäß Phase 1a nach gültiger kryptografischer
 Prüfung ebenfalls autonom aktualisiert.
 
@@ -246,6 +248,11 @@ bestandenen Gesundheitstest als Rückfallkopie erhalten. Ein manueller, durch
 Bestätigung geschützter GitHub-Workflow kann versionierte Server-Releases
 erzeugen und erst danach den stabilen signierten Kanal umschalten. Es wurde
 nichts veröffentlicht.
+
+Budgetgruppen können in der Admin-Oberfläche sicher gelöscht werden. Sind noch
+Benutzer zugeordnet, zeigt der Bestätigungsdialog Anzahl und Folgen deutlich
+an; erst die exakte Eingabe des Gruppennamens erlaubt das dauerhafte Entfernen
+der Gruppenzuordnungen, synchronisierten Daten und Versionshistorie.
 
 **Domain vorbereitet:** Der installierte Server ist auf
 `https://budget.leno.info` vorkonfiguriert. Ein konfliktfreier Caddy-Block für

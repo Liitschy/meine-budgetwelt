@@ -1,7 +1,7 @@
 # Codex-Projektübergabe: Meine Budgetwelt
 
-Stand: lokaler Entwicklungsstand **0.39.3** vom 1. August 2026;
-zuletzt veröffentlicht ist **0.39.2**
+Stand: **0.39.4** vom 1. August 2026;
+zuletzt veröffentlicht ist **0.39.4**
 
 Diese Datei enthält den aktuellen Projektstand und kann zusammen mit dem
 Repository an einen neuen Codex-Task übergeben werden. Repository-Code und
@@ -22,7 +22,7 @@ Den folgenden Text kann man vollständig in einen neuen Codex-Task kopieren:
 > Entwicklungs- und Testartefakt.
 >
 > Bewahre alle vorhandenen Funktionen, lokalen Finanzdaten und das bestehende
-> Datenformat. Version 0.39.2 besitzt noch keine Bank- oder KI-Verbindung und
+> Datenformat. Version 0.39.4 besitzt noch keine Bank- oder KI-Verbindung und
 > zeigt den früheren Wocheneinkauf nicht an. Die verbindliche Roadmap unter
 > `docs/ROADMAP.md` führt nach der Fehlerbereinigung eine OpenAI-gestützte
 > Wochenplanung und einen ausschließlich lesenden, manuell ausgelösten
@@ -115,7 +115,11 @@ keine Zahlungen aus.
 - Wiederherstellung einer Sicherung;
 - automatische Sicherheitssicherung vor einer Wiederherstellung;
 - Update-Prüfung über ein Manifest im neuesten GitHub Release;
-- Windows-Downloads über GitHub Releases.
+- Windows-Downloads über GitHub Releases;
+- eigener Budgetwelt-Startbildschirm mit realen Statusstufen für lokale Daten,
+  Konto, Updates und Oberfläche;
+- autonomer, SHA-256-geprüfter Update-Download mit sichtbarem Fortschritt,
+  Datensicherung, stiller Installation und automatischem Neustart.
 
 Der reguläre Windows-Download wird vor der nächsten Endnutzerversion von der
 portablen App-EXE auf eine komprimierte, deutschsprachige NSIS-Setup-EXE
@@ -195,6 +199,8 @@ außerdem bereits umgesetzt und isoliert geprüft:
   MIME-Typen, Cookie-Eigenschaften und unauthentifiziertem API-Zugriffsschutz.
 - responsive Admin-Oberfläche im freigegebenen Glas-Design für Benutzer,
   Sperren, Budgetgruppen, Rollen, Einladungen und Serverstatus;
+- sichere Löschoberfläche für Budgetgruppen mit Mitgliederwarnung und exakter
+  Namensbestätigung;
 - autonome Serverupdate-Aufgabe nach Systemstart und täglich, mit RSA-signiertem
   Manifest, SHA-256, Versionsschutz, Datensicherung und vollständigem
   Programm-Rückfall;
@@ -261,8 +267,8 @@ gezeigten dunklen Glas-Stil. Die Überschrift wird durch `Guten Morgen`,
 - Landschaftsansicht: `ui/budget_world_view.gd`
 - Renderer: GL Compatibility
 - Desktop-Viewport: 1440 × 900
-- lokaler Entwicklungsstand: 0.39.3
-- zuletzt veröffentlichte Version: 0.39.2
+- lokaler Entwicklungsstand: 0.39.4
+- zuletzt veröffentlichte Version: 0.39.4
 
 Wichtige Autoloads aus `project.godot`:
 
@@ -425,7 +431,7 @@ PWA bis zur Abnahme des serverseitigen Logins.**
 
 Aktuelle Windows-Version:
 
-`https://github.com/unique1986/meine-budgetwelt/releases/download/v0.39.2/Budget-und-Wocheneinkauf-0.39.2.exe`
+`https://github.com/unique1986/meine-budgetwelt/releases/download/v0.39.4/Meine-Budgetwelt-Setup-0.39.4.exe`
 
 Veröffentlichungsablauf:
 
@@ -488,9 +494,9 @@ Versionsnummer, Git-Tag und Dateiname müssen übereinstimmen.
 ## 15. Aktueller Repository-Zustand bei Erstellung dieser Übergabe
 
 - Branch: `main`
-- Version/Tag: `v0.39.2`
-- letzter veröffentlichter Stand: „Improve mobile readability and spacing“
-- PWA- und Windows-Workflow für 0.39.2 erfolgreich
+- Version/Tag: `v0.39.4`
+- eigener Start-/Updatebildschirm und dynamische Fensterneuberechnung ergänzt
+- Windows-Release-Workflow für 0.39.4 freigegeben
 - vor Erstellung dieser Datei bestanden bereits lokale Änderungen an:
   - `assets/ui/fixed_costs_ledger_background.png.import`
   - `assets/ui/transactions_ledger_background.png.import`

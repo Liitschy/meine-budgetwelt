@@ -14,12 +14,20 @@ func _ready() -> void:
 		preview_width = 390
 	if preview_height <= 0:
 		preview_height = 844
-	get_window().size = Vector2i(preview_width, preview_height)
-	get_window().content_scale_size = Vector2i(preview_width, preview_height)
+	var resize_first := OS.get_environment("BUDGETWELT_VISUAL_RESIZE_FIRST") == "1"
+	var initial_size := Vector2i(960, 640) if resize_first else Vector2i(preview_width, preview_height)
+	get_window().size = initial_size
+	get_window().content_scale_size = initial_size
 	var app := preload("res://app/Main.tscn").instantiate()
 	add_child(app)
 	await get_tree().process_frame
 	await get_tree().process_frame
+	if resize_first:
+		get_window().size = Vector2i(preview_width, preview_height)
+		get_window().content_scale_size = Vector2i(preview_width, preview_height)
+		app._queue_responsive_layout()
+		await get_tree().process_frame
+		await get_tree().process_frame
 	app.login_panel.visible = false
 	app.startup_status_panel.visible = false
 	app._show_page("fixed_costs")

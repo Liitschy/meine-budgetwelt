@@ -8,6 +8,7 @@ const state = {
   members: new Map(),
   health: null,
   activeView: "overview",
+  pendingDeleteGroup: null,
 };
 
 const loginView = document.querySelector("#login-view");
@@ -217,7 +218,7 @@ function renderGroups() {
       <small>${escapeHtml(roleName(member.role))}</small>
     </div>`).join("") : '<p class="empty-state">Noch keine Mitglieder.</p>';
     return `<article class="group-card glass-card">
-      <header><div><h3>${escapeHtml(group.name)}</h3><p>${members.length} ${members.length === 1 ? "Mitglied" : "Mitglieder"}</p></div><span class="status-label">Synchronisiert</span></header>
+      <header><div><h3>${escapeHtml(group.name)}</h3><p>${members.length} ${members.length === 1 ? "Mitglied" : "Mitglieder"}</p></div><div class="group-actions"><span class="status-label">Synchronisiert</span><button class="danger-icon-button" type="button" data-delete-group="${escapeHtml(group.id)}" data-group-name="${escapeHtml(group.name)}" data-member-count="${members.length}" aria-label="Budgetgruppe ${escapeHtml(group.name)} löschen"><svg><use href="#icon-trash"></use></svg></button></div></header>
       <div class="member-list">${memberMarkup}</div>
       <form class="assign-form" data-group-id="${escapeHtml(group.id)}">
         <label>Benutzer<select name="userId">${userOptions()}</select></label>
@@ -318,6 +319,7 @@ document.querySelectorAll(".nav-item[data-view]").forEach((button) =>
 document.querySelector("#mobile-menu-button").addEventListener("click", () => switchView("server"));
 
 const userDialog = document.querySelector("#user-dialog");
+const groupDeleteDialog = document.querySelector("#group-delete-dialog");
 document.querySelectorAll("[data-open-user-dialog]").forEach((button) =>
   button.addEventListener("click", () => {
     document.querySelector("#user-form").reset();
@@ -327,6 +329,14 @@ document.querySelectorAll("[data-open-user-dialog]").forEach((button) =>
   }));
 document.querySelectorAll("[data-close-user-dialog]").forEach((button) =>
   button.addEventListener("click", () => userDialog.close()));
+
+document.querySelectorAll("[data-close-group-delete]").forEach((button) =>
+  button.addEventListener("click", () => groupDeleteDialog.close()));
+groupDeleteDialog.addEventListener("close", () => {
+  state.pendingDeleteGroup = null;
+  document.querySelector("#group-delete-form").reset();
+  document.querySelector("#group-delete-error").textContent = "";
+});
 
 document.querySelector("#user-form").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -408,6 +418,52 @@ document.querySelector("#groups-list").addEventListener("submit", async (event) 
     showToast("Budgetgruppe wurde aktualisiert.");
   } catch (errorObject) {
     showToast(errorObject.message, true);
+  } finally {
+    setBusy(button, false);
+  }
+});
+
+document.querySelector("#groups-list").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-delete-group]");
+  if (!button) return;
+  const memberCount = Number.parseInt(button.dataset.memberCount ?? "0", 10) || 0;
+  state.pendingDeleteGroup = {
+    id: button.dataset.deleteGroup,
+    name: button.dataset.groupName,
+    memberCount,
+  };
+  document.querySelector("#group-delete-name").textContent = button.dataset.groupName;
+  document.querySelector("#group-delete-warning").textContent = memberCount > 0
+    ? `Achtung: ${memberCount} ${memberCount === 1 ? "Benutzer ist" : "Benutzer sind"} dieser Gruppe zugeordnet. Die gemeinsame Budgetwelt, alle synchronisierten Daten und der Versionsverlauf werden dauerhaft gelöscht.`
+    : "Die gemeinsame Budgetwelt, alle synchronisierten Daten und der Versionsverlauf werden dauerhaft gelöscht.";
+  document.querySelector("#group-delete-confirmation").value = "";
+  document.querySelector("#group-delete-error").textContent = "";
+  groupDeleteDialog.showModal();
+  document.querySelector("#group-delete-confirmation").focus();
+});
+
+document.querySelector("#group-delete-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const pending = state.pendingDeleteGroup;
+  if (!pending) return;
+  const confirmation = document.querySelector("#group-delete-confirmation").value.trim();
+  const error = document.querySelector("#group-delete-error");
+  if (confirmation !== pending.name) {
+    error.textContent = "Der eingegebene Gruppenname stimmt nicht exakt überein.";
+    return;
+  }
+  const button = event.submitter;
+  error.textContent = "";
+  setBusy(button, true);
+  try {
+    await api(`/api/admin/groups/${encodeURIComponent(pending.id)}?confirmationName=${encodeURIComponent(confirmation)}`, {
+      method: "DELETE",
+    });
+    groupDeleteDialog.close();
+    await loadAdminData();
+    showToast(`Budgetgruppe „${pending.name}“ wurde dauerhaft gelöscht.`);
+  } catch (errorObject) {
+    error.textContent = errorObject.message;
   } finally {
     setBusy(button, false);
   }

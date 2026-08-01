@@ -2,6 +2,7 @@ extends Node
 
 signal update_check_finished(result: Dictionary)
 signal update_download_status(result: Dictionary)
+signal update_download_progress(progress: float)
 
 const RELEASE_BASE_URL := "https://github.com/unique1986/meine-budgetwelt/releases/download/"
 const INSTALLER_NAME_TEMPLATE := "Meine-Budgetwelt-Setup-%s.exe"
@@ -66,6 +67,8 @@ var _download_stage := ""
 var _pending_update: Dictionary = {}
 var _expected_sha256 := ""
 var _verified_installer_path := ""
+var _last_download_progress := -1.0
+var startup_check_completed := false
 
 
 func _ready() -> void:
@@ -78,6 +81,22 @@ func _ready() -> void:
 	_download_request.timeout = 120.0
 	add_child(_download_request)
 	_download_request.request_completed.connect(_on_download_request_completed)
+
+
+func _process(_delta: float) -> void:
+	if _download_stage != "installer" or not is_instance_valid(_download_request):
+		return
+	var body_size := _download_request.get_body_size()
+	if body_size <= 0:
+		return
+	var progress := clampf(
+		float(_download_request.get_downloaded_bytes()) / float(body_size),
+		0.0,
+		1.0
+	)
+	if _last_download_progress < 0.0 or absf(progress - _last_download_progress) >= 0.005:
+		_last_download_progress = progress
+		update_download_progress.emit(progress)
 
 
 func get_current_version() -> String:
@@ -143,6 +162,7 @@ func download_update(version: String, download_url: String, sha256_url: String) 
 	}
 	_expected_sha256 = ""
 	_verified_installer_path = ""
+	_last_download_progress = -1.0
 	_remove_file_if_present(str(_pending_update.partial_path))
 	_download_stage = "checksum"
 	_download_request.download_file = ""
@@ -301,6 +321,8 @@ func _on_download_request_completed(
 
 func _start_installer_download() -> void:
 	_download_stage = "installer"
+	_last_download_progress = 0.0
+	update_download_progress.emit(0.0)
 	var partial_path := str(_pending_update.partial_path)
 	_download_request.download_file = ProjectSettings.globalize_path(partial_path)
 	update_download_status.emit({
@@ -330,6 +352,7 @@ func _verify_downloaded_installer() -> void:
 		return
 
 	_verified_installer_path = installer_path
+	update_download_progress.emit(1.0)
 	_download_stage = ""
 	_download_request.download_file = ""
 	var version := str(_pending_update.version)
@@ -353,6 +376,7 @@ func _fail_download(message: String) -> void:
 	_pending_update = {}
 	_expected_sha256 = ""
 	_verified_installer_path = ""
+	_last_download_progress = -1.0
 	update_download_status.emit({
 		"status": "error",
 		"message": message,

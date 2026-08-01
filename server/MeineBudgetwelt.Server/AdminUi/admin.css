@@ -148,7 +148,7 @@ option { background: #071c29; }
 .privacy-note { display: flex; align-items: flex-start; gap: .6rem; margin: 1.6rem 0 0; color: #9fa9a6; font-size: .78rem; }
 .privacy-note svg { flex: 0 0 auto; width: 1rem; }
 
-.primary-button, .secondary-button, .ghost-button {
+.primary-button, .secondary-button, .ghost-button, .danger-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -162,8 +162,9 @@ option { background: #071c29; }
 .primary-button { border: 1px solid var(--gold); color: #fff6df; background: linear-gradient(135deg, #0c9e9b, #08706f); box-shadow: 0 9px 24px rgba(0,121,123,.25), inset 0 1px 0 rgba(255,255,255,.15); }
 .secondary-button { border: 1px solid var(--gold); color: var(--gold-bright); background: rgba(4, 26, 35, .74); }
 .ghost-button { border: 1px solid rgba(216,170,93,.22); color: var(--muted); background: transparent; }
-.primary-button:hover, .secondary-button:hover, .ghost-button:hover { transform: translateY(-1px); filter: brightness(1.13); }
-.primary-button:disabled, .secondary-button:disabled { cursor: wait; opacity: .55; transform: none; }
+.danger-button { border: 1px solid var(--danger); color: #fff5ef; background: linear-gradient(135deg, #a74742, #73302f); box-shadow: 0 9px 24px rgba(133,48,43,.24); }
+.primary-button:hover, .secondary-button:hover, .ghost-button:hover, .danger-button:hover { transform: translateY(-1px); filter: brightness(1.13); }
+.primary-button:disabled, .secondary-button:disabled, .danger-button:disabled { cursor: wait; opacity: .55; transform: none; }
 .wide-button { width: 100%; min-height: 3.4rem; }
 
 .icon-button {
@@ -281,6 +282,9 @@ option { background: #071c29; }
 .group-card { border-radius: 1rem; padding: 1.25rem; }
 .group-card header { display: flex; align-items: flex-start; justify-content: space-between; border-bottom: 1px solid rgba(216,170,93,.2); padding-bottom: .85rem; }
 .group-card h3 { margin-bottom: .2rem; }
+.group-actions { display: flex; align-items: center; gap: .55rem; }
+.danger-icon-button { display: grid; width: 2.6rem; height: 2.6rem; place-items: center; border: 1px solid rgba(255,143,124,.46); border-radius: .7rem; color: var(--danger); background: rgba(101,28,27,.25); cursor: pointer; }
+.danger-icon-button:hover { border-color: var(--danger); background: rgba(150,49,44,.35); }
 .member-list { display: grid; gap: .5rem; padding: .9rem 0; }
 .member-row { display: flex; align-items: center; justify-content: space-between; gap: .7rem; border-radius: .65rem; padding: .65rem .7rem; background: rgba(0,9,15,.32); }
 .member-row small { color: var(--gold); text-transform: capitalize; }
@@ -317,6 +321,11 @@ option { background: #071c29; }
 .glass-dialog footer { justify-content: flex-end; margin-top: .4rem; }
 .glass-dialog h2 { margin-bottom: 0; }
 .glass-dialog label small { color: var(--muted); font-weight: 400; }
+.danger-dialog { border-color: rgba(255,143,124,.58); }
+.danger-warning { display: grid; grid-template-columns: auto 1fr; align-items: start; gap: .8rem; border: 1px solid rgba(255,143,124,.38); border-radius: .9rem; padding: .9rem; background: rgba(111,34,31,.22); }
+.danger-warning svg { width: 1.65rem; height: 1.65rem; color: var(--danger); }
+.danger-warning p { margin: 0; color: #ffd7ce; }
+#group-delete-name { color: var(--gold-bright); }
 
 .toast { position: fixed; z-index: 100; right: 1.2rem; bottom: 1.2rem; max-width: min(28rem, calc(100% - 2.4rem)); border: 1px solid var(--gold); border-radius: .85rem; padding: .9rem 1.1rem; color: var(--cream); background: #082632; box-shadow: var(--shadow); }
 .toast.error { border-color: var(--danger); }
@@ -383,6 +392,8 @@ option { background: #071c29; }
   .groups-grid, .status-grid { grid-template-columns: 1fr; }
   .assign-form { grid-template-columns: 1fr 1fr; }
   .assign-form button { grid-column: 1 / -1; }
+  .group-card header { gap: .7rem; }
+  .group-actions .status-label { display: none; }
   .invitation-row { grid-template-columns: 1fr auto; padding: .85rem; }
   .invitation-row .invite-email { grid-column: 1 / -1; }
   .update-card { display: block; }
