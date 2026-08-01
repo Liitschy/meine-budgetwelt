@@ -130,15 +130,17 @@ einem getrennten Testverzeichnis erfolgreich geprüft.
 
 ## Updates
 
-Die veröffentlichte Version 0.39.2 liest die Versionsdatei noch über den Button
-**Nach Updates suchen**. Ab dem lokalen Entwicklungsstand 0.39.3 prüft die App
-beim Start automatisch. Eine regulär installierte Windows-App lädt nur den
+Seit Version 0.39.3 kann die Prüfung zusätzlich über den Button **Nach Updates
+suchen** erneut ausgelöst werden. Version 0.39.4 zeigt beim Start einen eigenen
+Budgetwelt-Ladebildschirm mit echtem Status für Daten, Konto, Updates und
+Oberfläche. Eine regulär installierte Windows-App lädt nur den
 offiziellen Setup-Installer und dessen SHA-256-Datei aus den GitHub Releases
 dieses Projekts, verwirft abweichende Downloads, erstellt eine Datensicherung,
 schließt sich kontrolliert, installiert das Update still und startet danach
 neu. Portable Entwicklungs-EXEs werden nicht automatisch überschrieben. Die
-0.39.3 muss einmal manuell installiert werden; danach können künftige
-veröffentlichte Versionen autonom übernommen werden.
+0.39.3 musste einmal manuell installiert werden; ab dort können künftige
+veröffentlichte Versionen autonom übernommen werden. Offline- oder
+Serverfehler blockieren den App-Start nicht.
 
 Ein Tag im Format `v1.2.3` muss zur Versionsnummer in `project.godot` passen.
 Der Workflow `Windows-Version veröffentlichen` erzeugt die interne Godot-App,

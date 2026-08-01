@@ -594,6 +594,31 @@ func _test_responsive_layout() -> void:
 	_assert_equal(app.mobile_navigation.visible, false, "Mobile Navigation am Desktop verborgen")
 	_assert_equal(app.dashboard_body.vertical, false, "Budgetinhalt am Desktop nebeneinander")
 	_assert_equal(app.dashboard_body.get_child(0), app.world_view, "Landschaft steht am Desktop wieder links")
+	app._show_page("fixed_costs")
+	app.size = Vector2(960, 640)
+	app._queue_responsive_layout()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	app.size = Vector2(1440, 900)
+	app._queue_responsive_layout()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_assert_equal(
+		app.fixed_list_panel.position.x + app.fixed_list_panel.size.x <= app.fixed_costs_page.size.x + 1.0,
+		true,
+		"Fixkostenliste passt nach Verkleinern und Vergrößern wieder horizontal ins Fenster"
+	)
+	_assert_equal(
+		app.fixed_list_panel.position.y + app.fixed_list_panel.size.y <= app.fixed_costs_page.size.y + 1.0,
+		true,
+		"Fixkostenliste passt nach Verkleinern und Vergrößern wieder vertikal ins Fenster"
+	)
+	_assert_equal(
+		app.fixed_list_panel.size.y > 300.0,
+		true,
+		"Fixkosteninhalt wächst beim erneuten Maximieren wieder mit"
+	)
+	app._show_page("dashboard")
 	_assert_equal(
 		app.dashboard_title.text.begins_with("Guten "),
 		true,

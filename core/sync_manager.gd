@@ -23,6 +23,7 @@ var _request_in_progress := false
 var _device_id := ""
 var _sync_timer: Timer
 var _live_sync_timer: Timer
+var startup_restore_attempted := false
 
 
 func _ready() -> void:
@@ -88,6 +89,7 @@ func login(email: String, password: String, remember_me: bool) -> Dictionary:
 
 
 func restore_session() -> Dictionary:
+	startup_restore_attempted = true
 	if not OS.has_feature("web"):
 		var saved := _load_session()
 		_token = str(saved.get("token", ""))

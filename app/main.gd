@@ -195,9 +195,12 @@ var upcoming_cost_list: VBoxContainer
 var dashboard_flow_values: Dictionary = {}
 var display_font: SystemFont
 var interface_font: SystemFont
+var _responsive_layout_queued := false
 
 
 func _ready() -> void:
+	if not OS.has_feature("web"):
+		DisplayServer.window_set_min_size(Vector2i(960, 640))
 	_configure_web_content_scale()
 	_apply_design_theme()
 	_build_interface()
@@ -230,8 +233,10 @@ func _ready() -> void:
 	_rebuild_shopping_rows()
 	_rebuild_meal_plan_rows()
 	_update_month_labels()
-	resized.connect(_apply_responsive_layout)
+	resized.connect(_queue_responsive_layout)
+	get_viewport().size_changed.connect(_queue_responsive_layout)
 	_apply_responsive_layout()
+	_queue_responsive_layout()
 	call_deferred("_reset_dashboard_scroll")
 	if get_tree().current_scene == self:
 		call_deferred("_begin_account_startup")
@@ -594,6 +599,13 @@ func _build_login_panel() -> Control:
 func _begin_account_startup() -> void:
 	login_panel.visible = true
 	_update_login_server_label()
+	if SyncManager.startup_restore_attempted:
+		if SyncManager.is_logged_in():
+			login_panel.visible = false
+			_apply_account_identity(SyncManager.current_user)
+		else:
+			login_status_label.text = "Bitte mit deinem Konto anmelden."
+		return
 	login_status_label.text = "Gespeicherte Sitzung wird sicher geprüft …"
 	var result := await SyncManager.restore_session()
 	if bool(result.get("success", false)):
@@ -821,6 +833,11 @@ func _build_update_confirmation_dialog() -> void:
 
 
 func _begin_startup_update_check() -> void:
+	if UpdateManager.startup_check_completed:
+		_startup_update_check_active = false
+		startup_status_panel.visible = false
+		_show_required_login_if_needed()
+		return
 	if OS.has_feature("web"):
 		_startup_update_check_active = false
 		startup_status_panel.visible = true
@@ -4418,6 +4435,18 @@ func _apply_responsive_layout() -> void:
 		_rebuild_transaction_rows()
 		_rebuild_shopping_rows()
 	call_deferred("_reset_dashboard_scroll")
+
+
+func _queue_responsive_layout() -> void:
+	if _responsive_layout_queued or not is_inside_tree():
+		return
+	_responsive_layout_queued = true
+	call_deferred("_apply_queued_responsive_layout")
+
+
+func _apply_queued_responsive_layout() -> void:
+	_responsive_layout_queued = false
+	_apply_responsive_layout()
 
 
 func _responsive_view_size() -> Vector2:
