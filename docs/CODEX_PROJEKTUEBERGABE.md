@@ -257,6 +257,13 @@ sind erfolgreich. Der vollständige Windows-Dienst-Upgrade-Test läuft als
 verpflichtendes Gate im administrativen Server-Release-Workflow. Version 0.1.2 ist über den signierten
 Server-Updatekanal veröffentlicht und wird vom autonomen Server-Updater installiert.
 
+Serverversion 0.1.4 behebt zusätzlich die Manifest-Dekodierung unter Windows
+PowerShell 5.1. GitHub liefert das signierte JSON-Manifest als UTF-8-Bytefolge
+mit `application/octet-stream`; ältere Updater behandelten diese Antwort nicht
+als Text und meldeten deshalb ein unvollständiges Manifest. Nach einer einmaligen
+manuellen Aktualisierung auf 0.1.4 funktionieren folgende Serverupdates wieder
+autonom.
+
 ## 5. Verbindliche Designrichtung
 
 ### Gemeinsame Bildsprache
@@ -311,8 +318,8 @@ gezeigten dunklen Glas-Stil. Die Überschrift wird durch `Guten Morgen`,
 - Renderer: GL Compatibility
 - Desktop-Viewport: 1440 × 900
 - lokaler Entwicklungsstand: 0.41.0
-- lokaler Server-Entwicklungsstand: 0.1.3
-- zuletzt veröffentlichte/installierte Serverversion: 0.1.3
+- lokaler Server-Entwicklungsstand: 0.1.4
+- zuletzt veröffentlichte Serverversion: 0.1.4
 - zuletzt veröffentlichte Version: 0.41.0
 
 Wichtige Autoloads aus `project.godot`:

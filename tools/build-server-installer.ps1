@@ -73,6 +73,7 @@ New-Item -ItemType Directory -Force -Path $publishedToolsRoot | Out-Null
 Copy-Item -Path (Join-Path $serverToolsSourceRoot "*") -Destination $publishedToolsRoot -Recurse -Force
 foreach ($updaterFile in @(
     "ServerUpdate.ps1",
+    "ServerUpdateContent.ps1",
     "Install-ServerUpdateTask.ps1",
     "server-update-public-key.xml"
 )) {

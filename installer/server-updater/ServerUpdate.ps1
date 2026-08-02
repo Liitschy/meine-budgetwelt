@@ -14,6 +14,11 @@ $defaultManifestUrl = "https://github.com/unique1986/meine-budgetwelt/releases/d
 $maximumInstallerBytes = 160MB
 $mutex = $null
 $hasMutex = $false
+$contentConverterPath = Join-Path $PSScriptRoot "ServerUpdateContent.ps1"
+if (-not (Test-Path -LiteralPath $contentConverterPath -PathType Leaf)) {
+    throw "Die sichere Manifest-Dekodierung fehlt."
+}
+. $contentConverterPath
 
 function Write-UpdateLog([string]$Message) {
     if ([string]::IsNullOrWhiteSpace($script:DataRoot)) {
@@ -118,7 +123,8 @@ try {
             -not [string]::IsNullOrWhiteSpace($configuration.Updates.ManifestUrl)
         ) { [string]$configuration.Updates.ManifestUrl } else { $defaultManifestUrl }
         Assert-OfficialHttpsUrl $manifestUrl "Manifestadresse" ($officialRepositoryPath + "download/server-updates/") | Out-Null
-        $manifestText = (Invoke-WebRequest -UseBasicParsing -Uri $manifestUrl -TimeoutSec 30).Content
+        $manifestResponse = Invoke-WebRequest -UseBasicParsing -Uri $manifestUrl -TimeoutSec 30
+        $manifestText = Convert-ServerUpdateContentToText $manifestResponse.Content
     }
     else {
         $manifestText = Get-Content -LiteralPath $ManifestPath -Raw
