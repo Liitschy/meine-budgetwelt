@@ -311,8 +311,8 @@ gezeigten dunklen Glas-Stil. Die Überschrift wird durch `Guten Morgen`,
 - Renderer: GL Compatibility
 - Desktop-Viewport: 1440 × 900
 - lokaler Entwicklungsstand: 0.41.0
-- lokaler Server-Entwicklungsstand: 0.1.2
-- zuletzt veröffentlichte/installierte Serverversion: 0.1.2
+- lokaler Server-Entwicklungsstand: 0.1.3
+- zuletzt veröffentlichte/installierte Serverversion: 0.1.3
 - zuletzt veröffentlichte Version: 0.41.0
 
 Wichtige Autoloads aus `project.godot`:

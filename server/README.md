@@ -115,7 +115,7 @@ Werkzeug nach der App-ID und dem vollständigen Pfad zur heruntergeladenen
 privaten PEM-Datei; die lokale KI benötigt keinen Schlüssel:
 
 ```powershell
-& 'C:\Program Files\Meine Budgetwelt Server\tools\Configure-Integrations.ps1' `
+& 'C:\Program Files\Meine Budgetwelt Server\app\tools\Configure-Integrations.ps1' `
   -Integration EnableBanking
 ```
 
