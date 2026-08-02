@@ -102,7 +102,7 @@ vollständiger erhöhter Windows-Test hat Erstinstallation, eigenen Dienst,
 Updateaufgabe, Admin-Anmeldung, Datensicherung, Update, erneuten gesunden Start
 und Deinstallation geprüft. Der eigenständige Serverdienst, Caddy/HTTPS und
 die geschützte PWA laufen auf dem Root-Server unter `https://budget.leno.info`.
-Die gemeinsame lokale Ollama-KI wird mit Serverversion 0.1.2 aktiviert.
+Die gemeinsame lokale Ollama-KI wird ab Serverversion 0.1.2 aktiviert.
 
 Vollständige lokale Prüfungen:
 
@@ -158,3 +158,7 @@ verwendet Enable Banking nur nach ausdrücklicher Benutzeraktion. Der private
 Enable-Banking-Schlüssel bleibt in der geschützten Serverablage; PIN, TAN und
 Banking-Kennwörter dürfen niemals in der App oder im Repository gespeichert
 werden.
+
+Die dauerhaft erreichbaren Hinweise für die private Serverinstanz liegen unter
+`https://budget.leno.info/datenschutz` und
+`https://budget.leno.info/nutzungsbedingungen`.

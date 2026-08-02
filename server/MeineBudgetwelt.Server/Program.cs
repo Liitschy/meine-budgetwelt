@@ -212,7 +212,12 @@ app.Use(async (context, next) =>
         + "object-src 'none'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; "
         + "style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; "
         + "connect-src 'self'; worker-src 'self' blob:; manifest-src 'self'";
-    if (context.Request.Path.StartsWithSegments("/admin"))
+    if (
+        context.Request.Path.StartsWithSegments("/admin")
+        || context.Request.Path.StartsWithSegments("/legal")
+        || context.Request.Path == "/datenschutz"
+        || context.Request.Path == "/nutzungsbedingungen"
+    )
     {
         context.Response.Headers["Cache-Control"] =
             "no-cache, no-store, must-revalidate";
@@ -232,6 +237,30 @@ app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = adminFiles,
     RequestPath = "/admin",
+    OnPrepareResponse = context =>
+    {
+        context.Context.Response.Headers["Cache-Control"] =
+            "no-cache, no-store, must-revalidate";
+    },
+});
+
+var legalUiRoot = Path.Combine(AppContext.BaseDirectory, "LegalUi");
+var privacyPagePath = Path.Combine(legalUiRoot, "datenschutz.html");
+var termsPagePath = Path.Combine(legalUiRoot, "nutzungsbedingungen.html");
+if (
+    !Directory.Exists(legalUiRoot)
+    || !File.Exists(privacyPagePath)
+    || !File.Exists(termsPagePath)
+)
+{
+    throw new InvalidOperationException(
+        "Die öffentlichen Datenschutz- und Nutzungsbedingungen fehlen im Serverpaket.");
+}
+var legalFiles = new PhysicalFileProvider(legalUiRoot);
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = legalFiles,
+    RequestPath = "/legal",
     OnPrepareResponse = context =>
     {
         context.Context.Response.Headers["Cache-Control"] =
@@ -294,6 +323,12 @@ app.MapSyncEndpoints();
 app.MapPlanningEndpoints();
 app.MapBankingEndpoints();
 app.MapGet("/admin", () => Results.File(adminIndexPath, "text/html"));
+app.MapGet(
+    "/datenschutz",
+    () => Results.File(privacyPagePath, "text/html; charset=utf-8"));
+app.MapGet(
+    "/nutzungsbedingungen",
+    () => Results.File(termsPagePath, "text/html; charset=utf-8"));
 
 app.MapGet("/health", async (CancellationToken cancellationToken) =>
 {

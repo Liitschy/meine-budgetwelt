@@ -11,7 +11,7 @@
     <NuGetAuditLevel>low</NuGetAuditLevel>
     <AssemblyName>Meine-Budgetwelt-Server</AssemblyName>
     <RootNamespace>MeineBudgetwelt.Server</RootNamespace>
-    <Version>0.1.2</Version>
+    <Version>0.1.3</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,6 +23,10 @@
 
   <ItemGroup>
     <None Update="AdminUi\**\*"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest"
+          ExcludeFromSingleFile="true" />
+    <None Update="LegalUi\**\*"
           CopyToOutputDirectory="PreserveNewest"
           CopyToPublishDirectory="PreserveNewest"
           ExcludeFromSingleFile="true" />

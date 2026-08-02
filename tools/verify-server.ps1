@@ -172,6 +172,40 @@ try {
         }
     }
 
+    foreach ($legalPage in @(
+        @{ Path = "datenschutz"; Required = "Datenschutz" },
+        @{ Path = "nutzungsbedingungen"; Required = "Nutzungsbedingungen" }
+    )) {
+        $legalResponse = Invoke-WebRequest `
+            -Uri "http://127.0.0.1:$port/$($legalPage.Path)" `
+            -UseBasicParsing
+        if (
+            $legalResponse.StatusCode -ne 200 -or
+            $legalResponse.Headers["Content-Type"] -notmatch "text/html" -or
+            $legalResponse.Content -notmatch $legalPage.Required -or
+            $legalResponse.Content -notmatch "Enable Banking"
+        ) {
+            throw "Öffentliche Rechtstextseite wurde nicht korrekt ausgeliefert: $($legalPage.Path)"
+        }
+        if (
+            $legalResponse.Headers["Cache-Control"] -notmatch "no-store" -or
+            $legalResponse.Headers["Content-Security-Policy"] -notmatch "default-src 'self'" -or
+            $legalResponse.Headers["X-Frame-Options"] -ne "DENY"
+        ) {
+            throw "Rechtstextseite besitzt unvollständige Sicherheitsheader: $($legalPage.Path)"
+        }
+    }
+    $legalCssResponse = Invoke-WebRequest `
+        -Uri "http://127.0.0.1:$port/legal/legal.css" `
+        -Method Head `
+        -UseBasicParsing
+    if (
+        $legalCssResponse.Headers["Content-Type"] -notmatch "text/css" -or
+        $legalCssResponse.Headers["Cache-Control"] -notmatch "no-store"
+    ) {
+        throw "Stylesheet der Rechtstextseiten wird nicht sicher ausgeliefert."
+    }
+
     if (-not [string]::IsNullOrWhiteSpace($resolvedPwaRoot)) {
         $rootResponse = Invoke-WebRequest -Uri "http://127.0.0.1:$port/" -UseBasicParsing
         if ($rootResponse.StatusCode -ne 200 -or $rootResponse.Headers["Content-Type"] -notmatch "text/html") {
