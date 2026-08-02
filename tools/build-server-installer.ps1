@@ -21,6 +21,13 @@ if ($serverVersion -notmatch '^\d+\.\d+\.\d+$') {
     throw "Serverversion fehlt oder ist ungültig."
 }
 
+if (-not $SkipRestore) {
+    & dotnet restore $serverProject --runtime win-x64 --force-evaluate
+    if ($LASTEXITCODE -ne 0) {
+        throw "Server-Abhängigkeiten konnten nicht wiederhergestellt werden."
+    }
+}
+
 if (-not $SkipPwaBuild) {
     & (Join-Path $PSScriptRoot "verify-pwa.ps1") `
         -Configuration $Configuration `
@@ -39,13 +46,6 @@ foreach ($file in @(
 )) {
     if (-not (Test-Path -LiteralPath (Join-Path $webRoot $file) -PathType Leaf)) {
         throw "PWA-Datei fehlt: $file"
-    }
-}
-
-if (-not $SkipRestore) {
-    & dotnet restore $serverProject --runtime win-x64 --force-evaluate
-    if ($LASTEXITCODE -ne 0) {
-        throw "Server-Abhängigkeiten konnten nicht wiederhergestellt werden."
     }
 }
 
