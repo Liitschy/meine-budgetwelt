@@ -35,6 +35,7 @@ jobs:
           version: 4.7.1
           use-dotnet: false
           include-templates: true
+          cache: false
 
       - name: NSIS installieren
         shell: pwsh
@@ -57,7 +58,7 @@ jobs:
       - name: Server-Installer bauen und prüfen
         shell: pwsh
         run: |
-          $godotExecutable = Join-Path $env:USERPROFILE "godot\Godot_v4.7.1-stable_win64.exe"
+          $godotExecutable = Join-Path $env:USERPROFILE "godot\Godot_v4.7.1-stable_win64_console.exe"
           & .\tools\build-server-installer.ps1 -GodotPath $godotExecutable
 
       - name: Signiertes Update-Manifest erzeugen
