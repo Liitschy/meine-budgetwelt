@@ -10,7 +10,7 @@ namespace MeineBudgetwelt.Server.Banking;
 public sealed class BankingService(
     SqliteStore store,
     SyncService sync,
-    GoCardlessClient provider)
+    EnableBankingClient provider)
 {
     private const int MaximumKnownImportIds = 5_000;
     private const int MaximumPreviewTransactions = 5_000;
@@ -94,20 +94,18 @@ public sealed class BankingService(
         }
 
         var connectionId = Guid.NewGuid().ToString("N");
-        var reference = "mbw-" + Convert.ToHexString(
-            RandomNumberGenerator.GetBytes(12)).ToLowerInvariant();
         var redirectUrl =
-            $"{provider.RedirectBaseUrl}/api/banking/callback?connectionId={connectionId}";
-        var requisition = await provider.CreateRequisitionAsync(
-            institution.Id,
+            $"{provider.RedirectBaseUrl}/api/banking/callback";
+        var authorization = await provider.StartAuthorizationAsync(
+            institution,
+            provider.DefaultCountry,
             redirectUrl,
-            reference,
+            connectionId,
             cancellationToken);
         var now = DateTimeOffset.UtcNow;
-        try
+        await using (var connection = await store.OpenConnectionAsync(cancellationToken))
+        await using (var command = connection.CreateCommand())
         {
-            await using var connection = await store.OpenConnectionAsync(cancellationToken);
-            await using var command = connection.CreateCommand();
             command.CommandText =
                 """
                 INSERT INTO bank_connections(
@@ -115,7 +113,7 @@ public sealed class BankingService(
                     group_id,
                     created_by_user_id,
                     provider,
-                    requisition_id,
+                    provider_reference,
                     institution_id,
                     institution_name,
                     status,
@@ -128,8 +126,8 @@ public sealed class BankingService(
                     $connection_id,
                     $group_id,
                     $user_id,
-                    'gocardless-bad',
-                    $requisition_id,
+                    $provider,
+                    $provider_reference,
                     $institution_id,
                     $institution_name,
                     $status,
@@ -142,25 +140,14 @@ public sealed class BankingService(
             command.Parameters.AddWithValue("$connection_id", connectionId);
             command.Parameters.AddWithValue("$group_id", groupId);
             command.Parameters.AddWithValue("$user_id", userId);
-            command.Parameters.AddWithValue("$requisition_id", requisition.Id);
+            command.Parameters.AddWithValue("$provider", EnableBankingClient.ProviderId);
+            command.Parameters.AddWithValue("$provider_reference", authorization.Id);
             command.Parameters.AddWithValue("$institution_id", institution.Id);
             command.Parameters.AddWithValue("$institution_name", institution.Name);
-            command.Parameters.AddWithValue("$status", NormalizeStatus(requisition.Status));
+            command.Parameters.AddWithValue("$status", NormalizeStatus(authorization.Status));
             command.Parameters.AddWithValue("$created_utc", now.ToString("O", CultureInfo.InvariantCulture));
             command.Parameters.AddWithValue("$updated_utc", now.ToString("O", CultureInfo.InvariantCulture));
             await command.ExecuteNonQueryAsync(cancellationToken);
-        }
-        catch
-        {
-            try
-            {
-                await provider.DeleteRequisitionAsync(requisition.Id, cancellationToken);
-            }
-            catch
-            {
-                // The local insert failure remains the primary exception.
-            }
-            throw;
         }
 
         return new CreatedBankConnection(
@@ -168,16 +155,17 @@ public sealed class BankingService(
                 connectionId,
                 institution.Id,
                 institution.Name,
-                NormalizeStatus(requisition.Status),
+                NormalizeStatus(authorization.Status),
                 now,
                 now,
                 null,
                 0),
-            requisition.Link);
+            authorization.Link);
     }
 
     public async Task<bool> CompleteCallbackAsync(
         string connectionId,
+        string code,
         CancellationToken cancellationToken)
     {
         var stored = await GetConnectionByIdAsync(connectionId, cancellationToken);
@@ -185,18 +173,39 @@ public sealed class BankingService(
         {
             return false;
         }
-        var requisition = await provider.GetRequisitionAsync(
-            stored.RequisitionId,
-            cancellationToken);
+        if (!string.Equals(stored.Provider, EnableBankingClient.ProviderId, StringComparison.Ordinal))
+        {
+            return false;
+        }
+        var session = await provider.AuthorizeSessionAsync(code, cancellationToken);
         await UpdateProviderStateAsync(
             stored.ConnectionId,
-            requisition,
+            session,
             false,
             cancellationToken);
         return string.Equals(
-            requisition.Status,
-            "LN",
+            session.Status,
+            "AUTHORIZED",
             StringComparison.OrdinalIgnoreCase);
+    }
+
+    public async Task RejectCallbackAsync(
+        string connectionId,
+        CancellationToken cancellationToken)
+    {
+        var stored = await GetConnectionByIdAsync(connectionId, cancellationToken);
+        if (stored is null)
+        {
+            return;
+        }
+        var now = DateTimeOffset.UtcNow;
+        await using var connection = await store.OpenConnectionAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            "UPDATE bank_connections SET status = 'rejected', updated_utc = $updated_utc WHERE connection_id = $connection_id AND provider = 'enable-banking';";
+        command.Parameters.AddWithValue("$updated_utc", now.ToString("O", CultureInfo.InvariantCulture));
+        command.Parameters.AddWithValue("$connection_id", connectionId);
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     public async Task<BankRefreshPreview> RefreshAsync(
@@ -220,26 +229,31 @@ public sealed class BankingService(
             throw new BankingValidationException(
                 "Es wurden zu viele bekannte Bankbuchungen übermittelt.");
         }
+        if (!string.Equals(stored.Provider, EnableBankingClient.ProviderId, StringComparison.Ordinal))
+        {
+            throw new BankingValidationException(
+                "Diese ältere Bankfreigabe wird nicht mehr unterstützt. Bitte trennen und neu verbinden.");
+        }
 
-        var requisition = await provider.GetRequisitionAsync(
-            stored.RequisitionId,
+        var session = await provider.GetSessionAsync(
+            stored.ProviderReference,
             cancellationToken);
         await UpdateProviderStateAsync(
             stored.ConnectionId,
-            requisition,
+            session,
             true,
             cancellationToken);
-        if (!string.Equals(requisition.Status, "LN", StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(session.Status, "AUTHORIZED", StringComparison.OrdinalIgnoreCase))
         {
             throw new BankingValidationException(
-                requisition.Status.Equals("EX", StringComparison.OrdinalIgnoreCase)
+                session.Status.Equals("EXPIRED", StringComparison.OrdinalIgnoreCase)
                     ? "Die Bankfreigabe ist abgelaufen und muss erneuert werden."
                     : "Die Bankverbindung ist noch nicht vollständig freigegeben.");
         }
 
         var balances = new List<BankBalancePreview>();
         var transactions = new List<BankTransactionPreview>();
-        foreach (var accountId in requisition.Accounts)
+        foreach (var accountId in session.Accounts)
         {
             var accountReference = AccountReference(accountId);
             using var balanceDocument = await provider.GetBalancesAsync(
@@ -290,7 +304,10 @@ public sealed class BankingService(
     {
         await EnsureCanManageAsync(groupId, userId, cancellationToken);
         var stored = await GetConnectionAsync(groupId, connectionId, cancellationToken);
-        await provider.DeleteRequisitionAsync(stored.RequisitionId, cancellationToken);
+        if (string.Equals(stored.Provider, EnableBankingClient.ProviderId, StringComparison.Ordinal))
+        {
+            await provider.DeleteSessionAsync(stored.ProviderReference, cancellationToken);
+        }
         await using var connection = await store.OpenConnectionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
         command.CommandText =
@@ -346,7 +363,8 @@ public sealed class BankingService(
             SELECT
                 connection_id,
                 group_id,
-                requisition_id,
+                provider,
+                provider_reference,
                 institution_id,
                 institution_name,
                 status,
@@ -372,14 +390,15 @@ public sealed class BankingService(
             reader.GetString(4),
             reader.GetString(5),
             reader.GetString(6),
-            ParseDate(reader.GetString(7)),
+            reader.GetString(7),
             ParseDate(reader.GetString(8)),
-            reader.IsDBNull(9) ? null : ParseDate(reader.GetString(9)));
+            ParseDate(reader.GetString(9)),
+            reader.IsDBNull(10) ? null : ParseDate(reader.GetString(10)));
     }
 
     private async Task UpdateProviderStateAsync(
         string connectionId,
-        ProviderRequisition requisition,
+        ProviderSession session,
         bool refreshed,
         CancellationToken cancellationToken)
     {
@@ -389,7 +408,8 @@ public sealed class BankingService(
         command.CommandText =
             """
             UPDATE bank_connections
-            SET status = $status,
+            SET provider_reference = $provider_reference,
+                status = $status,
                 account_ids_json = $accounts,
                 updated_utc = $updated_utc,
                 last_refresh_utc = CASE
@@ -398,10 +418,11 @@ public sealed class BankingService(
                 END
             WHERE connection_id = $connection_id;
             """;
-        command.Parameters.AddWithValue("$status", NormalizeStatus(requisition.Status));
+        command.Parameters.AddWithValue("$provider_reference", session.Id);
+        command.Parameters.AddWithValue("$status", NormalizeStatus(session.Status));
         command.Parameters.AddWithValue(
             "$accounts",
-            JsonSerializer.Serialize(requisition.Accounts));
+            JsonSerializer.Serialize(session.Accounts));
         command.Parameters.AddWithValue("$updated_utc", now.ToString("O", CultureInfo.InvariantCulture));
         command.Parameters.AddWithValue("$refreshed", refreshed ? 1 : 0);
         command.Parameters.AddWithValue("$connection_id", connectionId);
@@ -421,23 +442,23 @@ public sealed class BankingService(
         }
         var priorities = new[]
         {
-            "interimAvailable",
-            "interimBooked",
-            "closingBooked",
-            "expected",
+            "ITAV",
+            "CLAV",
+            "CLBD",
+            "XPCD",
         };
         foreach (var preferredType in priorities)
         {
             foreach (var balance in values.EnumerateArray())
             {
                 if (!string.Equals(
-                    GoCardlessClient.GetString(balance, "balanceType"),
+                    EnableBankingClient.GetString(balance, "balance_type"),
                     preferredType,
                     StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
-                if (TryReadAmount(balance, "balanceAmount", out var amount, out var currency))
+                if (TryReadAmount(balance, "balance_amount", out var amount, out var currency))
                 {
                     return new BankBalancePreview(
                         accountReference,
@@ -445,6 +466,17 @@ public sealed class BankingService(
                         amount,
                         preferredType);
                 }
+            }
+        }
+        foreach (var balance in values.EnumerateArray())
+        {
+            if (TryReadAmount(balance, "balance_amount", out var amount, out var currency))
+            {
+                return new BankBalancePreview(
+                    accountReference,
+                    currency,
+                    amount,
+                    EnableBankingClient.GetString(balance, "balance_type"));
             }
         }
         return null;
@@ -458,41 +490,7 @@ public sealed class BankingService(
         List<BankTransactionPreview> result)
     {
         if (
-            !root.TryGetProperty("transactions", out var container)
-            || container.ValueKind != JsonValueKind.Object
-        )
-        {
-            return;
-        }
-        ParseTransactionArray(
-            container,
-            "booked",
-            "booked",
-            accountId,
-            accountReference,
-            knownIds,
-            result);
-        ParseTransactionArray(
-            container,
-            "pending",
-            "pending",
-            accountId,
-            accountReference,
-            knownIds,
-            result);
-    }
-
-    private static void ParseTransactionArray(
-        JsonElement container,
-        string property,
-        string status,
-        string accountId,
-        string accountReference,
-        HashSet<string> knownIds,
-        List<BankTransactionPreview> result)
-    {
-        if (
-            !container.TryGetProperty(property, out var values)
+            !root.TryGetProperty("transactions", out var values)
             || values.ValueKind != JsonValueKind.Array
         )
         {
@@ -500,14 +498,23 @@ public sealed class BankingService(
         }
         foreach (var transaction in values.EnumerateArray())
         {
-            if (!TryReadAmount(transaction, "transactionAmount", out var signedAmount, out var currency))
+            if (!TryReadAmount(transaction, "transaction_amount", out var rawAmount, out var currency))
             {
                 continue;
             }
-            var dateText = GoCardlessClient.GetString(transaction, "bookingDate");
+            var indicator = EnableBankingClient.GetString(
+                transaction,
+                "credit_debit_indicator");
+            var signedAmount = indicator.ToUpperInvariant() switch
+            {
+                "DBIT" => -Math.Abs(rawAmount),
+                "CRDT" => Math.Abs(rawAmount),
+                _ => rawAmount,
+            };
+            var dateText = EnableBankingClient.GetString(transaction, "booking_date");
             if (string.IsNullOrWhiteSpace(dateText))
             {
-                dateText = GoCardlessClient.GetString(transaction, "valueDate");
+                dateText = EnableBankingClient.GetString(transaction, "value_date");
             }
             if (!DateOnly.TryParseExact(
                 dateText,
@@ -519,6 +526,8 @@ public sealed class BankingService(
                 continue;
             }
             var description = TransactionDescription(transaction, signedAmount);
+            var status = NormalizeTransactionStatus(
+                EnableBankingClient.GetString(transaction, "status"));
             var importId = TransactionImportId(
                 transaction,
                 accountId,
@@ -554,8 +563,8 @@ public sealed class BankingService(
         {
             return false;
         }
-        var amountText = GoCardlessClient.GetString(value, "amount");
-        currency = GoCardlessClient.GetString(value, "currency").ToUpperInvariant();
+        var amountText = EnableBankingClient.GetString(value, "amount");
+        currency = EnableBankingClient.GetString(value, "currency").ToUpperInvariant();
         return currency.Length == 3
             && decimal.TryParse(
                 amountText,
@@ -569,20 +578,40 @@ public sealed class BankingService(
         decimal signedAmount)
     {
         var parts = new List<string>();
-        var counterparty = GoCardlessClient.GetString(
+        var counterparty = GetNestedString(
             transaction,
-            signedAmount < 0 ? "creditorName" : "debtorName");
+            signedAmount < 0 ? "creditor" : "debtor",
+            "name");
         if (!string.IsNullOrWhiteSpace(counterparty))
         {
             parts.Add(counterparty.Trim());
         }
+        if (
+            transaction.TryGetProperty("remittance_information", out var remittance)
+            && remittance.ValueKind == JsonValueKind.Array
+        )
+        {
+            foreach (var item in remittance.EnumerateArray())
+            {
+                var value = item.ValueKind == JsonValueKind.String
+                    ? item.GetString()?.Trim() ?? string.Empty
+                    : string.Empty;
+                if (
+                    !string.IsNullOrWhiteSpace(value)
+                    && !parts.Contains(value, StringComparer.OrdinalIgnoreCase)
+                )
+                {
+                    parts.Add(value);
+                }
+            }
+        }
         foreach (var property in new[]
         {
-            "remittanceInformationUnstructured",
-            "additionalInformation",
+            "note",
+            "reference_number",
         })
         {
-            var value = GoCardlessClient.GetString(transaction, property).Trim();
+            var value = EnableBankingClient.GetString(transaction, property).Trim();
             if (
                 !string.IsNullOrWhiteSpace(value)
                 && !parts.Contains(value, StringComparer.OrdinalIgnoreCase)
@@ -607,23 +636,23 @@ public sealed class BankingService(
         string currency,
         string description)
     {
-        var providerId = GoCardlessClient.GetString(transaction, "transactionId");
+        var providerId = EnableBankingClient.GetString(transaction, "entry_reference");
         if (string.IsNullOrWhiteSpace(providerId))
         {
-            providerId = GoCardlessClient.GetString(
+            providerId = EnableBankingClient.GetString(
                 transaction,
-                "internalTransactionId");
+                "transaction_id");
         }
         var source = !string.IsNullOrWhiteSpace(providerId)
-            ? $"gocardless|{accountId}|provider|{providerId}"
+            ? $"enable-banking|{accountId}|provider|{providerId}"
             : string.Join('|',
-                "gocardless",
+                "enable-banking",
                 accountId,
                 bookingDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
                 amount.ToString("0.00####", CultureInfo.InvariantCulture),
                 currency,
                 description.Trim().ToLowerInvariant());
-        return "gc_" + Convert.ToHexString(
+        return "eb_" + Convert.ToHexString(
             SHA256.HashData(Encoding.UTF8.GetBytes(source)))
             .ToLowerInvariant();
     }
@@ -669,18 +698,35 @@ public sealed class BankingService(
     private static string NormalizeStatus(string status) =>
         status.Trim().ToUpperInvariant() switch
         {
-            "LN" => "linked",
-            "EX" => "expired",
-            "RJ" => "rejected",
-            "CR" => "created",
-            "GC" or "UA" or "SA" or "GA" => "authorizing",
+            "AUTHORIZED" => "linked",
+            "EXPIRED" => "expired",
+            "CANCELLED" or "CLOSED" or "INVALID" or "REJECTED" or "REVOKED" or "ERROR" => "rejected",
+            "PENDING_AUTHORIZATION" or "RETURNED_FROM_BANK" => "authorizing",
             _ => "unknown",
         };
+
+    private static string NormalizeTransactionStatus(string status) =>
+        status.Trim().ToUpperInvariant() switch
+        {
+            "BOOK" => "booked",
+            "PDNG" or "HOLD" or "SCHD" => "pending",
+            _ => "other",
+        };
+
+    private static string GetNestedString(
+        JsonElement element,
+        string property,
+        string nestedProperty) =>
+        element.TryGetProperty(property, out var nested)
+            && nested.ValueKind == JsonValueKind.Object
+                ? EnableBankingClient.GetString(nested, nestedProperty)
+                : string.Empty;
 
     private sealed record StoredBankConnection(
         string ConnectionId,
         string GroupId,
-        string RequisitionId,
+        string Provider,
+        string ProviderReference,
         string InstitutionId,
         string InstitutionName,
         string Status,

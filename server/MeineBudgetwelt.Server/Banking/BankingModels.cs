@@ -5,7 +5,7 @@ public sealed record BankInstitution(
     string Name,
     string Bic,
     string Logo,
-    int MaximumAccessDays);
+    int MaximumConsentValiditySeconds);
 
 public sealed record CreateBankConnectionRequest(string InstitutionId);
 

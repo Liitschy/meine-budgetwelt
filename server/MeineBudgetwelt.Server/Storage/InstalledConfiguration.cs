@@ -48,13 +48,14 @@ public static class InstalledConfiguration
                 TimeoutSeconds = 300,
                 KeepAlive = "30m",
             },
-            GoCardless = new
+            EnableBanking = new
             {
                 Enabled = false,
-                BaseUrl = "https://bankaccountdata.gocardless.com/api/v2/",
+                BaseUrl = "https://api.enablebanking.com/",
                 RedirectBaseUrl = "https://budget.leno.info",
                 DefaultCountry = "DE",
-                SandboxMode = false,
+                ApplicationId = string.Empty,
+                PrivateKeyPath = Path.Combine(paths.RootDirectory, "secrets", "enable-banking-private.pem"),
                 TimeoutSeconds = 45,
             },
             Logging = new
@@ -105,17 +106,31 @@ public static class InstalledConfiguration
             changed = true;
         }
 
-        if (!configuration.ContainsKey("GoCardless"))
+        if (!configuration.ContainsKey("EnableBanking"))
         {
-            configuration["GoCardless"] = new JsonObject
+            configuration["EnableBanking"] = new JsonObject
             {
                 ["Enabled"] = false,
-                ["BaseUrl"] = "https://bankaccountdata.gocardless.com/api/v2/",
+                ["BaseUrl"] = "https://api.enablebanking.com/",
                 ["RedirectBaseUrl"] = "https://budget.leno.info",
                 ["DefaultCountry"] = "DE",
-                ["SandboxMode"] = false,
+                ["ApplicationId"] = string.Empty,
+                ["PrivateKeyPath"] = Path.Combine(
+                    Path.GetDirectoryName(configurationPath)
+                        ?? throw new InvalidOperationException("Konfigurationsordner fehlt."),
+                    "secrets",
+                    "enable-banking-private.pem"),
                 ["TimeoutSeconds"] = 45,
             };
+            changed = true;
+        }
+
+        if (
+            configuration["GoCardless"] is JsonObject goCardless
+            && goCardless["Enabled"]?.GetValue<bool>() == true
+        )
+        {
+            goCardless["Enabled"] = false;
             changed = true;
         }
 

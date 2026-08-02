@@ -11,7 +11,7 @@ $installerScript = Join-Path $repositoryRoot "installer\meine-budgetwelt.nsi"
 $buildRoot = Join-Path $repositoryRoot "build\windows"
 $isolatedAppData = Join-Path $repositoryRoot ".godot\windows-export-appdata"
 $isolatedLocalAppData = Join-Path $repositoryRoot ".godot\windows-export-localappdata"
-$isolatedTemplateRoot = Join-Path $isolatedAppData "Godot\export_templates\4.7.1.stable"
+$isolatedTemplateRoot = ""
 $templateArchive = Join-Path $repositoryRoot ".godot\windows-export-templates\Godot_v4.7.1-stable_export_templates.tpz"
 
 $projectText = Get-Content -LiteralPath $projectFile -Raw
@@ -48,8 +48,14 @@ if ([string]::IsNullOrWhiteSpace($GodotPath)) {
     }
 }
 if ([string]::IsNullOrWhiteSpace($GodotPath) -or -not (Test-Path -LiteralPath $GodotPath -PathType Leaf)) {
-    throw "Godot 4.7.1 wurde nicht gefunden."
+	throw "Godot 4.7.1 wurde nicht gefunden."
 }
+$templateVersion = if ([IO.Path]::GetFileName($GodotPath) -match "mono") {
+    "4.7.1.stable.mono"
+} else {
+    "4.7.1.stable"
+}
+$isolatedTemplateRoot = Join-Path $isolatedAppData "Godot\export_templates\$templateVersion"
 
 if ([string]::IsNullOrWhiteSpace($MakensisPath)) {
     $makensisCommand = Get-Command makensis -ErrorAction SilentlyContinue
@@ -81,7 +87,7 @@ $requiredTemplates = @(
     "windows_debug_x86_64.exe",
     "windows_release_x86_64.exe"
 )
-$sourceTemplateRoot = Join-Path $env:APPDATA "Godot\export_templates\4.7.1.stable"
+$sourceTemplateRoot = Join-Path $env:APPDATA "Godot\export_templates\$templateVersion"
 foreach ($templateName in $requiredTemplates) {
     $targetTemplate = Join-Path $isolatedTemplateRoot $templateName
     $sourceTemplate = Join-Path $sourceTemplateRoot $templateName

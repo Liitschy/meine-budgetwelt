@@ -12,10 +12,10 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <Compile Include="..\MeineBudgetwelt.Server\Banking\BankingModels.cs"
              Link="Banking\BankingModels.cs" />
-    <Compile Include="..\MeineBudgetwelt.Server\Banking\GoCardlessOptions.cs"
-             Link="Banking\GoCardlessOptions.cs" />
-    <Compile Include="..\MeineBudgetwelt.Server\Banking\GoCardlessClient.cs"
-             Link="Banking\GoCardlessClient.cs" />
+    <Compile Include="..\MeineBudgetwelt.Server\Banking\EnableBankingOptions.cs"
+             Link="Banking\EnableBankingOptions.cs" />
+    <Compile Include="..\MeineBudgetwelt.Server\Banking\EnableBankingClient.cs"
+             Link="Banking\EnableBankingClient.cs" />
   </ItemGroup>
 
 </Project>

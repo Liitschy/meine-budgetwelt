@@ -1,8 +1,6 @@
 param(
-    [ValidateSet("LocalAi", "GoCardless", "Both")]
+    [ValidateSet("LocalAi", "EnableBanking", "Both")]
     [string]$Integration = "Both",
-    [ValidateSet("Sandbox", "Production")]
-    [string]$GoCardlessMode = "Production",
     [string]$DataRoot = "$env:ProgramData\Meine Budgetwelt Server",
     [string]$ServiceName = "MeineBudgetweltServer"
 )
@@ -17,35 +15,64 @@ function Assert-Administrator {
     }
 }
 
-function Read-SecretValue {
+function Read-RequiredText {
     param([string]$Prompt)
 
-    $secureValue = Read-Host -Prompt $Prompt -AsSecureString
-    $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureValue)
-    try {
-        $plainValue = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer)
-        if ([string]::IsNullOrWhiteSpace($plainValue)) {
-            throw "Der geheime Wert darf nicht leer sein."
-        }
-        return $plainValue
+    $value = (Read-Host -Prompt $Prompt).Trim()
+    if ([string]::IsNullOrWhiteSpace($value)) {
+        throw "$Prompt darf nicht leer sein."
     }
-    finally {
-        [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer)
-    }
+    return $value
 }
 
-function Set-ServiceEnvironmentEntry {
+function Protect-SecretPath {
     param(
-        [string[]]$Entries,
-        [string]$Name,
-        [string]$Value
+        [string]$Path,
+        [switch]$Directory
     )
 
-    $result = @($Entries | Where-Object {
-        $_ -notlike "$Name=*"
-    })
-    $result += "$Name=$Value"
-    return [string[]]$result
+    $systemSid = [Security.Principal.SecurityIdentifier]::new(
+        [Security.Principal.WellKnownSidType]::LocalSystemSid,
+        $null
+    )
+    $administratorsSid = [Security.Principal.SecurityIdentifier]::new(
+        [Security.Principal.WellKnownSidType]::BuiltinAdministratorsSid,
+        $null
+    )
+    $localServiceSid = [Security.Principal.SecurityIdentifier]::new(
+        [Security.Principal.WellKnownSidType]::LocalServiceSid,
+        $null
+    )
+    $acl = if ($Directory) {
+        [Security.AccessControl.DirectorySecurity]::new()
+    } else {
+        [Security.AccessControl.FileSecurity]::new()
+    }
+    $inheritance = [Security.AccessControl.InheritanceFlags]::None
+    $propagation = [Security.AccessControl.PropagationFlags]::None
+    if ($Directory) {
+        $inheritance = (
+            [Security.AccessControl.InheritanceFlags]::ContainerInherit -bor
+            [Security.AccessControl.InheritanceFlags]::ObjectInherit
+        )
+    }
+    $acl.SetAccessRuleProtection($true, $false)
+    $accessRules = @(
+        @{ Sid = $systemSid; Rights = [Security.AccessControl.FileSystemRights]::FullControl },
+        @{ Sid = $administratorsSid; Rights = [Security.AccessControl.FileSystemRights]::FullControl },
+        @{ Sid = $localServiceSid; Rights = [Security.AccessControl.FileSystemRights]::ReadAndExecute }
+    )
+    foreach ($accessRule in $accessRules) {
+        $rule = [Security.AccessControl.FileSystemAccessRule]::new(
+            $accessRule.Sid,
+            $accessRule.Rights,
+            $inheritance,
+            $propagation,
+            [Security.AccessControl.AccessControlType]::Allow
+        )
+        $acl.AddAccessRule($rule) | Out-Null
+    }
+    Set-Acl -LiteralPath $Path -AclObject $acl
 }
 
 function Ensure-ConfigurationSection {
@@ -83,7 +110,10 @@ if ($null -ne $serviceProperties.PSObject.Properties["Environment"]) {
     $environmentEntries = @($serviceProperties.Environment)
 }
 $environmentEntries = @($environmentEntries | Where-Object {
-    $_ -notlike "BUDGETWELT_OPENAI_API_KEY=*"
+    -not [string]::IsNullOrWhiteSpace($_)
+    -and $_ -notlike "BUDGETWELT_OPENAI_API_KEY=*"
+    -and $_ -notlike "BUDGETWELT_GOCARDLESS_SECRET_ID=*"
+    -and $_ -notlike "BUDGETWELT_GOCARDLESS_SECRET_KEY=*"
 })
 
 if ($Integration -in @("LocalAi", "Both")) {
@@ -103,44 +133,75 @@ if ($Integration -in @("LocalAi", "Both")) {
     $configuration.LocalAi.Model = "qwen3.5:4b"
 }
 
-if ($Integration -in @("GoCardless", "Both")) {
-    $secretId = Read-SecretValue "GoCardless Secret ID"
-    $secretKey = Read-SecretValue "GoCardless Secret Key"
-    try {
-        $environmentEntries = Set-ServiceEnvironmentEntry `
-            -Entries $environmentEntries `
-            -Name "BUDGETWELT_GOCARDLESS_SECRET_ID" `
-            -Value $secretId
-        $environmentEntries = Set-ServiceEnvironmentEntry `
-            -Entries $environmentEntries `
-            -Name "BUDGETWELT_GOCARDLESS_SECRET_KEY" `
-            -Value $secretKey
+if ($Integration -in @("EnableBanking", "Both")) {
+    $applicationId = Read-RequiredText "Enable Banking App-ID"
+    $parsedApplicationId = [Guid]::Empty
+    if (-not [Guid]::TryParse($applicationId, [ref]$parsedApplicationId)) {
+        throw "Die Enable-Banking-App-ID muss eine gültige UUID sein."
     }
-    finally {
-        $secretId = $null
-        $secretKey = $null
+
+    $sourceKeyPath = Read-RequiredText "Vollständiger Pfad zur heruntergeladenen PEM-Datei"
+    if (-not (Test-Path -LiteralPath $sourceKeyPath -PathType Leaf)) {
+        throw "Die PEM-Datei wurde nicht gefunden: $sourceKeyPath"
     }
+    $sourceKeyPath = (Resolve-Path -LiteralPath $sourceKeyPath).Path
+    $privateKey = [IO.File]::ReadAllText($sourceKeyPath)
+    if (
+        $privateKey -notmatch "-----BEGIN (RSA )?PRIVATE KEY-----" -or
+        $privateKey -notmatch "-----END (RSA )?PRIVATE KEY-----"
+    ) {
+        throw "Die ausgewählte Datei enthält keinen unterstützten privaten PEM-Schlüssel."
+    }
+
+    $secretDirectory = Join-Path $DataRoot "secrets"
+    New-Item -ItemType Directory -Path $secretDirectory -Force | Out-Null
+    Protect-SecretPath -Path $secretDirectory -Directory
+    $destinationKeyPath = Join-Path $secretDirectory "enable-banking-private.pem"
+    if (-not [string]::Equals(
+        $sourceKeyPath,
+        $destinationKeyPath,
+        [StringComparison]::OrdinalIgnoreCase)) {
+        [IO.File]::Copy($sourceKeyPath, $destinationKeyPath, $true)
+    }
+    Protect-SecretPath -Path $destinationKeyPath
+    $privateKey = $null
+
     Ensure-ConfigurationSection `
         -Configuration $configuration `
-        -Name "GoCardless" `
+        -Name "EnableBanking" `
         -Defaults @{
             Enabled = $false
-            BaseUrl = "https://bankaccountdata.gocardless.com/api/v2/"
+            BaseUrl = "https://api.enablebanking.com/"
             RedirectBaseUrl = "https://budget.leno.info"
             DefaultCountry = "DE"
-            SandboxMode = $false
+            ApplicationId = ""
+            PrivateKeyPath = $destinationKeyPath
             TimeoutSeconds = 45
         }
-    $configuration.GoCardless.Enabled = $true
-    $configuration.GoCardless.SandboxMode = ($GoCardlessMode -eq "Sandbox")
+    $configuration.EnableBanking.Enabled = $true
+    $configuration.EnableBanking.BaseUrl = "https://api.enablebanking.com/"
+    $configuration.EnableBanking.RedirectBaseUrl = "https://budget.leno.info"
+    $configuration.EnableBanking.ApplicationId = $parsedApplicationId.ToString()
+    $configuration.EnableBanking.PrivateKeyPath = $destinationKeyPath
+
+    if ($null -ne $configuration.PSObject.Properties["GoCardless"]) {
+        $configuration.GoCardless.Enabled = $false
+    }
 }
 
-New-ItemProperty `
-    -LiteralPath $serviceRegistryPath `
-    -Name "Environment" `
-    -PropertyType MultiString `
-    -Value ([string[]]$environmentEntries) `
-    -Force | Out-Null
+if ($environmentEntries.Count -eq 0) {
+    Remove-ItemProperty `
+        -LiteralPath $serviceRegistryPath `
+        -Name "Environment" `
+        -ErrorAction SilentlyContinue
+} else {
+    New-ItemProperty `
+        -LiteralPath $serviceRegistryPath `
+        -Name "Environment" `
+        -PropertyType MultiString `
+        -Value ([string[]]$environmentEntries) `
+        -Force | Out-Null
+}
 
 $temporaryPath = "$configurationPath.new"
 $backupPath = "$configurationPath.before-integrations-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
@@ -157,8 +218,8 @@ $service = Get-Service -Name $ServiceName
 $service.WaitForStatus([ServiceProcess.ServiceControllerStatus]::Running, [TimeSpan]::FromSeconds(30))
 
 Write-Host "Integrationen wurden sicher konfiguriert."
-if ($Integration -in @("GoCardless", "Both")) {
-    Write-Host "GoCardless-Modus: $GoCardlessMode"
+if ($Integration -in @("EnableBanking", "Both")) {
+    Write-Host "Enable Banking ist eingerichtet. Sandbox oder Produktion wird durch die registrierte App-ID bestimmt."
 }
 Write-Host "Die vorherige Konfiguration liegt unter: $backupPath"
-Write-Host "Kein geheimer Wert wurde in appsettings.json oder auf der Befehlszeile gespeichert."
+Write-Host "Der private Schlüssel liegt ausschließlich in der geschützten Serverablage."

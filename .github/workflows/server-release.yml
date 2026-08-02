@@ -61,6 +61,10 @@ jobs:
           $godotExecutable = Join-Path $env:USERPROFILE "godot\Godot_v4.7.1-stable_win64_console.exe"
           & .\tools\build-server-installer.ps1 -GodotPath $godotExecutable
 
+      - name: Installation, Dienststart und Upgrade prüfen
+        shell: pwsh
+        run: .\tools\verify-server-installer.ps1 -SkipBuild
+
       - name: Signiertes Update-Manifest erzeugen
         id: package
         shell: pwsh

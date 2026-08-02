@@ -12,7 +12,7 @@ risikogerechten Prüfung veröffentlicht.
 - Die kostenfreie KI-gestützte Wochenplanung ist ein fester Bestandteil des
   Zielprodukts und nicht optional. Sie verwendet dieselbe lokale
   Ollama-Laufzeit auf dem Root-Server wie Blenk Voice.
-- Die Online-Banking-Anbindung erfolgt über GoCardless Bank Account Data,
+- Die Online-Banking-Anbindung erfolgt über Enable Banking,
   ausschließlich lesend und nur nach einem ausdrücklichen Knopfdruck.
 - Wocheneinkauf, Rezepte und Speiseplan sind im Zielprodukt dauerhaft sichtbare
   Hauptfunktionen. Sie zeigen voraussichtliche Kosten pro Rezept, Tag und Woche.
@@ -37,7 +37,7 @@ risikogerechten Prüfung veröffentlicht.
 - Budgetberechnungen, Preisprüfung und Sicherheitsgrenzen bleiben in
   deterministischen Calculators beziehungsweise Managern. KI-Ausgaben werden
   vor der Anzeige und Speicherung gegen diese Regeln validiert.
-- PIN, TAN, Banking-Passwörter sowie GoCardless-Geheimnisse dürfen
+- PIN, TAN, Banking-Passwörter sowie Enable-Banking-App-ID und privater Schlüssel dürfen
   niemals in der PWA, der Windows-EXE oder dem Repository gespeichert werden.
 
 ## Phase 0: Fehlerbereinigung und belastbare Tests
@@ -285,7 +285,7 @@ konfliktfreie Caddy-Block für den ausschließlich lokalen Upstream
 7. Desktop-App und PWA verwenden dieselbe Authentifizierung und
    Synchronisations-API. Lokale Daten dienen danach als Offline-Kopie und
    Sicherung, nicht als voneinander getrennter Hauptdatenbestand.
-8. Die KI ist nur über Loopback erreichbar. GoCardless-Geheimnisse und
+8. Die KI ist nur über Loopback erreichbar. Enable-Banking-App-ID und privater Schlüssel und
    Bankzugriffstoken liegen ausschließlich im Serverdienst und niemals in
    Client, PWA-Cache oder Repository.
 9. Der Server prüft selbständig nach dem Start und täglich auf signierte
@@ -347,7 +347,7 @@ Abnahmekriterien:
 - nach Abmeldung sind private Daten nicht mehr aus Cache oder Verlauf abrufbar;
 - es existiert keine offene Registrierung;
 - der Zugriff jedes freigeschalteten Kontos kann einzeln entzogen werden;
-- PWA, lokales KI-Backend und GoCardless-Backend verwenden denselben verbindlichen
+- PWA, lokales KI-Backend und Enable-Banking-Backend verwenden denselben verbindlichen
   Benutzer- und Sitzungsgrenzschutz.
 - Desktop und PWA zeigen nach abgeschlossener Synchronisation denselben
   fachlichen Datenstand;
@@ -383,7 +383,7 @@ gespeichert; Buchungen bleiben unverändert. Die aktive Woche und der dauerhafte
 Wocheneinkauf sind im selben Bereich sichtbar. Manuelle Artikel können ergänzt,
 abgehakt und bestätigt gelöscht werden; das Verbuchen bleibt eine getrennte,
 eindeutige Benutzeraktion für die tatsächlich gekauften Artikel. Dieser Stand
-ist noch nicht veröffentlicht.
+ist mit Version 0.41.0 veröffentlicht.
 
 Rezeptbibliothek und persönliche Preisbasis sind inzwischen ebenfalls
 datengebunden umgesetzt und visuell freigegeben. Rezepte lassen sich anlegen,
@@ -476,29 +476,33 @@ Abnahmekriterien:
 - jeder KI-Plan zeigt Preisbasis, Schätzcharakter und Sicherheitspuffer;
 - Übertragung und Löschung der Planungsdaten sind transparent dokumentiert.
 
-## Phase 4: Read-only-Bankanbindung mit GoCardless
+## Phase 4: Read-only-Bankanbindung mit Enable Banking
 
 Status: **Backend, Clientlogik und freigegebene responsive Oberfläche lokal
-umgesetzt; GoCardless-Sandbox- und Produktivtest mit Servergeheimnissen offen**
+umgesetzt; Server-Installer 0.1.2 lokal gebaut und Sandbox-App vorhanden;
+administrativer Dienst-Upgrade-Test, Root-Server-Einrichtung und Live-Abnahme
+noch offen**
 
-GoCardless Bank Account Data wird ausschließlich für einen manuellen,
+Enable Banking wird ausschließlich für einen manuellen,
 lesenden Abruf verwendet.
 
 **Lokal umgesetzt am 2. August 2026:** Der isolierte Server besitzt eine eigene
 Schema-Version und Tabelle ausschließlich für Bankfreigaben, authentifizierte
-und gedrosselte Endpunkte sowie einen serverseitigen GoCardless-Client mit
-Token-Erneuerung. Der Client zeigt Kontostände und Buchungen zuerst als
+und gedrosselte Endpunkte sowie einen serverseitigen Enable-Banking-Client. Der
+Client zeigt Kontostände und Buchungen zuerst als
 Vorschau, markiert Dubletten und vorgemerkte Umsätze als nicht auswählbar und
 übernimmt nur ausdrücklich ausgewählte, gebuchte EUR-Umsätze. Stabile
 Import-IDs verhindern erneute Übernahmen. Bankauswahl und starke
-Authentifizierung erfolgen im Browser bei GoCardless beziehungsweise der Bank.
-Ein standardmaessig ausgeschalteter Server-Schalter blendet fuer die erste
-Abnahme gezielt die offizielle GoCardless-Testbank ein; im Produktivmodus wird
-sie nicht angeboten.
+Authentifizierung erfolgen im Browser bei Enable Banking beziehungsweise der Bank.
+App-ID und privater PEM-Schlüssel werden ausschließlich auf dem Server
+eingerichtet. Ob Sandbox- oder Produktivbanken angeboten werden, bestimmt die
+registrierte Enable-Banking-App; es gibt keinen lokalen Modusschalter. Für den
+späteren eingeschränkten Produktivbetrieb wird eine getrennte Production-App
+verwendet und auf die eigenen Konten begrenzt.
 Nur `owner` und `manager` dürfen eine Verbindung anlegen oder trennen; der
 Abruf bleibt für Mitglieder derselben Budgetgruppe bewusst manuell. Es gibt
 keinen Zahlungsendpunkt. Die freigegebene Desktop- und Mobiloberfläche ist in
-den Buchungsbereich integriert, aber noch nicht veröffentlicht.
+den Buchungsbereich integriert und mit Version 0.41.0 veröffentlicht.
 
 Damit werden umgesetzt:
 
@@ -514,15 +518,16 @@ Sicherheits- und Datenschutzregeln:
 - Der Abruf startet nur über **Bank aktualisieren** oder eine vergleichbar
   eindeutige Benutzeraktion; keine unbemerkte Hintergrundsynchronisierung.
 - Anmeldung und starke Authentifizierung erfolgen bei der Bank beziehungsweise
-  im von GoCardless vorgesehenen Ablauf.
+  im von Enable Banking vorgesehenen Ablauf.
 - Die App fragt keine PIN oder TAN ab und speichert keine Bankzugangsdaten.
-- GoCardless-Geheimnisse und Zugriffstoken liegen nur in einem geschützten
-  Backend, niemals in GitHub Pages oder der Windows-EXE.
+- Enable-Banking-App-ID, privater Schlüssel und Sitzungsreferenzen liegen nur
+  im geschützten Backend, niemals in GitHub Pages oder der Windows-EXE. Der
+  PEM-Inhalt wird auch nicht in `appsettings.json` gespeichert.
 - Importierte Buchungen werden anhand stabiler Bank-IDs und eines geprüften
   Fallback-Fingerprints dedupliziert.
 - Bankverbindungen können getrennt und zugehörige Tokens gelöscht werden.
 - Die vorhandene lokale Datenspeicherung und manuelle Erfassung bleiben
-  unabhängig von GoCardless funktionsfähig.
+  unabhängig von Enable Banking funktionsfähig.
 - Es wird kein Zahlungsauslösedienst implementiert.
 
 Abnahmekriterien:

@@ -39,7 +39,7 @@ public static class BankingEndpoints
             : Results.Ok(new
             {
                 enabled = banking.IsConfigured,
-                provider = "GoCardless Bank Account Data",
+                provider = EnableBankingClient.ProviderName,
                 mode = "read-only",
                 automaticRefresh = false,
                 payments = false,
@@ -150,18 +150,30 @@ public static class BankingEndpoints
     }
 
     private static async Task<IResult> CompleteCallbackAsync(
-        string? connectionId,
+        string? state,
+        string? code,
+        string? error,
         BankingService banking,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(connectionId))
+        if (string.IsNullOrWhiteSpace(state))
         {
             return Results.Redirect("/?banking=invalid", false, false);
         }
         try
         {
+            if (!string.IsNullOrWhiteSpace(error))
+            {
+                await banking.RejectCallbackAsync(state, cancellationToken);
+                return Results.Redirect("/?banking=rejected", false, false);
+            }
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                return Results.Redirect("/?banking=invalid", false, false);
+            }
             var linked = await banking.CompleteCallbackAsync(
-                connectionId,
+                state,
+                code,
                 cancellationToken);
             return Results.Redirect(
                 linked ? "/?banking=connected" : "/?banking=pending",

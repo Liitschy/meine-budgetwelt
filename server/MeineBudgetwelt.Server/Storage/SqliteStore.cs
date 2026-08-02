@@ -208,8 +208,9 @@ public sealed class SqliteStore(
                 connection_id TEXT PRIMARY KEY,
                 group_id TEXT NOT NULL,
                 created_by_user_id TEXT NOT NULL,
-                provider TEXT NOT NULL CHECK(provider = 'gocardless-bad'),
-                requisition_id TEXT NOT NULL UNIQUE,
+                provider TEXT NOT NULL
+                    CHECK(provider IN ('gocardless-bad', 'enable-banking')),
+                provider_reference TEXT NOT NULL UNIQUE,
                 institution_id TEXT NOT NULL,
                 institution_name TEXT NOT NULL,
                 status TEXT NOT NULL,
@@ -231,6 +232,84 @@ public sealed class SqliteStore(
             """,
             cancellationToken);
 
+
+        if (!await ColumnExistsAsync(
+            connection,
+            "bank_connections",
+            "provider_reference",
+            cancellationToken))
+        {
+            await ExecuteAsync(
+                connection,
+                "PRAGMA foreign_keys = OFF;",
+                cancellationToken);
+            try
+            {
+                await ExecuteAsync(
+                    connection,
+                    """
+                    BEGIN IMMEDIATE;
+
+                    CREATE TABLE bank_connections_v6 (
+                        connection_id TEXT PRIMARY KEY,
+                        group_id TEXT NOT NULL,
+                        created_by_user_id TEXT NOT NULL,
+                        provider TEXT NOT NULL
+                            CHECK(provider IN ('gocardless-bad', 'enable-banking')),
+                        provider_reference TEXT NOT NULL UNIQUE,
+                        institution_id TEXT NOT NULL,
+                        institution_name TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        account_ids_json TEXT NOT NULL DEFAULT '[]',
+                        created_utc TEXT NOT NULL,
+                        updated_utc TEXT NOT NULL,
+                        last_refresh_utc TEXT NULL,
+                        FOREIGN KEY(group_id) REFERENCES budget_groups(group_id)
+                            ON DELETE CASCADE,
+                        FOREIGN KEY(created_by_user_id) REFERENCES users(user_id)
+                            ON DELETE CASCADE
+                    );
+
+                    INSERT INTO bank_connections_v6
+                    SELECT
+                        connection_id,
+                        group_id,
+                        created_by_user_id,
+                        provider,
+                        requisition_id,
+                        institution_id,
+                        institution_name,
+                        status,
+                        account_ids_json,
+                        created_utc,
+                        updated_utc,
+                        last_refresh_utc
+                    FROM bank_connections;
+
+                    DROP TABLE bank_connections;
+                    ALTER TABLE bank_connections_v6 RENAME TO bank_connections;
+                    CREATE INDEX idx_bank_connections_group
+                        ON bank_connections(group_id, created_utc DESC);
+                    COMMIT;
+                    """,
+                    cancellationToken);
+            }
+            finally
+            {
+                await ExecuteAsync(
+                    connection,
+                    "PRAGMA foreign_keys = ON;",
+                    cancellationToken);
+            }
+        }
+
+        await ExecuteAsync(
+            connection,
+            """
+            INSERT OR IGNORE INTO schema_versions(version, applied_utc)
+            VALUES (6, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+            """,
+            cancellationToken);
         logger.LogInformation(
             "Isolierte Budgetwelt-Datenbank initialisiert: {DatabasePath}",
             paths.DatabasePath);
@@ -269,9 +348,9 @@ public sealed class SqliteStore(
 
             await using var command = connection.CreateCommand();
             command.CommandText =
-                "SELECT COUNT(*) FROM schema_versions WHERE version IN (1, 2, 3, 4, 5);";
+                "SELECT COUNT(*) FROM schema_versions WHERE version IN (1, 2, 3, 4, 5, 6);";
             var result = await command.ExecuteScalarAsync(cancellationToken);
-            return Convert.ToInt64(result) == 5
+            return Convert.ToInt64(result) == 6
                 ? DatabaseHealth.Healthy()
                 : DatabaseHealth.Unhealthy("Schema-Version fehlt.");
         }
@@ -280,6 +359,25 @@ public sealed class SqliteStore(
             logger.LogError(exception, "Datenbank-Gesundheitsprüfung fehlgeschlagen.");
             return DatabaseHealth.Unhealthy("Datenbank nicht erreichbar.");
         }
+    }
+
+    private static async Task<bool> ColumnExistsAsync(
+        SqliteConnection connection,
+        string table,
+        string column,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            """
+            SELECT 1
+            FROM pragma_table_info($table)
+            WHERE name = $column
+            LIMIT 1;
+            """;
+        command.Parameters.AddWithValue("$table", table);
+        command.Parameters.AddWithValue("$column", column);
+        return await command.ExecuteScalarAsync(cancellationToken) is not null;
     }
 
     private static async Task ExecuteAsync(

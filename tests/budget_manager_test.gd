@@ -825,7 +825,7 @@ func _test_responsive_layout() -> void:
 	_assert_equal(app._compact_layout, true, "Kompaktes Layout bei Mobilbreite")
 	_assert_equal(app.sidebar_panel.visible, false, "Seitenleiste mobil ausgeblendet")
 	_assert_equal(app.mobile_navigation.visible, true, "Mobile Navigation eingeblendet")
-	_assert_equal(app.desktop_backdrop.visible, false, "Landschaftshintergrund ist ausschließlich für Windows aktiv")
+	_assert_equal(app.desktop_backdrop.visible, true, "Landschaft verbindet auch die mobile Oberfläche")
 	_assert_equal(
 		app.app_shell.get_child(app.app_shell.get_child_count() - 1),
 		app.mobile_navigation,
@@ -945,7 +945,7 @@ func _test_responsive_layout() -> void:
 			"Bestätigtes Löschen entfernt den Einkaufsartikel"
 		)
 	app._show_page("dashboard")
-	_assert_equal(app.desktop_backdrop.visible, false, "Mobiles Dashboard bleibt unverändert aufgeräumt")
+	_assert_equal(app.desktop_backdrop.visible, true, "Mobiles Dashboard behält die gemeinsame Landschaft")
 	app.size = Vector2(1440, 900)
 	app._apply_responsive_layout()
 	_assert_equal(app._compact_layout, false, "Desktoplayout bei großer Breite")
@@ -968,6 +968,8 @@ func _test_responsive_layout() -> void:
 		"Dashboard-Markierung bleibt auf Unterseiten nicht fälschlich aktiv"
 	)
 	app._show_page("fixed_costs")
+	_assert_equal(app.sidebar_panel.visible, true, "Fixkosten bleiben im gemeinsamen Desktop-Rahmen")
+	_assert_equal(app.app_bar.visible, true, "Kontostatus bleibt auch über Fixkosten sichtbar")
 	app.size = Vector2(960, 640)
 	app._queue_responsive_layout()
 	await get_tree().process_frame
@@ -1011,6 +1013,11 @@ func _test_responsive_layout() -> void:
 		"Wochenplanung kehrt nach dem Maximieren in die Sieben-Spalten-Ansicht zurück"
 	)
 	app._show_page("dashboard")
+	_assert_equal(app.sidebar_nav_buttons.has("settings"), true, "Desktopnavigation enthält Einstellungen")
+	app._show_page("settings")
+	_assert_equal(app.settings_page.visible, true, "Einstellungen sind als eigene Seite erreichbar")
+	app._navigate_back()
+	_assert_equal(app.dashboard_scroll.visible, true, "Zurück führt über den echten Seitenverlauf")
 	_assert_equal(
 		app.dashboard_title.text.begins_with("Guten "),
 		true,

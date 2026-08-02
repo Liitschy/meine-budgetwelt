@@ -103,9 +103,9 @@ builder.Services.Configure<LocalAiPlanningOptions>(
     builder.Configuration.GetSection("LocalAi"));
 builder.Services.AddSingleton<WeeklyPlanningValidator>();
 builder.Services.AddHttpClient<LocalAiWeeklyPlanningService>();
-builder.Services.Configure<GoCardlessOptions>(
-    builder.Configuration.GetSection("GoCardless"));
-builder.Services.AddHttpClient<GoCardlessClient>();
+builder.Services.Configure<EnableBankingOptions>(
+    builder.Configuration.GetSection("EnableBanking"));
+builder.Services.AddHttpClient<EnableBankingClient>();
 builder.Services.AddSingleton<BankingService>();
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
@@ -166,6 +166,7 @@ builder.Services.AddRateLimiter(options =>
 
 var app = builder.Build();
 var store = app.Services.GetRequiredService<SqliteStore>();
+var bankProvider = app.Services.GetRequiredService<EnableBankingClient>();
 await store.InitializeAsync();
 
 if (bootstrapAdmin)
@@ -303,12 +304,7 @@ app.MapGet("/health", async (CancellationToken cancellationToken) =>
     var aiPlanningProvider = aiPlanningEnabled
         ? "local-ollama"
         : "disabled";
-    var bankDataEnabled =
-        builder.Configuration.GetValue<bool>("GoCardless:Enabled")
-        && !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(
-            GoCardlessClient.SecretIdEnvironmentVariable))
-        && !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(
-            GoCardlessClient.SecretKeyEnvironmentVariable));
+    var bankDataEnabled = bankProvider.IsConfigured;
     var version = Assembly.GetExecutingAssembly()
         .GetName()
         .Version?
