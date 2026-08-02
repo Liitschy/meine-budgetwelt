@@ -57,7 +57,7 @@ jobs:
       - name: Server-Installer bauen und prüfen
         shell: pwsh
         run: |
-          powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\build-server-installer.ps1
+          & .\tools\build-server-installer.ps1
 
       - name: Signiertes Update-Manifest erzeugen
         id: package
