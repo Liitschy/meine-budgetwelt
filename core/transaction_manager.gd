@@ -133,7 +133,7 @@ func import_bank_transactions(items: Array) -> Dictionary:
 			"amount": amount,
 			"day": clampi(date_text.right(2).to_int(), 1, 31),
 			"bank_import_id": import_id,
-			"bank_provider": "gocardless-bad",
+			"bank_provider": "enable-banking",
 			"bank_account_reference": str(item.get(
 				"accountReference",
 				item.get("account_reference", "")

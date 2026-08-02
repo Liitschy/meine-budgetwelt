@@ -1,7 +1,7 @@
 # Codex-Projektübergabe: Meine Budgetwelt
 
-Stand: **0.40.0** vom 2. August 2026;
-zuletzt veröffentlicht ist **0.40.0**
+Stand: **0.41.0** vom 2. August 2026;
+zuletzt veröffentlicht ist **0.41.0**
 
 Diese Datei enthält den aktuellen Projektstand und kann zusammen mit dem
 Repository an einen neuen Codex-Task übergeben werden. Repository-Code und
@@ -27,7 +27,7 @@ Den folgenden Text kann man vollständig in einen neuen Codex-Task kopieren:
 > `docs/ROADMAP.md` führt nach der Fehlerbereinigung eine kostenfreie, lokal
 > über die bereits von Blenk Voice verwendete Ollama-Laufzeit gestützte
 > Wochenplanung und einen ausschließlich lesenden, manuell ausgelösten
-> GoCardless-Bankabruf ein. Wocheneinkauf, Rezepte und Speiseplan werden dabei
+> Enable-Banking-Bankabruf ein. Wocheneinkauf, Rezepte und Speiseplan werden dabei
 > wieder dauerhaft sichtbar und zeigen voraussichtliche Kosten. Zusätzlich wird
 > bei jedem Start automatisch nach Updates gesucht und der Status auf einem
 > Start-/Statusbildschirm angezeigt. Die regulär installierte Windows-App lädt,
@@ -62,8 +62,9 @@ die ihre Daten manuell eintragen möchten. Die App soll auf einen Blick zeigen:
 - Sparziele;
 - Einnahmen und Ausgaben.
 
-Die aktuelle Version ist kein Bankprogramm und ruft noch keine Kontodaten ab.
-Die Roadmap ergänzt später einen ausschließlich lesenden Abruf über GoCardless.
+Der lokal weiterentwickelte Stand ergänzt einen ausschließlich lesenden,
+manuell ausgelösten Abruf über Enable Banking; die Live-Abnahme steht noch aus.
+Die manuelle Nutzung bleibt vollständig erhalten.
 Die App verarbeitet auch dann keine PIN, TAN oder Banking-Passwörter und löst
 keine Zahlungen aus.
 
@@ -146,12 +147,12 @@ Neuaufbau einer Wochenplanung nach Abschluss der Fehlerbereinigung.
 Noch nicht produktiv freigeschaltet sind die neue integrierte Wochenplanung,
 der echte Durchstichtest mit der gemeinsamen Ollama-Laufzeit und die
 read-only-Bankanbindung. Alle drei Bereiche sind lokal implementiert; für die
-KI fehlt nur noch die Root-Server-Abnahme, für GoCardless fehlen die
+KI fehlt nur noch die Root-Server-Abnahme, für Enable Banking fehlen die
 serverseitigen Geheimnisse sowie Sandbox-/Produktiv- und Geräteabnahme. Konten,
 Server, Desktop/PWA-Synchronisierung, geschützte PWA und automatische Updates
 sind bereits eingerichtet.
 
-Kostenfreie lokale KI-Wochenplanung, verbindlicher PWA-Login und read-only-GoCardless-Abruf
+Kostenfreie lokale KI-Wochenplanung, verbindlicher PWA-Login und read-only-Enable-Banking-Abruf
 sind inzwischen verbindlicher Zielumfang. Ebenso verbindlich sind der sichtbare
 Wocheneinkauf mit Rezepten, Speiseplan und Schätzkosten sowie die automatische
 Updateprüfung beim Start. Die Synchronisierung ist inzwischen verbindlich:
@@ -227,25 +228,34 @@ ergänzen, abhaken und nach Bestätigung löschen. Nur die ausdrücklich abgehak
 Artikel können über die bestehende Funktion als Monatsausgabe verbucht werden.
 Desktop- und Mobilvorschau wurden freigegeben und aus der echten
 Godot-Oberfläche erneut auf vollständige Darstellung geprüft. Dieser
-Entwicklungsstand ist noch nicht veröffentlicht. Budgetwelt verwendet dafür
+Entwicklungsstand ist mit Version 0.41.0 veröffentlicht. Budgetwelt verwendet dafür
 dieselbe lokale Ollama-Laufzeit und `qwen3.5:4b` wie Blenk Voice. Die
 Verbindung ist fest auf `127.0.0.1` begrenzt und benötigt keinen API-Schlüssel.
 
 Ebenfalls am 2. August 2026 wurde die freigegebene read-only-Bankoberfläche in
 den Buchungsbereich integriert. Der Server speichert Bankfreigaben isoliert,
-ruft über GoCardless ausschließlich auf Knopfdruck Kontostände und Buchungen ab
+ruft über Enable Banking ausschließlich auf Knopfdruck Kontostände und Buchungen ab
 und liefert nur eine Vorschau mit pseudonymisierten Kontoreferenzen. Der Client
 importiert ausschließlich ausgewählte, gebuchte EUR-Umsätze und verhindert
 Dubletten über stabile Import-IDs. PIN, TAN, Banking-Kennwort und rohe
 Bankzugangsdaten gelangen weder in Client/PWA noch zur lokalen KI. Die lokale
-KI benötigt kein Geheimnis. Die Einrichtung der GoCardless-Geheimnisse erfolgt
-verdeckt über das mit dem Server installierte Werkzeug
-`tools/Configure-Integrations.ps1`; Geheimnisse landen
-nicht in `appsettings.json` oder Befehlszeilen. Für die erste echte Abnahme
-kann das Werkzeug die offizielle GoCardless-Testbank in einem expliziten,
-standardmäßig ausgeschalteten Sandbox-Modus anbieten und danach wieder auf
-den Produktivmodus umstellen. Ein echter Anbieter-Test und die
-Veröffentlichung stehen noch aus.
+KI benötigt kein Geheimnis. App-ID und privater Schlüssel werden mit dem
+installierten Werkzeug `tools/Configure-Integrations.ps1` eingerichtet. Es
+kopiert den Schlüssel in die geschützte Serverablage; sein Inhalt landet weder
+in `appsettings.json` noch in einer Befehlszeile.
+Sandbox und Produktion werden durch getrennte, bei Enable Banking registrierte
+Apps bestimmt. Für die erste echte Abnahme wird die vorhandene Sandbox-App
+verwendet. Für den späteren eingeschränkten Produktivbetrieb ist eine eigene
+Production-App vorgesehen, die auf die eigenen Konten begrenzt wird. Ein echter
+Anbieter-Live-Test steht noch aus; die Oberfläche und der read-only-Vertrag sind
+mit Version 0.41.0 veröffentlicht.
+
+Der Providerwechsel verwendet Serverversion 0.1.2 und Datenbankschema 6. Der
+lokale Server-Installer wurde reproduzierbar gebaut; Server-, PWA-, Desktop-
+Synchronisations-, JWT-Vertrags-, Datenbank- und Konfigurationsmigrationstests
+sind erfolgreich. Der vollständige Windows-Dienst-Upgrade-Test läuft als
+verpflichtendes Gate im administrativen Server-Release-Workflow. Version 0.1.2 ist über den signierten
+Server-Updatekanal veröffentlicht und wird vom autonomen Server-Updater installiert.
 
 ## 5. Verbindliche Designrichtung
 
@@ -300,8 +310,10 @@ gezeigten dunklen Glas-Stil. Die Überschrift wird durch `Guten Morgen`,
 - Landschaftsansicht: `ui/budget_world_view.gd`
 - Renderer: GL Compatibility
 - Desktop-Viewport: 1440 × 900
-- lokaler Entwicklungsstand: 0.40.0
-- zuletzt veröffentlichte Version: 0.40.0
+- lokaler Entwicklungsstand: 0.41.0
+- lokaler Server-Entwicklungsstand: 0.1.2
+- zuletzt veröffentlichte/installierte Serverversion: 0.1.2
+- zuletzt veröffentlichte Version: 0.41.0
 
 Wichtige Autoloads aus `project.godot`:
 
@@ -473,7 +485,7 @@ läuft mit serverseitigem Login unter `https://budget.leno.info`.**
 
 Aktuelle Windows-Version:
 
-`https://github.com/unique1986/meine-budgetwelt/releases/download/v0.40.0/Meine-Budgetwelt-Setup-0.40.0.exe`
+`https://github.com/unique1986/meine-budgetwelt/releases/download/v0.41.0/Meine-Budgetwelt-Setup-0.41.0.exe`
 
 Veröffentlichungsablauf:
 
@@ -495,12 +507,12 @@ Versionsnummer, Git-Tag und Dateiname müssen übereinstimmen.
 ## 13. Bekannte Einschränkungen
 
 - der gemeinsame Ollama-Durchstichtest auf dem Root-Server steht noch aus; der
-  integrierte Planungsbereich und sein lokaler KI-Vertrag sind geprüft, aber
-  noch nicht veröffentlicht;
-- GoCardless ist noch nicht mit echten serverseitigen Zugangsdaten aktiviert;
-  Backend, Client, Dublettenschutz und Oberfläche sind lokal geprüft, aber der
-  Sandbox-/Produktivtest steht aus;
-- Version 0.40.0 enthält die neue Wochenplanung; der echte gemeinsame
+  integrierte Planungsbereich und sein lokaler KI-Vertrag sind mit Version 0.41.0
+  veröffentlicht;
+- die Enable-Banking-Sandbox-App, App-ID und der private Schlüssel sind auf dem
+  Root-Server eingerichtet; Backend, Client, Dublettenschutz und Oberfläche sind
+  geprüft, die erste echte Bankfreigabe und Live-Import-Abnahme stehen noch aus;
+- Version 0.41.0 enthält die neue Wochenplanung; der echte gemeinsame
   Ollama-Durchstichtest auf dem Root-Server gehört zur abschließenden
   Live-Abnahme;
 - keine Codesignatur für die Windows-Dateien; der veröffentlichte Installer
@@ -525,7 +537,7 @@ Versionsnummer, Git-Tag und Dateiname müssen übereinstimmen.
 5. Mobil und Windows nicht mit identischen starren Größen behandeln.
 6. Finanzlogik nicht in mehreren UI-Funktionen duplizieren.
 7. Bestehende IDs und gespeicherte JSON-Felder nicht ohne Migration umbenennen.
-8. Lokale KI und GoCardless nur innerhalb der Grenzen von `docs/ROADMAP.md`
+8. Lokale KI und Enable Banking nur innerhalb der Grenzen von `docs/ROADMAP.md`
    implementieren; Ollama bleibt loopback-gebunden und Bankgeheimnisse oder
    Bankzugangsdaten gehören nicht in den Client.
 9. Einkaufs- und Rezeptfunktionen erst nach der Fehlerbereinigung kontrolliert
@@ -539,9 +551,9 @@ Versionsnummer, Git-Tag und Dateiname müssen übereinstimmen.
 ## 15. Aktueller Repository-Zustand bei Erstellung dieser Übergabe
 
 - Branch: `main`
-- Version/Tag: `v0.40.0`
+- Version/Tag: `v0.41.0`
 - eigener Start-/Updatebildschirm und dynamische Fensterneuberechnung ergänzt
-- Windows-Release-Workflow für 0.40.0 freigegeben
+- Windows-Release-Workflow für 0.41.0 freigegeben
 - vor Erstellung dieser Datei bestanden bereits lokale Änderungen an:
   - `assets/ui/fixed_costs_ledger_background.png.import`
   - `assets/ui/transactions_ledger_background.png.import`
@@ -562,7 +574,7 @@ Die weitere Reihenfolge ist in `docs/ROADMAP.md` festgelegt:
 5. sichtbarer Wocheneinkauf, Rezepte und Speiseplan mit Schätzkosten;
 6. feste, kostenfreie lokale KI-Planung über die gemeinsame Ollama-Laufzeit
    für Budget, Rezepte und Einkauf;
-7. read-only-GoCardless-Import auf Knopfdruck;
+7. read-only-Enable-Banking-Import auf Knopfdruck;
 8. gemeinsame Integration, kostenlose Codesignaturprüfung, Geräteprüfung und
    erst danach Veröffentlichung.
 

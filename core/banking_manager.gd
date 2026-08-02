@@ -7,7 +7,7 @@ signal banking_message_changed(kind: String, message: String)
 
 var _status: Dictionary = {
 	"enabled": false,
-	"provider": "GoCardless Bank Account Data",
+	"provider": "Enable Banking",
 	"mode": "read-only",
 	"automaticRefresh": false,
 	"payments": false,
@@ -203,7 +203,7 @@ func disconnect_connection(connection_id: String) -> Dictionary:
 static func normalize_status(data: Dictionary) -> Dictionary:
 	return {
 		"enabled": bool(data.get("enabled", false)),
-		"provider": str(data.get("provider", "GoCardless Bank Account Data")),
+		"provider": str(data.get("provider", "Enable Banking")),
 		"mode": "read-only",
 		"automaticRefresh": false,
 		"payments": false,

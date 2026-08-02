@@ -193,7 +193,7 @@ func _build_header() -> Control:
 	titles.add_child(subtitle)
 	row.add_child(titles)
 	var provider := Label.new()
-	provider.text = "GoCardless Bank Account Data"
+	provider.text = str(_status.get("provider", "Enable Banking"))
 	provider.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	provider.add_theme_color_override("font_color", COLORS.gold)
 	row.add_child(provider)
@@ -251,7 +251,7 @@ func _build_unavailable_card() -> Control:
 	title.add_theme_color_override("font_color", COLORS.text)
 	column.add_child(title)
 	var detail := Label.new()
-	detail.text = "Die manuellen Buchungen funktionieren unverändert. Für den Bankimport müssen ausschließlich auf dem Budgetwelt-Server die GoCardless-Zugangsdaten eingerichtet werden."
+	detail.text = "Die manuellen Buchungen funktionieren unverändert. Für den Bankimport werden ausschließlich auf dem Budgetwelt-Server die Enable-Banking-App-ID und der geschützte private Schlüssel eingerichtet."
 	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	detail.add_theme_color_override("font_color", COLORS.muted)
 	column.add_child(detail)

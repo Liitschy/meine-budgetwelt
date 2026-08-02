@@ -13,14 +13,15 @@ Die Geschäftslogik für Budget, Fixkosten, Monate und Preise bleibt von der
 Darstellung getrennt. Dadurch kann sie später in einer Web-Oberfläche
 wiederverwendet oder kontrolliert übertragen werden.
 
-## Finanzdaten in Version 0.39.2
+## Finanzdaten und read-only-Bankabruf
 
-Monatslohn, Startkontostand, Fixkosten und tatsächliche Ausgaben werden
-ausschließlich vom Benutzer eingetragen. Die veröffentlichte Version 0.39.2
-enthält noch keine Bank- oder KI-Verbindung.
+Monatslohn, Startkontostand, Fixkosten und tatsächliche Ausgaben können
+weiterhin vollständig manuell gepflegt werden. Desktop und geschützte PWA
+synchronisieren dieselbe Budgetgruppe über den eigenen Budgetwelt-Server.
 
-Die Roadmap sieht einen ausschließlich lesenden, manuell ausgelösten Abruf über
-GoCardless Bank Account Data vor. Die Anwendung wird auch künftig keine PIN,
+Der lokale Entwicklungsstand ergänzt einen ausschließlich lesenden, manuell
+ausgelösten Abruf über Enable Banking. Die Live-Abnahme steht noch aus. Die
+Anwendung wird auch künftig keine PIN,
 TAN oder Online-Banking-Passwörter abfragen und keine Zahlungen auslösen.
 
 ## GitHub und iPhone
@@ -50,12 +51,12 @@ ein Authentifizierungs-Gateway gesetzt werden. Private Daten dürfen nicht in
 öffentlich erreichbaren Service-Worker-Caches liegen. Für ein bereits
 entsperrtes gemeinsames Gerät wird zusätzlich eine lokale App-Sperre geplant.
 
-## Geschütztes Backend für lokale KI und GoCardless
+## Geschütztes Backend für lokale KI und Enable Banking
 
 Die verbindliche lokale KI-Wochenplanung und der read-only-Bankabruf verwenden
 den Budgetwelt-Server. Die KI teilt sich mit Blenk Voice ausschließlich die
 loopback-gebundene Ollama-Laufzeit; Datenbanken und Anwendungskonfigurationen
-bleiben getrennt. GoCardless-Geheimnisse werden nie an PWA oder Windows-EXE
+bleiben getrennt. Enable-Banking-App-ID und privater Schlüssel werden nie an PWA oder Windows-EXE
 ausgeliefert.
 
 Bankumsätze werden nicht automatisch an die KI weitergegeben. Für die
@@ -63,10 +64,10 @@ KI-Planung darf nur ein notwendiger, vom Benutzer bestätigter Planungsbetrag
 zusammen mit Rezept- und Ernährungsvorgaben verwendet werden. Die Daten
 verlassen den Root-Server nicht.
 
-Eine rein lokale PWA kann manuelle Finanzdaten im Gerätespeicher halten. Der
-PWA-Login ist unabhängig davon verbindlich. Für eine optionale Synchronisierung
-zwischen Windows, iPhone und Android wäre später zusätzlich ein
-authentifizierter, verschlüsselter Datendienst erforderlich.
+Desktop und PWA greifen nach Anmeldung auf dieselben serverseitigen Daten der
+zugeordneten Budgetgruppe zu. Lokale Daten dienen nur der robusten
+Clientnutzung; der authentifizierte Server bleibt die gemeinsame
+Synchronisationsstelle.
 
 ## Android
 
@@ -91,27 +92,21 @@ Android-Geräte weiter verfeinert.
 
 ## Datenschutz
 
-- Finanzdaten werden standardmäßig nur lokal gespeichert.
+- Finanzdaten werden ausschließlich im Client und auf dem eigenen Server gespeichert.
 - Es werden keine Finanzdaten automatisch von Dritten abgerufen.
-- Eine spätere Gerätesynchronisierung muss freiwillig und abschaltbar sein.
-- Vor einer Synchronisierung werden Verschlüsselung, Datenexport,
-  Datensicherung und vollständige Löschung umgesetzt.
+- Enable Banking wird ausschließlich auf Knopfdruck und nur lesend angesprochen.
+- Übertragung erfolgt per HTTPS; Datenexport, Datensicherung und vollständige
+  Löschung bleiben verbindliche Funktionen.
 
 ## Umsetzungsreihenfolge
 
-1. Fehlerbereinigung und belastbare automatische Tests;
-2. automatische Updateprüfung und -installation beim Start mit sichtbarem
-   Status und anschließendem Neustart;
-3. kompakten Offline-Installer mit Startmenü, optionaler
-   Desktopverknüpfung, autonomem Update-, Reparatur- und Deinstallationsweg
-   umsetzen;
-4. serverseitigen PWA-Login ohne öffentliche Registrierung umsetzen;
-5. Wocheneinkauf, Rezepte und Speiseplan sichtbar mit Schätzkosten aufbauen;
-6. verbindliche, kostenfreie KI-Planung über die gemeinsame lokale
-   Ollama-Laufzeit umsetzen;
-7. read-only-Bankabruf über GoCardless mit Dublettenprüfung umsetzen;
-8. gemeinsame Windows-, iPhone- und Android-Prüfung;
-9. kostenlose Open-Source-Codesignatur prüfen und bei Eignung integrieren;
-10. erst danach eine neue Version veröffentlichen.
+1. Enable-Banking-Umstellung und Migration vollständig lokal prüfen;
+2. neue Serverversion und Server-Installer bereitstellen;
+3. Sandbox-App-ID und privaten PEM-Schlüssel auf dem Root-Server einrichten;
+4. den vollständigen Sandbox-Ablauf mit einem Testinstitut abnehmen;
+5. später eine getrennte Production-App für die eigenen Konten einrichten;
+6. Desktop, iPhone-PWA und Android-PWA gemeinsam mit echter Synchronisation prüfen;
+7. kostenlose Codesignatur bei stabiler Version erneut bewerten;
+8. erst nach dieser Abnahme Client und geschützte PWA veröffentlichen.
 
 Die vollständige Planung steht in [`ROADMAP.md`](ROADMAP.md).

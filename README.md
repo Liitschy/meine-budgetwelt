@@ -40,7 +40,7 @@ neu aufgebaut:
   Resteverwertung und die Einhaltung des Wochenbudgets;
 - dauerhaft sichtbarer Wocheneinkauf, Rezeptbereich und Sieben-Tage-Speiseplan
   mit voraussichtlichen Kosten pro Rezept, Tag und Woche;
-- ausschließlich lesender Bankabruf über GoCardless Bank Account Data nach
+- ausschließlich lesender Bankabruf über Enable Banking nach
   einem ausdrücklichen Knopfdruck;
 - zwingender serverseitiger Login für die PWA mit höchstens wenigen
   ausdrücklich freigeschalteten Benutzern und ohne öffentliche Registrierung;
@@ -102,7 +102,7 @@ vollständiger erhöhter Windows-Test hat Erstinstallation, eigenen Dienst,
 Updateaufgabe, Admin-Anmeldung, Datensicherung, Update, erneuten gesunden Start
 und Deinstallation geprüft. Der eigenständige Serverdienst, Caddy/HTTPS und
 die geschützte PWA laufen auf dem Root-Server unter `https://budget.leno.info`.
-Die gemeinsame lokale Ollama-KI wird mit Serverversion 0.1.1 aktiviert.
+Die gemeinsame lokale Ollama-KI wird mit Serverversion 0.1.2 aktiviert.
 
 Vollständige lokale Prüfungen:
 
@@ -151,8 +151,10 @@ mit seiner SHA-256-Prüfsumme.
 
 ## Datenschutz
 
-Version 0.39.4 speichert Budget- und Buchungsdaten ausschließlich lokal und
-enthält noch keine Online-Banking- oder KI-Verbindung. Die geplante lokale KI
-läuft ausschließlich über Ollama auf dem eigenen Root-Server. GoCardless-
-Geheimnisse, PIN und TAN dürfen niemals in der App oder im Repository
-gespeichert werden.
+Die veröffentlichte App synchronisiert Budget- und Buchungsdaten ausschließlich
+mit dem eigenen Budgetwelt-Server. Die lokale KI läuft über Ollama auf demselben
+Root-Server und benötigt keinen Cloud-API-Schlüssel. Die read-only-Bankanbindung
+verwendet Enable Banking nur nach ausdrücklicher Benutzeraktion. Der private
+Enable-Banking-Schlüssel bleibt in der geschützten Serverablage; PIN, TAN und
+Banking-Kennwörter dürfen niemals in der App oder im Repository gespeichert
+werden.

@@ -206,16 +206,25 @@ try {
         $config.LocalAi.Enabled -ne $true -or
         $config.LocalAi.Endpoint -ne "http://127.0.0.1:11434/api/chat" -or
         $config.LocalAi.Model -ne "qwen3.5:4b" -or
-        $config.GoCardless.Enabled -ne $false -or
-        $config.GoCardless.SandboxMode -ne $false -or
-        $config.GoCardless.RedirectBaseUrl -ne "https://budget.leno.info" -or
+        $config.EnableBanking.Enabled -ne $false -or
+        $config.EnableBanking.ApplicationId -ne "" -or
+        $config.EnableBanking.PrivateKeyPath -ne (Join-Path $dataRoot "secrets\enable-banking-private.pem") -or
+        $config.EnableBanking.RedirectBaseUrl -ne "https://budget.leno.info" -or
         $config.AllowedHosts -notmatch "budget\.leno\.info"
     ) {
         throw "Installierte Domain- oder Updatekonfiguration ist unvollstaendig."
     }
 
     $config.PSObject.Properties.Remove("LocalAi")
-    $config.PSObject.Properties.Remove("GoCardless")
+    $config.PSObject.Properties.Remove("EnableBanking")
+    $config | Add-Member -MemberType NoteProperty -Name "GoCardless" -Value ([pscustomobject]@{
+        Enabled = $true
+        BaseUrl = "https://bankaccountdata.gocardless.com/api/v2/"
+        RedirectBaseUrl = "https://budget.leno.info"
+        DefaultCountry = "DE"
+        SandboxMode = $false
+        TimeoutSeconds = 45
+    })
     [IO.File]::WriteAllText(
         $configPath,
         ($config | ConvertTo-Json -Depth 20) + [Environment]::NewLine,
@@ -245,8 +254,10 @@ try {
         $migratedConfig.LocalAi.Enabled -ne $true -or
         $migratedConfig.LocalAi.Endpoint -ne "http://127.0.0.1:11434/api/chat" -or
         $migratedConfig.LocalAi.Model -ne "qwen3.5:4b" -or
-        $migratedConfig.GoCardless.Enabled -ne $false -or
-        $migratedConfig.GoCardless.SandboxMode -ne $false
+        $migratedConfig.EnableBanking.Enabled -ne $false -or
+        $migratedConfig.EnableBanking.ApplicationId -ne "" -or
+        $migratedConfig.EnableBanking.PrivateKeyPath -ne (Join-Path $dataRoot "secrets\enable-banking-private.pem") -or
+        $migratedConfig.GoCardless.Enabled -ne $false
     ) {
         throw "Bestehende Serverkonfiguration wurde beim Update nicht sicher migriert."
     }

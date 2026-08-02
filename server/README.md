@@ -97,32 +97,33 @@ powershell -NoProfile -ExecutionPolicy Bypass \
 
 ## Read-only-Bankabruf
 
-Der geschützte Bankbereich verwendet GoCardless Bank Account Data ausschließlich
+Der geschützte Bankbereich verwendet Enable Banking ausschließlich
 lesend. `GET /api/banking/status` meldet ausdrücklich `read-only`, keine
 automatische Aktualisierung und keine Zahlungen. Banken, Verbindungen,
 Kontostände und Buchungsvorschauen sind an Anmeldung und Budgetgruppe gebunden.
 Nur `owner` und `manager` dürfen Bankfreigaben anlegen oder trennen. Es gibt
 keinen Endpunkt für Überweisungen oder andere Zahlungen.
 
-GoCardless-Secret-ID, Secret-Key und Zugriffstoken bleiben ausschließlich im
+Enable-Banking-App-ID, privater Schlüssel und Sitzung bleiben ausschließlich im
 Serverprozess. PIN, TAN und Banking-Kennwort werden nur bei der Bank eingegeben.
 Importierte Buchungen werden erst nach Auswahl im Client gespeichert und über
 stabile Provider-ID beziehungsweise Fallback-Fingerabdruck dedupliziert.
 
-Nach Installation werden lokale KI und/oder GoCardless in einer als
-Administrator gestarteten PowerShell eingerichtet. Nur GoCardless fragt dabei
-Geheimnisse ab; die lokale KI benötigt keinen Schlüssel:
+Nach Installation werden lokale KI und/oder Enable Banking in einer als
+Administrator gestarteten PowerShell eingerichtet. Für Enable Banking fragt das
+Werkzeug nach der App-ID und dem vollständigen Pfad zur heruntergeladenen
+privaten PEM-Datei; die lokale KI benötigt keinen Schlüssel:
 
 ```powershell
 & 'C:\Program Files\Meine Budgetwelt Server\tools\Configure-Integrations.ps1' `
-  -Integration GoCardless `
-  -GoCardlessMode Sandbox
+  -Integration EnableBanking
 ```
 
-Das Werkzeug fragt geheime Werte verdeckt ab, hinterlegt sie nur in der
-geschützten Windows-Dienstumgebung, aktiviert den passenden Abschnitt in der
+Das Werkzeug prüft die App-ID und die PEM-Datei, kopiert den privaten Schlüssel
+in die zugriffsgeschützte Serverablage und aktiviert den passenden Abschnitt in der
 externen `appsettings.json` und startet ausschließlich den Budgetwelt-Dienst
-neu. Die vorherige Konfiguration wird ohne Geheimnisse gesichert.
+neu. Der PEM-Inhalt landet weder in der Konfigurationsdatei noch im Client. Die
+vorherige Konfiguration wird gesichert.
 
 Der lokale Anbieter-Vertragstest benötigt weder Geheimnisse noch Netzwerk:
 
@@ -131,10 +132,12 @@ powershell -NoProfile -ExecutionPolicy Bypass `
   -File .\tools\verify-banking.ps1
 ```
 
-Im Sandbox-Modus wird zusaetzlich die offizielle GoCardless-Testbank
-`SANDBOXFINANCE_SFIN0000` angeboten. Nach erfolgreicher Abnahme wird derselbe
-Befehl mit `-GoCardlessMode Production` erneut ausgefuehrt; dann verschwindet
-die Testbank und nur die regulaeren Banken des konfigurierten Landes bleiben.
+Sandbox und Produktion werden nicht durch einen lokalen Schalter bestimmt,
+sondern durch die in Enable Banking registrierte App. Für die erste Abnahme wird
+die vorhandene Sandbox-App samt App-ID und Schlüssel eingerichtet. Für den
+späteren eingeschränkten Produktivbetrieb wird eine getrennte Production-App
+angelegt und anschließend mit demselben Werkzeug eingerichtet. Die eigenen
+Konten werden dafür im Enable-Banking-Control-Panel freigegeben.
 
 ## Windows-Installer
 
