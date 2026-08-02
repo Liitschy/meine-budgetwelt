@@ -162,7 +162,8 @@ try {
     foreach ($updaterFile in @(
         "app\updater\ServerUpdate.ps1",
         "app\updater\Install-ServerUpdateTask.ps1",
-        "app\updater\server-update-public-key.xml"
+        "app\updater\server-update-public-key.xml",
+        "app\tools\Configure-Integrations.ps1"
     )) {
         if (-not (Test-Path -LiteralPath (Join-Path $installRoot $updaterFile) -PathType Leaf)) {
             throw "Installierte Updater-Datei fehlt: $updaterFile"
@@ -202,10 +203,24 @@ try {
     if (
         $config.Updates.Enabled -ne $true -or
         $config.Email.PublicBaseUrl -ne "https://budget.leno.info" -or
+        $config.LocalAi.Enabled -ne $true -or
+        $config.LocalAi.Endpoint -ne "http://127.0.0.1:11434/api/chat" -or
+        $config.LocalAi.Model -ne "qwen3.5:4b" -or
+        $config.GoCardless.Enabled -ne $false -or
+        $config.GoCardless.SandboxMode -ne $false -or
+        $config.GoCardless.RedirectBaseUrl -ne "https://budget.leno.info" -or
         $config.AllowedHosts -notmatch "budget\.leno\.info"
     ) {
         throw "Installierte Domain- oder Updatekonfiguration ist unvollstaendig."
     }
+
+    $config.PSObject.Properties.Remove("LocalAi")
+    $config.PSObject.Properties.Remove("GoCardless")
+    [IO.File]::WriteAllText(
+        $configPath,
+        ($config | ConvertTo-Json -Depth 20) + [Environment]::NewLine,
+        [Text.UTF8Encoding]::new($false)
+    )
 
     $updateProcess = Start-Process -FilePath $testInstaller -ArgumentList "/S", "/SERVER_AUTO_UPDATE" -PassThru -Wait
     if ($updateProcess.ExitCode -ne 0) {
@@ -224,6 +239,19 @@ try {
     $health = Invoke-RestMethod -Uri "http://127.0.0.1:$testPort/health" -TimeoutSec 5
     if ($health.status -ne "ok" -or $health.database -ne "ok") {
         throw "Aktualisierter Server meldet keinen gesunden Zustand."
+    }
+    $migratedConfig = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
+    if (
+        $migratedConfig.LocalAi.Enabled -ne $true -or
+        $migratedConfig.LocalAi.Endpoint -ne "http://127.0.0.1:11434/api/chat" -or
+        $migratedConfig.LocalAi.Model -ne "qwen3.5:4b" -or
+        $migratedConfig.GoCardless.Enabled -ne $false -or
+        $migratedConfig.GoCardless.SandboxMode -ne $false
+    ) {
+        throw "Bestehende Serverkonfiguration wurde beim Update nicht sicher migriert."
+    }
+    if (-not (Get-ChildItem -LiteralPath $dataRoot -Filter "appsettings.json.before-integration-migration-*" -File)) {
+        throw "Sicherung der Konfiguration vor der Integrationsmigration fehlt."
     }
     $loginAfterUpdate = Invoke-RestMethod `
         -Uri "http://127.0.0.1:$testPort/api/auth/desktop-login" `
@@ -294,8 +322,8 @@ finally {
     }
     Remove-TestService
     Remove-TestUpdateTask
-    & reg.exe delete "HKLM\$productKey" /f 2>&1 | Out-Null
-    & reg.exe delete "HKLM\$uninstallKey" /f 2>&1 | Out-Null
+    Remove-Item -LiteralPath "HKLM:\$productKey" -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath "HKLM:\$uninstallKey" -Recurse -Force -ErrorAction SilentlyContinue
     Start-Sleep -Milliseconds 1500
     Remove-TestFiles
 }

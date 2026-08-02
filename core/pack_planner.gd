@@ -41,18 +41,21 @@ const PACKS := {
 }
 
 
-static func plan_all(ingredients: Array) -> Array:
+static func plan_all(ingredients: Array, personal_prices: Array = []) -> Array:
 	var result: Array = []
 	for ingredient: Dictionary in ingredients:
-		result.append(plan_ingredient(ingredient))
+		result.append(plan_ingredient(ingredient, personal_prices))
 	return result
 
 
-static func plan_ingredient(ingredient: Dictionary) -> Dictionary:
+static func plan_ingredient(ingredient: Dictionary, personal_prices: Array = []) -> Dictionary:
 	var planned := ingredient.duplicate(true)
 	var key := str(ingredient.get("name", "")).strip_edges().to_lower()
 	var required := QuantityCalculator.parse(str(ingredient.get("quantity", "")))
-	var pack_definitions: Array = PACKS.get(key, [])
+	var personal_definitions := _personal_definitions(key, personal_prices)
+	var pack_definitions: Array = (
+		personal_definitions if not personal_definitions.is_empty() else PACKS.get(key, [])
+	)
 	if required.is_empty() or pack_definitions.is_empty():
 		return planned
 
@@ -99,7 +102,31 @@ static func plan_ingredient(ingredient: Dictionary) -> Dictionary:
 		str(required.dimension)
 	)
 	planned.pack_count = pack_count
+	planned.price_source = (
+		"personal_checkout" if not personal_definitions.is_empty() else "catalog_estimate"
+	)
 	return planned
+
+
+static func _personal_definitions(key: String, personal_prices: Array) -> Array:
+	var definitions: Array = []
+	for raw_price: Variant in personal_prices:
+		if not raw_price is Dictionary:
+			continue
+		var price: Dictionary = raw_price
+		if str(price.get("name", "")).strip_edges().to_lower() != key:
+			continue
+		var quantity := str(price.get("package_quantity", "")).strip_edges()
+		var selected_price := float(price.get("checkout_price", -1.0))
+		if selected_price < 0.0:
+			selected_price = float(price.get("package_price", -1.0))
+		if quantity.is_empty() or selected_price < 0.0:
+			continue
+		definitions.append({
+			"quantity": quantity,
+			"price": selected_price,
+		})
+	return definitions
 
 
 static func _search_combinations(

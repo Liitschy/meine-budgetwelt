@@ -7,7 +7,7 @@ config_version=5
 
 config/name="Budget & Wocheneinkauf"
 config/description="Einfache lokale Budgetplanung"
-config/version="0.39.4"
+config/version="0.40.0"
 config/icon="res://assets/app_icon.svg"
 run/main_scene="res://app/Boot.tscn"
 boot_splash/image="res://assets/world/budget_world_island.png"
@@ -26,6 +26,8 @@ TransactionManager="*res://core/transaction_manager.gd"
 ShoppingManager="*res://core/shopping_manager.gd"
 MealPlanManager="*res://core/meal_plan_manager.gd"
 CustomRecipeManager="*res://core/custom_recipe_manager.gd"
+AiPlanningManager="*res://core/ai_planning_manager.gd"
+BankingManager="*res://core/banking_manager.gd"
 SyncManager="*res://core/sync_manager.gd"
 UpdateManager="*res://core/update_manager.gd"
 

@@ -50,16 +50,18 @@ ein Authentifizierungs-Gateway gesetzt werden. Private Daten dürfen nicht in
 öffentlich erreichbaren Service-Worker-Caches liegen. Für ein bereits
 entsperrtes gemeinsames Gerät wird zusätzlich eine lokale App-Sperre geplant.
 
-## Geschütztes Backend für OpenAI und GoCardless
+## Geschütztes Backend für lokale KI und GoCardless
 
-Die verbindlich geplante OpenAI-Wochenplanung und der read-only-Bankabruf
-benötigen einen kleinen Backenddienst. Dieser hält die Anbieter-Geheimnisse und
-verarbeitet Rückleitungen, ohne die Schlüssel an PWA oder Windows-EXE
-auszuliefern.
+Die verbindliche lokale KI-Wochenplanung und der read-only-Bankabruf verwenden
+den Budgetwelt-Server. Die KI teilt sich mit Blenk Voice ausschließlich die
+loopback-gebundene Ollama-Laufzeit; Datenbanken und Anwendungskonfigurationen
+bleiben getrennt. GoCardless-Geheimnisse werden nie an PWA oder Windows-EXE
+ausgeliefert.
 
-Bankumsätze werden nicht automatisch an OpenAI weitergegeben. Für die
+Bankumsätze werden nicht automatisch an die KI weitergegeben. Für die
 KI-Planung darf nur ein notwendiger, vom Benutzer bestätigter Planungsbetrag
-zusammen mit Rezept- und Ernährungsvorgaben verwendet werden.
+zusammen mit Rezept- und Ernährungsvorgaben verwendet werden. Die Daten
+verlassen den Root-Server nicht.
 
 Eine rein lokale PWA kann manuelle Finanzdaten im Gerätespeicher halten. Der
 PWA-Login ist unabhängig davon verbindlich. Für eine optionale Synchronisierung
@@ -105,7 +107,8 @@ Android-Geräte weiter verfeinert.
    umsetzen;
 4. serverseitigen PWA-Login ohne öffentliche Registrierung umsetzen;
 5. Wocheneinkauf, Rezepte und Speiseplan sichtbar mit Schätzkosten aufbauen;
-6. verbindliche KI-Planung mit OpenAI umsetzen;
+6. verbindliche, kostenfreie KI-Planung über die gemeinsame lokale
+   Ollama-Laufzeit umsetzen;
 7. read-only-Bankabruf über GoCardless mit Dublettenprüfung umsetzen;
 8. gemeinsame Windows-, iPhone- und Android-Prüfung;
 9. kostenlose Open-Source-Codesignatur prüfen und bei Eignung integrieren;

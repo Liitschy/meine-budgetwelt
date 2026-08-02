@@ -31,22 +31,49 @@ func save_recipe(
 	title: String,
 	mode: String,
 	ingredients: Array,
-	preparation: String
+	preparation: String,
+	details: Dictionary = {}
 ) -> String:
 	var clean_title := title.strip_edges()
-	if clean_title.is_empty() or ingredients.is_empty() or preparation.strip_edges().is_empty():
+	var clean_ingredients: Array = []
+	for raw_ingredient: Variant in ingredients:
+		if not raw_ingredient is Dictionary:
+			continue
+		var ingredient: Dictionary = raw_ingredient
+		var ingredient_name := str(ingredient.get("name", "")).strip_edges()
+		var quantity := str(ingredient.get("quantity", "")).strip_edges()
+		if ingredient_name.is_empty() or quantity.is_empty():
+			continue
+		var clean_ingredient := ingredient.duplicate(true)
+		clean_ingredient.name = ingredient_name
+		clean_ingredient.quantity = quantity
+		clean_ingredient.estimated_price = maxf(
+			float(ingredient.get("estimated_price", 0.0)),
+			0.0
+		)
+		clean_ingredient.include_in_shopping = bool(
+			ingredient.get("include_in_shopping", true)
+		)
+		clean_ingredients.append(clean_ingredient)
+	if clean_title.is_empty() or clean_ingredients.is_empty() or preparation.strip_edges().is_empty():
 		return ""
 	var clean_id := recipe_id
 	if clean_id.is_empty():
 		clean_id = "custom_%d" % Time.get_ticks_usec()
-	var data := {
+	var previous := get_recipe(clean_id)
+	var data := previous.duplicate(true)
+	data.merge({
 		"id": clean_id,
 		"title": clean_title,
-		"mode": mode,
-		"ingredients": ingredients.duplicate(true),
+		"mode": mode.strip_edges() if not mode.strip_edges().is_empty() else "Normal kochen",
+		"servings": clampi(int(details.get("servings", previous.get("servings", 2))), 1, 24),
+		"active_minutes": clampi(int(details.get("active_minutes", previous.get("active_minutes", 30))), 1, 240),
+		"ingredients": clean_ingredients,
 		"preparation": preparation.strip_edges(),
 		"custom": true,
-	}
+		"favorite": bool(details.get("favorite", previous.get("favorite", false))),
+		"estimated_cost": _ingredient_total(clean_ingredients),
+	}, true)
 	var replaced := false
 	for index in _recipes.size():
 		if str(_recipes[index].get("id", "")) == clean_id:
@@ -57,6 +84,14 @@ func save_recipe(
 		_recipes.append(data)
 	_save_and_emit()
 	return clean_id
+
+
+func set_favorite(recipe_id: String, favorite: bool) -> bool:
+	for index in _recipes.size():
+		if str(_recipes[index].get("id", "")) == recipe_id:
+			_recipes[index].favorite = favorite
+			return _save_and_emit()
+	return false
 
 
 func remove_recipe(recipe_id: String) -> bool:
@@ -104,3 +139,11 @@ func _save_and_emit() -> bool:
 	var saved := StorageManager.save_custom_recipes(_recipes)
 	recipes_changed.emit(get_recipes())
 	return saved
+
+
+static func _ingredient_total(ingredients: Array) -> float:
+	var total := 0.0
+	for raw_ingredient: Variant in ingredients:
+		if raw_ingredient is Dictionary:
+			total += maxf(float(raw_ingredient.get("estimated_price", 0.0)), 0.0)
+	return total

@@ -27,6 +27,12 @@ jobs:
       - name: Server bauen und Warnungen prüfen
         run: dotnet build server/MeineBudgetwelt.Server/MeineBudgetwelt.Server.csproj --configuration Release --runtime win-x64 --no-restore
 
+      - name: KI-Planungsvertrag prüfen
+        run: dotnet run --project server/MeineBudgetwelt.PlanningChecks/MeineBudgetwelt.PlanningChecks.csproj --configuration Release
+
+      - name: Read-only-Bankingvertrag prüfen
+        run: dotnet run --project server/MeineBudgetwelt.BankingChecks/MeineBudgetwelt.BankingChecks.csproj --configuration Release
+
       - name: Godot installieren
         uses: chickensoft-games/setup-godot@v2
         with:

@@ -1,7 +1,7 @@
 # Codex-Projektübergabe: Meine Budgetwelt
 
-Stand: **0.39.4** vom 1. August 2026;
-zuletzt veröffentlicht ist **0.39.4**
+Stand: **0.40.0** vom 2. August 2026;
+zuletzt veröffentlicht ist **0.40.0**
 
 Diese Datei enthält den aktuellen Projektstand und kann zusammen mit dem
 Repository an einen neuen Codex-Task übergeben werden. Repository-Code und
@@ -24,7 +24,8 @@ Den folgenden Text kann man vollständig in einen neuen Codex-Task kopieren:
 > Bewahre alle vorhandenen Funktionen, lokalen Finanzdaten und das bestehende
 > Datenformat. Version 0.39.4 besitzt noch keine Bank- oder KI-Verbindung und
 > zeigt den früheren Wocheneinkauf nicht an. Die verbindliche Roadmap unter
-> `docs/ROADMAP.md` führt nach der Fehlerbereinigung eine OpenAI-gestützte
+> `docs/ROADMAP.md` führt nach der Fehlerbereinigung eine kostenfreie, lokal
+> über die bereits von Blenk Voice verwendete Ollama-Laufzeit gestützte
 > Wochenplanung und einen ausschließlich lesenden, manuell ausgelösten
 > GoCardless-Bankabruf ein. Wocheneinkauf, Rezepte und Speiseplan werden dabei
 > wieder dauerhaft sichtbar und zeigen voraussichtliche Kosten. Zusätzlich wird
@@ -130,26 +131,27 @@ Deinstallation. Vor Updates wird gesichert; lokale Budgetdaten bleiben
 standardmäßig erhalten. Reparatur, Versionsupdate, Downgrade-Schutz und
 Rückfall auf die bisherige Programmdatei sind umgesetzt und isoliert geprüft.
 
-## 4. In Version 0.39.2 nicht Bestandteil der sichtbaren App
+## 4. Aktueller Ausbau nach Version 0.39.4
 
-Der frühere Bereich „Wocheneinkauf“ mit Rezepten, Speiseplan, KI-Vorschlägen,
-Vorratsschrank und Schichtarbeit wurde bewusst entfernt.
+Der frühere Bereich „Wocheneinkauf“ mit Rezepten und Speiseplan ist in der
+veröffentlichten Version 0.39.4 noch nicht sichtbar. Im lokalen, unveröffentlichten
+Entwicklungsstand ist er zusammen mit Rezeptbibliothek, persönlicher Preisbasis
+und verbindlicher lokaler KI-Planung vollständig neu integriert.
 
 Einige ältere interne Module und Datendateien für Einkauf, Rezepte und
 Speisepläne existieren weiterhin. Sie werden zur Datenverträglichkeit nicht
 ungefragt gelöscht. Die Roadmap beauftragt ihre kontrollierte Prüfung und den
 Neuaufbau einer Wochenplanung nach Abschluss der Fehlerbereinigung.
 
-Im veröffentlichten Stand 0.39.2 ebenfalls noch nicht vorhanden:
+Noch nicht produktiv freigeschaltet sind die neue integrierte Wochenplanung,
+der echte Durchstichtest mit der gemeinsamen Ollama-Laufzeit und die
+read-only-Bankanbindung. Alle drei Bereiche sind lokal implementiert; für die
+KI fehlt nur noch die Root-Server-Abnahme, für GoCardless fehlen die
+serverseitigen Geheimnisse sowie Sandbox-/Produktiv- und Geräteabnahme. Konten,
+Server, Desktop/PWA-Synchronisierung, geschützte PWA und automatische Updates
+sind bereits eingerichtet.
 
-- Online-Banking;
-- Kontosynchronisierung;
-- Cloud-Synchronisierung zwischen Geräten;
-- OpenAI- oder andere KI-API;
-- Serverkonto oder Benutzeranmeldung;
-- automatische Update-Installation.
-
-OpenAI-Wochenplanung, verbindlicher PWA-Login und read-only-GoCardless-Abruf
+Kostenfreie lokale KI-Wochenplanung, verbindlicher PWA-Login und read-only-GoCardless-Abruf
 sind inzwischen verbindlicher Zielumfang. Ebenso verbindlich sind der sichtbare
 Wocheneinkauf mit Rezepten, Speiseplan und Schätzkosten sowie die automatische
 Updateprüfung beim Start. Die Synchronisierung ist inzwischen verbindlich:
@@ -167,8 +169,7 @@ geprüften Gesundheitsendpunkt. Der Release-Build und ein isolierter Starttest
 sind bestanden; der NuGet-Abhängigkeitsbaum enthält zum Prüfzeitpunkt keine
 bekannte Schwachstelle.
 
-Im lokalen, noch unveröffentlichten Entwicklungsstand sind auf diesem Kern
-außerdem bereits umgesetzt und isoliert geprüft:
+Auf diesem Kern sind produktiv beziehungsweise durchgängig geprüft:
 
 - einmalige Anlage des ersten Systemadministrators ohne Kennwort in der
   Befehlszeile;
@@ -204,15 +205,47 @@ außerdem bereits umgesetzt und isoliert geprüft:
 - autonome Serverupdate-Aufgabe nach Systemstart und täglich, mit RSA-signiertem
   Manifest, SHA-256, Versionsschutz, Datensicherung und vollständigem
   Programm-Rückfall;
-- vorbereitete Serverkonfiguration und Caddy-Prüffassung für
+- aktive Serverkonfiguration und dokumentierter Caddy-Block für
   `https://budget.leno.info` mit internem Upstream `127.0.0.1:48732`.
 
-Der installierbare Windows-Serverdienst ist im lokalen Entwicklungsstand
-umgesetzt und durch einen erhöhten vollständigen Setup-/Dienst-/Admin-/Update-/
-Deinstallationslauf geprüft. Noch offen sind die Installation auf dem echten
-Root-Server, die Validierung und Aktivierung der bereitgestellten Caddy-
-Ergänzung, die öffentliche HTTPS-Abnahme sowie die Abnahme auf echten
-Mobilgeräten. Es wurde noch kein Serverrelease veröffentlicht.
+Der installierbare Windows-Serverdienst wurde auf dem echten Root-Server
+eingerichtet. Caddy, HTTPS, Admin-Oberfläche, Konten, geschützte PWA und die
+Synchronisierung mit dem Desktop sind unter `https://budget.leno.info`
+in Betrieb. Diese Arbeiten sind abgeschlossen.
+
+Am 2. August 2026 begann der gemeinsame Ausbau von Rezepten, Sieben-Tage-
+Speiseplan, Wocheneinkauf und lokaler KI. Der neue geschützte Serverendpunkt
+prüft Gruppenzugehörigkeit und Eingabegrenzen, fordert ein strukturiertes
+Planungsergebnis an und validiert Kosten, Budget, Rezeptverweise, doppelte
+Einkaufsartikel, Allergien und ausgeschlossene Zutaten nochmals
+deterministisch. Er speichert oder bucht den Entwurf nicht. Nach ausdrücklicher
+Bestätigung übernimmt der lokal integrierte Client Rezepte, genau sieben Tage
+und die Einkaufsliste gemeinsam, legt vorher eine Sicherung an und erzeugt
+keine Finanzbuchung. Die aktive Woche zeigt anschließend Speiseplan,
+Rezeptdetails und den dauerhaften Wocheneinkauf; Artikel lassen sich manuell
+ergänzen, abhaken und nach Bestätigung löschen. Nur die ausdrücklich abgehakten
+Artikel können über die bestehende Funktion als Monatsausgabe verbucht werden.
+Desktop- und Mobilvorschau wurden freigegeben und aus der echten
+Godot-Oberfläche erneut auf vollständige Darstellung geprüft. Dieser
+Entwicklungsstand ist noch nicht veröffentlicht. Budgetwelt verwendet dafür
+dieselbe lokale Ollama-Laufzeit und `qwen3.5:4b` wie Blenk Voice. Die
+Verbindung ist fest auf `127.0.0.1` begrenzt und benötigt keinen API-Schlüssel.
+
+Ebenfalls am 2. August 2026 wurde die freigegebene read-only-Bankoberfläche in
+den Buchungsbereich integriert. Der Server speichert Bankfreigaben isoliert,
+ruft über GoCardless ausschließlich auf Knopfdruck Kontostände und Buchungen ab
+und liefert nur eine Vorschau mit pseudonymisierten Kontoreferenzen. Der Client
+importiert ausschließlich ausgewählte, gebuchte EUR-Umsätze und verhindert
+Dubletten über stabile Import-IDs. PIN, TAN, Banking-Kennwort und rohe
+Bankzugangsdaten gelangen weder in Client/PWA noch zur lokalen KI. Die lokale
+KI benötigt kein Geheimnis. Die Einrichtung der GoCardless-Geheimnisse erfolgt
+verdeckt über das mit dem Server installierte Werkzeug
+`tools/Configure-Integrations.ps1`; Geheimnisse landen
+nicht in `appsettings.json` oder Befehlszeilen. Für die erste echte Abnahme
+kann das Werkzeug die offizielle GoCardless-Testbank in einem expliziten,
+standardmäßig ausgeschalteten Sandbox-Modus anbieten und danach wieder auf
+den Produktivmodus umstellen. Ein echter Anbieter-Test und die
+Veröffentlichung stehen noch aus.
 
 ## 5. Verbindliche Designrichtung
 
@@ -267,8 +300,8 @@ gezeigten dunklen Glas-Stil. Die Überschrift wird durch `Guten Morgen`,
 - Landschaftsansicht: `ui/budget_world_view.gd`
 - Renderer: GL Compatibility
 - Desktop-Viewport: 1440 × 900
-- lokaler Entwicklungsstand: 0.39.4
-- zuletzt veröffentlichte Version: 0.39.4
+- lokaler Entwicklungsstand: 0.40.0
+- zuletzt veröffentlichte Version: 0.40.0
 
 Wichtige Autoloads aus `project.godot`:
 
@@ -281,6 +314,9 @@ Wichtige Autoloads aus `project.godot`:
 - `ShoppingManager`
 - `MealPlanManager`
 - `CustomRecipeManager`
+- `AiPlanningManager`
+- `BankingManager`
+- `SyncManager`
 - `UpdateManager`
 
 Die Manager halten Geschäftslogik und Speicherung von der Darstellung in
@@ -298,6 +334,10 @@ werden.
 - `core/fixed_cost_calculator.gd` – Fixkostenzusammenfassung
 - `core/savings_manager.gd` – Sparziele und Einzahlungen
 - `core/transaction_manager.gd` – Einnahmen und Ausgaben
+- `core/ai_planning_manager.gd` – validierte KI-Entwürfe und atomare Übernahme
+- `core/banking_manager.gd` – read-only-Bankstatus, Vorschau und Importauswahl
+- `ui/weekly_planning_page.gd` – Wochenplanung, Rezepte und persönliche Preise
+- `ui/banking_panel.gd` – responsive, manuell ausgelöste Bankimportoberfläche
 - `core/month_manager.gd` – Monatswechsel und Monatshistorie
 - `core/storage_manager.gd` – JSON-Speicherung, Backup und Wiederherstellung
 - `core/update_manager.gd` – Versions- und Update-Prüfung
@@ -394,6 +434,8 @@ Für den aktuellen Server-/Synchronisationsblock zusätzlich:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-server.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-client-server.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-pwa.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-ai-planning.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-banking.ps1
 ```
 
 Der Prüflauf importiert bei einem frischen Checkout zuerst alle Assets, führt
@@ -426,12 +468,12 @@ Repository:
 
 `https://github.com/unique1986/meine-budgetwelt`
 
-PWA-Status: **GitHub Pages am 31. Juli 2026 deaktiviert; keine öffentliche
-PWA bis zur Abnahme des serverseitigen Logins.**
+PWA-Status: **GitHub Pages am 31. Juli 2026 deaktiviert; die geschützte PWA
+läuft mit serverseitigem Login unter `https://budget.leno.info`.**
 
 Aktuelle Windows-Version:
 
-`https://github.com/unique1986/meine-budgetwelt/releases/download/v0.39.4/Meine-Budgetwelt-Setup-0.39.4.exe`
+`https://github.com/unique1986/meine-budgetwelt/releases/download/v0.40.0/Meine-Budgetwelt-Setup-0.40.0.exe`
 
 Veröffentlichungsablauf:
 
@@ -441,8 +483,8 @@ Veröffentlichungsablauf:
 4. Änderungen auf einem Arbeitsbranch committen und per Pull Request nach
    `main` bringen;
 5. für die Windows-Version einen passenden Tag wie `v0.39.3` erstellen;
-6. eine PWA erst nach Abnahme des serverseitigen Logins und nur über den
-   geschützten manuellen Workflow freigeben;
+6. eine PWA nur mit bestandenem serverseitigem Login- und Datenschutztest
+   über den geschützten Server veröffentlichen;
 7. Push des Versionstags baut automatisch Setup-EXE, SHA-256-Datei und
    Update-Manifest;
 8. die jeweils freigegebenen GitHub-Actions abwarten und Links mit HTTP 200
@@ -452,25 +494,27 @@ Versionsnummer, Git-Tag und Dateiname müssen übereinstimmen.
 
 ## 13. Bekannte Einschränkungen
 
-- die lokale Server-/Gerätesynchronisierung ist implementiert, aber noch nicht
-  auf dem Root-Server mit öffentlicher HTTPS-Domain installiert;
-- die sichtbare Admin-Oberfläche und das autonome signierte Serverupdate sind
-  lokal vollständig geprüft, aber noch nicht auf dem Root-Server installiert
-  oder veröffentlicht;
-- keine Codesignatur für die Windows-Dateien; der neue Installer ist lokal
-  getestet, aber noch nicht veröffentlicht;
-- automatische Client-Updateprüfung und -installation sowie der autonome RSA-
-  und SHA-256-geprüfte Serveraktualisierungsablauf sind lokal umgesetzt, aber
+- der gemeinsame Ollama-Durchstichtest auf dem Root-Server steht noch aus; der
+  integrierte Planungsbereich und sein lokaler KI-Vertrag sind geprüft, aber
   noch nicht veröffentlicht;
+- GoCardless ist noch nicht mit echten serverseitigen Zugangsdaten aktiviert;
+  Backend, Client, Dublettenschutz und Oberfläche sind lokal geprüft, aber der
+  Sandbox-/Produktivtest steht aus;
+- Version 0.40.0 enthält die neue Wochenplanung; der echte gemeinsame
+  Ollama-Durchstichtest auf dem Root-Server gehört zur abschließenden
+  Live-Abnahme;
+- keine Codesignatur für die Windows-Dateien; der veröffentlichte Installer
+  wird bis zur späteren kostenlosen Signaturlösung per SHA-256 geschützt;
 - die PWA kann auf dem iPhone durch Safari-/Service-Worker-Caches kurzzeitig
   eine alte Version zeigen; deshalb existieren versionierte PWA-Links;
-- die normalen Godot-4.7.1-Web-Exportvorlagen sind lokal installiert und der
-  PWA-Export ist automatisiert geprüft; reale iPhone-/Android-Geräte bleiben
-  vor Veröffentlichung abzunehmen;
+- neue Versionen des integrierten Planungsbereichs müssen erneut auf echten
+  iPhone-/Android-Geräten und unter Windows abgenommen werden;
 - ein Teil der Oberfläche wird zentral in der großen Datei `app/main.gd`
   erzeugt und sollte langfristig vorsichtig in kleinere UI-Komponenten
   zerlegt werden;
-- ältere Shopping- und Rezeptmodule sind intern vorhanden, aber unsichtbar.
+- `app/main.gd` enthält noch ältere, nicht instanziierte Shopping-, Rezept- und
+  Speiseplanoberflächen; geeignete Logik wird übernommen, die sichtbare
+  Oberfläche jedoch erst nach Vorschaufreigabe neu integriert.
 
 ## 14. Arbeitsregeln für zukünftige Änderungen
 
@@ -481,8 +525,9 @@ Versionsnummer, Git-Tag und Dateiname müssen übereinstimmen.
 5. Mobil und Windows nicht mit identischen starren Größen behandeln.
 6. Finanzlogik nicht in mehreren UI-Funktionen duplizieren.
 7. Bestehende IDs und gespeicherte JSON-Felder nicht ohne Migration umbenennen.
-8. OpenAI und GoCardless nur innerhalb der Grenzen von `docs/ROADMAP.md`
-   implementieren; keine Geheimnisse oder Bankzugangsdaten im Client.
+8. Lokale KI und GoCardless nur innerhalb der Grenzen von `docs/ROADMAP.md`
+   implementieren; Ollama bleibt loopback-gebunden und Bankgeheimnisse oder
+   Bankzugangsdaten gehören nicht in den Client.
 9. Einkaufs- und Rezeptfunktionen erst nach der Fehlerbereinigung kontrolliert
    gemäß Roadmap reaktivieren und bestehende Daten kompatibel halten.
 10. Keine Commits, Tags, Pushes oder Releases ohne ausdrücklichen Benutzerwunsch.
@@ -494,9 +539,9 @@ Versionsnummer, Git-Tag und Dateiname müssen übereinstimmen.
 ## 15. Aktueller Repository-Zustand bei Erstellung dieser Übergabe
 
 - Branch: `main`
-- Version/Tag: `v0.39.4`
+- Version/Tag: `v0.40.0`
 - eigener Start-/Updatebildschirm und dynamische Fensterneuberechnung ergänzt
-- Windows-Release-Workflow für 0.39.4 freigegeben
+- Windows-Release-Workflow für 0.40.0 freigegeben
 - vor Erstellung dieser Datei bestanden bereits lokale Änderungen an:
   - `assets/ui/fixed_costs_ledger_background.png.import`
   - `assets/ui/transactions_ledger_background.png.import`
@@ -515,7 +560,8 @@ Die weitere Reihenfolge ist in `docs/ROADMAP.md` festgelegt:
    Synchronisation für Windows-App und PWA;
 4. zwingender serverseitiger PWA-Login ohne öffentliche Registrierung;
 5. sichtbarer Wocheneinkauf, Rezepte und Speiseplan mit Schätzkosten;
-6. feste OpenAI-KI-Planung für Budget, Rezepte und Einkauf;
+6. feste, kostenfreie lokale KI-Planung über die gemeinsame Ollama-Laufzeit
+   für Budget, Rezepte und Einkauf;
 7. read-only-GoCardless-Import auf Knopfdruck;
 8. gemeinsame Integration, kostenlose Codesignaturprüfung, Geräteprüfung und
    erst danach Veröffentlichung.

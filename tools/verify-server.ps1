@@ -137,6 +137,9 @@ try {
     if ($health.service -ne "MeineBudgetweltServer") {
         throw "Gesundheitspruefung meldet einen unerwarteten Dienstnamen."
     }
+    if ($health.aiPlanningEnabled -ne $false -or $health.bankDataEnabled -ne $false) {
+        throw "Nicht konfigurierte externe Dienste werden im Gesundheitsstatus faelschlich als aktiv gemeldet."
+    }
 
     $adminPage = Invoke-WebRequest `
         -Uri "http://127.0.0.1:$port/admin/" `
@@ -287,6 +290,163 @@ try {
     $groups = @(Invoke-RestMethod -Uri "http://127.0.0.1:$port/api/admin/groups" -Headers $headers)
     if ($groups.Count -ne 1) {
         throw "Persoenliche Start-Budgetgruppe fehlt."
+    }
+    $planningBody = @{
+        weeklyBudgetCents = 7000
+        safetyBufferCents = 1000
+        people = 2
+        servingsPerMeal = 2
+        maxActiveMinutes = 30
+        dietaryStyle = "Alles"
+        planningStyle = "Meal-Prep"
+        allergies = @()
+        excludedIngredients = @()
+        preferredIngredients = @()
+        pantry = @()
+        personalPrices = @()
+    } | ConvertTo-Json -Depth 10
+    $planningWithoutLoginWasRejected = $false
+    try {
+        Invoke-RestMethod `
+            -Uri "http://127.0.0.1:$port/api/planning/groups/$($groups[0].id)/weekly-plan" `
+            -Method Post `
+            -ContentType "application/json" `
+            -Body $planningBody | Out-Null
+    }
+    catch {
+        if ($_.Exception.Response.StatusCode.value__ -eq 401) {
+            $planningWithoutLoginWasRejected = $true
+        }
+        else {
+            throw
+        }
+    }
+    if (-not $planningWithoutLoginWasRejected) {
+        throw "KI-Planung war ohne Anmeldung erreichbar."
+    }
+    $invalidPlanningWasRejected = $false
+    try {
+        Invoke-RestMethod `
+            -Uri "http://127.0.0.1:$port/api/planning/groups/$($groups[0].id)/weekly-plan" `
+            -Method Post `
+            -Headers $headers `
+            -ContentType "application/json" `
+            -Body (@{
+                weeklyBudgetCents = 0
+                safetyBufferCents = 0
+                people = 2
+                servingsPerMeal = 2
+                maxActiveMinutes = 30
+                dietaryStyle = "Alles"
+                planningStyle = "Meal-Prep"
+                allergies = @()
+                excludedIngredients = @()
+                preferredIngredients = @()
+                pantry = @()
+                personalPrices = @()
+            } | ConvertTo-Json -Depth 10) | Out-Null
+    }
+    catch {
+        if ($_.Exception.Response.StatusCode.value__ -eq 400) {
+            $invalidPlanningWasRejected = $true
+        }
+        else {
+            throw
+        }
+    }
+    if (-not $invalidPlanningWasRejected) {
+        throw "Ungueltige KI-Planungsdaten wurden angenommen."
+    }
+    $disabledPlanningWasRejected = $false
+    try {
+        Invoke-RestMethod `
+            -Uri "http://127.0.0.1:$port/api/planning/groups/$($groups[0].id)/weekly-plan" `
+            -Method Post `
+            -Headers $headers `
+            -ContentType "application/json" `
+            -Body $planningBody | Out-Null
+    }
+    catch {
+        if ($_.Exception.Response.StatusCode.value__ -eq 503) {
+            $disabledPlanningWasRejected = $true
+        }
+        else {
+            throw
+        }
+    }
+    if (-not $disabledPlanningWasRejected) {
+        throw "Nicht konfigurierte KI-Planung wurde nicht sicher gestoppt."
+    }
+    $bankingWithoutLoginWasRejected = $false
+    try {
+        Invoke-RestMethod `
+            -Uri "http://127.0.0.1:$port/api/banking/status" | Out-Null
+    }
+    catch {
+        if ($_.Exception.Response.StatusCode.value__ -eq 401) {
+            $bankingWithoutLoginWasRejected = $true
+        }
+        else {
+            throw
+        }
+    }
+    if (-not $bankingWithoutLoginWasRejected) {
+        throw "Bankstatus war ohne Anmeldung erreichbar."
+    }
+    $bankingStatus = Invoke-RestMethod `
+        -Uri "http://127.0.0.1:$port/api/banking/status" `
+        -Headers $headers
+    if (
+        $bankingStatus.enabled -ne $false -or
+        $bankingStatus.mode -ne "read-only" -or
+        $bankingStatus.automaticRefresh -ne $false -or
+        $bankingStatus.payments -ne $false
+    ) {
+        throw "Bankstatus verletzt den strikt lesenden, manuellen Betriebsmodus."
+    }
+    $bankConnectionsResponse = Invoke-WebRequest `
+        -Uri "http://127.0.0.1:$port/api/banking/groups/$($groups[0].id)/connections" `
+        -Headers $headers `
+        -UseBasicParsing
+    if ($bankConnectionsResponse.Content.Trim() -ne "[]") {
+        throw "Neue Budgetgruppe enthaelt unerwartete Bankverbindungen."
+    }
+    $disabledBankingWasRejected = $false
+    try {
+        Invoke-RestMethod `
+            -Uri "http://127.0.0.1:$port/api/banking/institutions?country=DE" `
+            -Headers $headers | Out-Null
+    }
+    catch {
+        if ($_.Exception.Response.StatusCode.value__ -eq 503) {
+            $disabledBankingWasRejected = $true
+        }
+        else {
+            throw
+        }
+    }
+    if (-not $disabledBankingWasRejected) {
+        throw "Nicht konfigurierte Bankanbindung wurde nicht sicher gestoppt."
+    }
+    $disabledBankConnectionWasRejected = $false
+    try {
+        Invoke-RestMethod `
+            -Uri "http://127.0.0.1:$port/api/banking/groups/$($groups[0].id)/connections" `
+            -Method Post `
+            -Headers $headers `
+            -ContentType "application/json" `
+            -Body (@{ institutionId = "SANDBOXFINANCE_SFIN0000" } | ConvertTo-Json) | Out-Null
+    }
+    catch {
+        if ($_.Exception.Response.StatusCode.value__ -eq 503) {
+            $disabledBankConnectionWasRejected = $true
+        }
+        else {
+            throw
+        }
+    }
+    if (-not $disabledBankConnectionWasRejected) {
+        throw "Bankverbindung konnte ohne serverseitige Zugangsdaten angelegt werden."
     }
     $memberBody = @{
         userId = $newUser.id
@@ -537,7 +697,7 @@ try {
     }
 
     $pwaResult = if ([string]::IsNullOrWhiteSpace($resolvedPwaRoot)) { "" } else { ", PWA-Auslieferung" }
-    Write-Host "Server-Pruefung erfolgreich: Konten, PWA-Cookie, API-Schutz, E-Mail, zwei synchronisierte Clients, Konfliktschutz, Sperre, Datenbank, Gesundheitsstatus$pwaResult."
+    Write-Host "Server-Pruefung erfolgreich: Konten, PWA-Cookie, API-Schutz, E-Mail, KI-Schutz, Nur-Lese-Banking, zwei synchronisierte Clients, Konfliktschutz, Sperre, Datenbank, Gesundheitsstatus$pwaResult."
 }
 finally {
     if ($null -ne $serverProcess -and -not $serverProcess.HasExited) {

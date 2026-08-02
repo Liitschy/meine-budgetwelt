@@ -12,9 +12,9 @@ der tatsächliche Kassenbetrag erfasst werden.
 
 ## Verbindlicher Produktbestandteil
 
-Die KI-gestützte Planung mit OpenAI ist ein fester Bestandteil des
-Zielprodukts. Sie wird nach der technischen Fehlerbereinigung und der
-Stabilisierung der lokalen Planungslogik umgesetzt.
+Die kostenfreie KI-gestützte Planung ist ein fester Bestandteil des
+Zielprodukts. Sie verwendet dieselbe lokale Ollama-Laufzeit auf dem Root-Server
+wie Blenk Voice und benötigt keinen kostenpflichtigen externen API-Zugang.
 
 Die KI erstellt Vorschläge, aber sie ist nicht die Quelle der verbindlichen
 Budgetberechnung. Wochenbudget, Sicherheitspuffer, Packungskosten und
@@ -124,10 +124,10 @@ Für die Planung können gespeichert werden:
 
 Gesundheitsrelevante Einschränkungen haben immer Vorrang vor Preis und Komfort.
 
-## OpenAI-Integration und Datenminimierung
+## Lokale KI-Integration und Datenminimierung
 
-- OpenAI wird über einen geschützten Backenddienst und nicht direkt aus der PWA
-  oder Windows-EXE aufgerufen.
+- Ollama wird nur über `127.0.0.1` vom geschützten Budgetwelt-Server und nicht
+  direkt aus der PWA oder Windows-EXE aufgerufen.
 - Die Antwort wird in einem festen strukturierten Schema für Tage, Rezepte,
   Zutaten, Einkaufsliste und Schätzkosten angefordert.
 - Übermittelt werden nur die vom Benutzer bestätigten Planungsangaben.
@@ -135,8 +135,7 @@ Gesundheitsrelevante Einschränkungen haben immer Vorrang vor Preis und Komfort.
   nicht zu den KI-Eingaben.
 - Ein aus manuellen oder importierten Buchungen abgeleitetes Wochenbudget wird
   nur als Betrag und nur nach Bestätigung verwendet.
-- API-Schlüssel werden weder im Repository noch in lokalen Sicherungen
-  gespeichert.
+- Für die lokale KI ist kein API-Schlüssel erforderlich.
 - Bei Nichterreichbarkeit bleiben vorhandene Pläne und eine manuelle Planung
   nutzbar; die KI-Planung bleibt dennoch Teil des verbindlichen Zielumfangs.
 
