@@ -13,6 +13,7 @@ $tamperedManifestPath = Join-Path $testRoot "tampered-manifest.json"
 $dataRoot = Join-Path $testRoot "data"
 $signingScript = Join-Path $PSScriptRoot "New-ServerUpdateManifest.ps1"
 $updaterScript = Join-Path $repositoryRoot "installer\server-updater\ServerUpdate.ps1"
+$contentConverterScript = Join-Path $repositoryRoot "installer\server-updater\ServerUpdateContent.ps1"
 
 try {
     New-Item -ItemType Directory -Force -Path $testRoot | Out-Null
@@ -43,6 +44,17 @@ try {
         -PrivateKeyPath $privateKeyPath `
         -OutputPath $manifestPath `
         -PublishedUtc "2026-08-01T00:00:00+00:00"
+
+    . $contentConverterScript
+    $manifestBytes = [IO.File]::ReadAllBytes($manifestPath)
+    $decodedManifest = Convert-ServerUpdateContentToText $manifestBytes | ConvertFrom-Json
+    if ($decodedManifest.schemaVersion -ne 1 -or $decodedManifest.version -ne "0.1.1") {
+        throw "Als Byte-Array geliefertes UTF-8-Manifest wurde nicht korrekt dekodiert."
+    }
+    $manifestString = Get-Content -LiteralPath $manifestPath -Raw
+    if ((Convert-ServerUpdateContentToText $manifestString) -ne $manifestString) {
+        throw "Bereits als Text geliefertes Manifest wurde veraendert."
+    }
 
     $downloadOutput = & $updaterScript `
         -ManifestPath $manifestPath `
@@ -96,7 +108,7 @@ try {
         throw "Gleiche Version wurde unnoetig heruntergeladen."
     }
 
-    Write-Host "Server-Updater-Pruefung erfolgreich: RSA-Signatur, SHA-256, Versionsschutz und Manipulationsabwehr."
+    Write-Host "Server-Updater-Pruefung erfolgreich: UTF-8-Byteantwort, RSA-Signatur, SHA-256, Versionsschutz und Manipulationsabwehr."
 }
 finally {
     if (Test-Path -LiteralPath $testRoot) {

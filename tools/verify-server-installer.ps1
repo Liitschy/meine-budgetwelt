@@ -161,6 +161,7 @@ try {
     }
     foreach ($updaterFile in @(
         "app\updater\ServerUpdate.ps1",
+        "app\updater\ServerUpdateContent.ps1",
         "app\updater\Install-ServerUpdateTask.ps1",
         "app\updater\server-update-public-key.xml",
         "app\tools\Configure-Integrations.ps1"

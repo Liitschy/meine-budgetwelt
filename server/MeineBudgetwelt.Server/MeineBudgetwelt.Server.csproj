@@ -11,7 +11,7 @@
     <NuGetAuditLevel>low</NuGetAuditLevel>
     <AssemblyName>Meine-Budgetwelt-Server</AssemblyName>
     <RootNamespace>MeineBudgetwelt.Server</RootNamespace>
-    <Version>0.1.3</Version>
+    <Version>0.1.4</Version>
   </PropertyGroup>
 
   <ItemGroup>
