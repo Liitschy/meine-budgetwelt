@@ -72,7 +72,7 @@ public sealed class SyncService(SqliteStore store)
     {
         await using var connection = await store.OpenConnectionAsync(
             cancellationToken);
-        await EnsureMembershipAsync(
+        await EnsureMembershipOnConnectionAsync(
             connection,
             groupId,
             userId,
@@ -105,7 +105,7 @@ public sealed class SyncService(SqliteStore store)
             cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(
             cancellationToken);
-        await EnsureMembershipAsync(
+        await EnsureMembershipOnConnectionAsync(
             connection,
             groupId,
             userId,
@@ -207,7 +207,49 @@ public sealed class SyncService(SqliteStore store)
             deviceId);
     }
 
-    private static async Task EnsureMembershipAsync(
+    public async Task EnsureMembershipAsync(
+        string groupId,
+        string userId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = await store.OpenConnectionAsync(
+            cancellationToken);
+        await EnsureMembershipOnConnectionAsync(
+            connection,
+            groupId,
+            userId,
+            cancellationToken);
+    }
+
+    public async Task<string> GetMembershipRoleAsync(
+        string groupId,
+        string userId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = await store.OpenConnectionAsync(
+            cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            """
+            SELECT m.role
+            FROM budget_group_members m
+            INNER JOIN users u ON u.user_id = m.user_id
+            WHERE m.group_id = $group_id
+              AND m.user_id = $user_id
+              AND u.is_active = 1
+            LIMIT 1;
+            """;
+        command.Parameters.AddWithValue("$group_id", groupId);
+        command.Parameters.AddWithValue("$user_id", userId);
+        var role = await command.ExecuteScalarAsync(cancellationToken);
+        if (role is not string value || string.IsNullOrWhiteSpace(value))
+        {
+            throw new SyncAccessDeniedException();
+        }
+        return value;
+    }
+
+    private static async Task EnsureMembershipOnConnectionAsync(
         SqliteConnection connection,
         string groupId,
         string userId,

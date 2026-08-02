@@ -17,6 +17,8 @@ const WeeklyNeedCalculator := preload("res://core/weekly_need_calculator.gd")
 const PackPlanner := preload("res://core/pack_planner.gd")
 const StorageManagerScript := preload("res://core/storage_manager.gd")
 const SyncManagerScript := preload("res://core/sync_manager.gd")
+const AiPlanningManagerScript := preload("res://core/ai_planning_manager.gd")
+const BankingManagerScript := preload("res://core/banking_manager.gd")
 const UpdateManagerScript := preload("res://core/update_manager.gd")
 
 var _failed := false
@@ -138,6 +140,13 @@ func _ready() -> void:
 	_assert_equal(shopping_summary.checked, 12.5, "Abgehakter Einkaufswert")
 	_assert_equal(shopping_summary.remaining, 37.5, "Verbleibendes Wochenbudget")
 	_assert_equal(shopping_summary.over_budget, false, "Wochenbudget eingehalten")
+	var actual_shopping_summary := ShoppingCalculator.summarize([
+		{"estimated_price": 12.5, "actual_price": 11.9, "checked": true},
+		{"estimated_price": 20.0, "checked": false},
+	], 70.0)
+	_assert_equal(actual_shopping_summary.planned, 32.5, "Schätzsumme bleibt vor dem Einkauf erhalten")
+	_assert_equal(actual_shopping_summary.checked, 11.9, "Kassenpreis wird für die Buchung verwendet")
+	_assert_equal(actual_shopping_summary.checked_estimated, 12.5, "Schätzpreis bleibt getrennt nachvollziehbar")
 	var meal_plan := MealSuggestionCatalog.generate()
 	_assert_equal(meal_plan.size(), 7, "Sieben Tagesgerichte")
 	_assert_equal(meal_plan[0].recipe_id, "linseneintopf_kette", "Rezeptkette startet mit Eintopf")
@@ -219,6 +228,20 @@ func _ready() -> void:
 		"Eigenmarken-Packpreis berechnet"
 	)
 	_assert_equal(rice_pack_plan.surplus_quantity, "400 g", "Packungsüberschuss berechnet")
+	var personal_rice_plan := PackPlanner.plan_ingredient({
+		"name": "Reis",
+		"quantity": "1,1 kg",
+		"estimated_price": 4.0,
+	}, [{
+		"name": "Reis",
+		"package_quantity": "1 kg",
+		"package_price": 2.29,
+		"checkout_price": 2.19,
+	}])
+	_assert_equal(personal_rice_plan.pack_plan, "2 × 1 kg", "Persönliche Packungsgröße wird verwendet")
+	_assert_equal(personal_rice_plan.surplus_quantity, "900 g", "Persönliche Packung weist Restmenge aus")
+	_assert_equal(personal_rice_plan.estimated_price, 4.38, "Bestätigter Kassenpreis bildet die Preisbasis")
+	_assert_equal(personal_rice_plan.price_source, "personal_checkout", "Persönliche Preisquelle wird markiert")
 	var potato_pack_plan := PackPlanner.plan_ingredient({
 		"name": "Kartoffeln",
 		"quantity": "3 kg",
@@ -244,6 +267,9 @@ func _ready() -> void:
 	_test_storage_backup_roundtrip()
 	_test_sync_snapshot_roundtrip()
 	_test_sync_server_url_validation()
+	_test_personal_price_persistence()
+	_test_ai_weekly_planning_conversion()
+	_test_read_only_bank_import()
 	_test_update_validation()
 	await _test_responsive_layout()
 
@@ -252,6 +278,107 @@ func _ready() -> void:
 	else:
 		print("BudgetManager: alle Tests bestanden.")
 		get_tree().quit(0)
+
+
+func _test_personal_price_persistence() -> void:
+	ShoppingManager._months = {}
+	ShoppingManager._personal_prices = []
+	var price_id := ShoppingManager.save_personal_price(
+		"",
+		"Haferflocken",
+		"500 g",
+		0.99,
+		1.05,
+		"Supermarkt"
+	)
+	_assert_equal(price_id.is_empty(), false, "Persönlicher Preis erhält eine ID")
+	_assert_equal(ShoppingManager.get_personal_prices().size(), 1, "Persönlicher Preis wird gespeichert")
+	var ai_prices := ShoppingManager.get_ai_personal_prices()
+	_assert_equal(ai_prices.size(), 1, "Persönliche Preisbasis wird für die KI bereitgestellt")
+	_assert_equal(ai_prices[0].priceCents, 105, "Letzter Kassenpreis hat für die KI Vorrang")
+	var saved := StorageManager.load_shopping_data()
+	_assert_equal(int(saved.get("schema_version", 0)), 2, "Einkaufsdatei erhält kompatible Version 2")
+	_assert_equal(saved.get("months", null) is Dictionary, true, "Bisherige Monatsstruktur bleibt erhalten")
+	_assert_equal(saved.get("personal_prices", null) is Array, true, "Preisbasis synchronisiert in shopping.json")
+	_assert_equal(ShoppingManager.remove_personal_price(price_id), true, "Persönlicher Preis kann gelöscht werden")
+
+
+func _test_read_only_bank_import() -> void:
+	var normalized_status := BankingManagerScript.normalize_status({
+		"enabled": true,
+		"mode": "unexpected",
+		"automaticRefresh": true,
+		"payments": true,
+	})
+	_assert_equal(normalized_status.enabled, true, "Bankstatus übernimmt die serverseitige Verfügbarkeit")
+	_assert_equal(normalized_status.mode, "read-only", "Bankzugang bleibt clientseitig strikt lesend")
+	_assert_equal(normalized_status.automaticRefresh, false, "Bankabruf bleibt ausschließlich manuell")
+	_assert_equal(normalized_status.payments, false, "Zahlungsfunktionen bleiben ausgeschlossen")
+	_assert_equal(
+		BankingManagerScript.is_safe_authorization_url("https://bank.example/authorize"),
+		true,
+		"Bankfreigabe akzeptiert ausschließlich HTTPS"
+	)
+	_assert_equal(
+		BankingManagerScript.is_safe_authorization_url("http://bank.example/authorize"),
+		false,
+		"Unsichere Bankfreigabe wird abgewiesen"
+	)
+
+	var preview := BankingManagerScript.normalize_preview({
+		"connectionId": "connection-1",
+		"institutionName": "Testbank",
+		"transactions": [
+			{
+				"importId": "bank-new",
+				"accountReference": "konto-1234",
+				"status": "booked",
+				"kind": "expense",
+				"amount": 12.34,
+				"currency": "EUR",
+				"bookingDate": "2026-08-01",
+				"description": "Supermarkt",
+				"alreadyImported": false,
+			},
+			{
+				"importId": "bank-pending",
+				"status": "pending",
+				"kind": "expense",
+				"amount": 2.0,
+				"currency": "EUR",
+				"bookingDate": "2026-08-02",
+				"description": "Vorgemerkt",
+				"alreadyImported": false,
+			},
+			{
+				"importId": "bank-duplicate",
+				"status": "booked",
+				"kind": "income",
+				"amount": 50.0,
+				"currency": "EUR",
+				"bookingDate": "2026-08-02",
+				"description": "Erstattung",
+				"alreadyImported": true,
+			},
+		],
+	})
+	var selected := BankingManagerScript.select_importable_transactions(
+		preview,
+		["bank-new", "bank-pending", "bank-duplicate"]
+	)
+	_assert_equal(selected.size(), 1, "Nur neue, gebuchte EUR-Buchungen werden auswählbar")
+	_assert_equal(selected[0].importId, "bank-new", "Die richtige Bankbuchung wird ausgewählt")
+
+	TransactionManager._months = {}
+	var imported := TransactionManager.import_bank_transactions(selected)
+	_assert_equal(imported.imported, 1, "Ausgewählte Bankbuchung wird lokal übernommen")
+	_assert_equal(imported.rejected, 0, "Gültige Bankbuchung wird nicht abgewiesen")
+	var imported_again := TransactionManager.import_bank_transactions(selected)
+	_assert_equal(imported_again.imported, 0, "Bankbuchung wird nicht doppelt übernommen")
+	_assert_equal(imported_again.duplicates, 1, "Doppelter Bankimport wird erkannt")
+	var august_transactions: Array = TransactionManager._months.get("2026-08", [])
+	_assert_equal(august_transactions.size(), 1, "Bankbuchung wird dem Buchungsmonat zugeordnet")
+	_assert_equal(august_transactions[0].kind, "expense", "Ausgabe bleibt als Ausgabe erhalten")
 
 
 func _test_empty_savings_goals_remain_empty() -> void:
@@ -419,6 +546,152 @@ func _test_sync_server_url_validation() -> void:
 	)
 
 
+func _test_ai_weekly_planning_conversion() -> void:
+	var input_error := AiPlanningManagerScript.validate_planning_input({
+		"weeklyBudgetCents": 7000,
+		"safetyBufferCents": 700,
+		"people": 2,
+		"servingsPerMeal": 2,
+		"maxActiveMinutes": 30,
+		"dietaryStyle": "Alles",
+		"planningStyle": "Meal-Prep und Resteverwertung",
+	})
+	_assert_equal(input_error, "", "Vollständige KI-Planungsangaben werden akzeptiert")
+	_assert_equal(
+		AiPlanningManagerScript.validate_planning_input({
+			"weeklyBudgetCents": 7000,
+			"safetyBufferCents": 7000,
+			"people": 2,
+			"servingsPerMeal": 2,
+			"maxActiveMinutes": 30,
+			"dietaryStyle": "Alles",
+			"planningStyle": "Ausgewogen",
+		}).is_empty(),
+		false,
+		"Sicherheitspuffer darf das Wochenbudget nicht aufbrauchen"
+	)
+
+	var days: Array = []
+	for day_index in range(7):
+		days.append({
+			"dayIndex": day_index,
+			"meal": "Gemüsepfanne Tag %d" % (day_index + 1),
+			"recipeId": "gemuese_pfanne",
+			"mode": "Reste" if day_index == 1 else "Normal kochen",
+			"mealPrepNote": "Gemüse vorbereiten" if day_index == 0 else "",
+			"leftoverNote": "Reste vom Vortag" if day_index == 1 else "",
+			"estimatedCostCents": 650,
+		})
+	var draft := {
+		"currency": "EUR",
+		"weeklyBudgetCents": 7000,
+		"safetyBufferCents": 700,
+		"planningTargetCents": 6300,
+		"estimatedCostCents": 4550,
+		"remainingCents": 1750,
+		"warnings": [],
+		"days": days,
+		"recipes": [{
+			"id": "gemuese_pfanne",
+			"title": "Günstige Gemüsepfanne",
+			"mode": "Meal-Prep",
+			"servings": 2,
+			"activeMinutes": 20,
+			"estimatedCostCents": 650,
+			"preparation": "Gemüse schneiden und gemeinsam garen.",
+			"ingredients": [{
+				"name": "Gemüse",
+				"quantity": "1 kg",
+				"estimatedPriceCents": 4550,
+				"includeInShopping": true,
+				"usesPantry": false,
+				"allergens": [],
+			}],
+		}],
+		"shoppingItems": [{
+			"name": "Gemüse",
+			"quantity": "1 kg",
+			"estimatedPriceCents": 4550,
+			"recipeIds": ["gemuese_pfanne"],
+			"allergens": [],
+		}],
+	}
+	_assert_equal(
+		AiPlanningManagerScript.is_valid_draft(draft),
+		true,
+		"Vollständiger Sieben-Tage-Entwurf wird erkannt"
+	)
+	var duplicate_day_draft := draft.duplicate(true)
+	duplicate_day_draft.days[6].dayIndex = 5
+	_assert_equal(
+		AiPlanningManagerScript.is_valid_draft(duplicate_day_draft),
+		false,
+		"Doppelte Wochentage werden im Client abgelehnt"
+	)
+
+	var snapshot := {
+		"schemaVersion": StorageManagerScript.SYNC_SCHEMA_VERSION,
+		"files": {
+			"budget_data.json": {},
+			"fixed_costs.json": [],
+			"month_history.json": {},
+			"savings_goals.json": [],
+			"transactions.json": {"2026-08": [{"id": "bestehende-buchung"}]},
+			"shopping.json": {
+				"schema_version": 1,
+				"months": {"2026-08": {"1": {
+					"items": [{"id": "manuell_1", "name": "Kaffee"}],
+					"booked": false,
+				}}},
+			},
+			"meal_plans.json": {"schema_version": 2, "months": {}},
+			"custom_recipes.json": [{
+				"id": "ai_gemuese_pfanne",
+				"title": "Familienrezept",
+				"ingredients": [],
+			}],
+		},
+	}
+	var before_transactions: Dictionary = snapshot.files["transactions.json"].duplicate(true)
+	var converted := AiPlanningManagerScript.build_snapshot_with_draft(
+		snapshot,
+		draft,
+		"2026-08",
+		1
+	)
+	_assert_equal(converted.get("success", false), true, "KI-Entwurf wird gemeinsam vorbereitet")
+	if bool(converted.get("success", false)):
+		var files: Dictionary = converted.snapshot.files
+		_assert_equal(
+			files["custom_recipes.json"].size(),
+			2,
+			"Manuelles Rezept bleibt neben dem KI-Rezept erhalten"
+		)
+		_assert_equal(
+			str(files["custom_recipes.json"][1].id),
+			"ai_gemuese_pfanne_2",
+			"KI-Rezept überschreibt bei gleicher ID kein manuelles Rezept"
+		)
+		_assert_equal(
+			files["meal_plans.json"].months["2026-08"]["1"].size(),
+			7,
+			"Alle sieben Tage werden gemeinsam übernommen"
+		)
+		_assert_equal(
+			files["shopping.json"].months["2026-08"]["1"].items.size(),
+			2,
+			"Manueller Einkaufsartikel bleibt neben dem KI-Einkauf erhalten"
+		)
+		_assert_equal(
+			files["shopping.json"].months["2026-08"]["1"].booked,
+			false,
+			"KI-Übernahme verbucht den Einkauf nicht"
+		)
+		_assert_equal(
+			files["transactions.json"],
+			before_transactions,
+			"KI-Planung verändert keinerlei Buchungen"
+		)
 func _test_update_validation() -> void:
 	var version := "0.40.0"
 	var download_url := (
@@ -582,10 +855,97 @@ func _test_responsive_layout() -> void:
 	_assert_equal(app.fixed_summary_row.vertical, false, "Fixkostensummen mobil nebeneinander")
 	_assert_equal(app.savings_summary_row.vertical, false, "Sparziele mobil nebeneinander")
 	_assert_equal(app.transaction_summary_row.vertical, false, "Buchungssumme mobil kompakt")
+	app._show_page("transactions")
+	_assert_equal(app.banking_panel.visible, false, "Buchungen starten weiterhin in der manuellen Ansicht")
+	app.banking_panel.set_status({
+		"enabled": true,
+		"mode": "read-only",
+		"automaticRefresh": false,
+		"payments": false,
+	})
+	app.banking_panel.set_connections([{
+		"id": "ui-bank-connection",
+		"institutionName": "UI-Testbank",
+		"status": "linked",
+		"lastRefreshUtc": "2026-08-02T10:00:00Z",
+	}])
+	app.banking_panel.set_data({
+		"connectionId": "ui-bank-connection",
+		"institutionName": "UI-Testbank",
+		"balances": [{
+			"accountReference": "konto-test",
+			"currency": "EUR",
+			"amount": 123.45,
+		}],
+		"transactions": [
+			{"importId": "ui-new", "status": "booked", "kind": "expense", "amount": 4.5, "currency": "EUR", "bookingDate": "2026-08-01", "description": "Neu", "alreadyImported": false},
+			{"importId": "ui-old", "status": "booked", "kind": "expense", "amount": 3.0, "currency": "EUR", "bookingDate": "2026-08-01", "description": "Alt", "alreadyImported": true},
+		],
+	})
+	app.banking_panel.visible = true
+	await get_tree().process_frame
+	_assert_equal(app.banking_panel._compact, true, "Bankimport verwendet das mobile Kartenlayout")
+	_assert_equal(
+		app.banking_panel.get_selected_import_ids(),
+		["ui-new"],
+		"Bankimport wählt nur neue, gebuchte Buchungen vor"
+	)
+	app._show_manual_transactions()
+	_assert_equal(app.banking_panel.visible, false, "Manueller Buchungsbereich bleibt direkt erreichbar")
 	app._show_page("fixed_costs")
 	_assert_equal(app.mobile_navigation.visible, true, "Mobile Navigation bleibt auf Unterseiten sichtbar")
 	_assert_equal(app.fixed_list_header.visible, false, "Desktop-Tabellenkopf ist mobil verborgen")
+	ShoppingManager._months = {}
+	ShoppingManager._emit_current()
+	app._show_page("weekly_planning")
+	_assert_equal(app.weekly_planning_page.visible, true, "Wochenplanung ist mobil erreichbar")
+	_assert_equal(
+		app.weekly_planning_page._compact,
+		true,
+		"Wochenplanung stapelt Angaben und Entwurf in der mobilen Ansicht"
+	)
+	_assert_equal(
+		app.desktop_backdrop.visible,
+		true,
+		"Freigegebener Landschaftshintergrund bleibt in der mobilen Wochenplanung sichtbar"
+	)
+	_assert_equal(
+		app.mobile_nav_buttons.has("weekly_planning"),
+		true,
+		"Mobile Navigation enthält den festen Planungsbereich"
+	)
+	var shopping_test_name := "UI-Testartikel-%d" % Time.get_ticks_usec()
+	app.weekly_planning_page._shopping_name_input.text = shopping_test_name
+	app.weekly_planning_page._shopping_quantity_input.text = "2 Stück"
+	app.weekly_planning_page._shopping_price_input.value = 3.49
+	app.weekly_planning_page._add_shopping_item()
+	var shopping_test_items := ShoppingManager.get_items().filter(
+		func(item: Dictionary) -> bool:
+			return str(item.get("name", "")) == shopping_test_name
+	)
+	_assert_equal(shopping_test_items.size(), 1, "Artikel kann im integrierten Einkauf ergänzt werden")
+	if not shopping_test_items.is_empty():
+		var shopping_test_id := str(shopping_test_items[0].id)
+		app.weekly_planning_page._toggle_current_shopping_item(true, shopping_test_id)
+		var checked_item: Dictionary = ShoppingManager.get_items().filter(
+			func(item: Dictionary) -> bool:
+				return str(item.get("id", "")) == shopping_test_id
+		)[0]
+		_assert_equal(checked_item.checked, true, "Einkaufsartikel kann als gekauft markiert werden")
+		app.weekly_planning_page.request_remove_shopping_item.emit(shopping_test_id)
+		_assert_equal(app.confirmation_panel.visible, true, "Löschen verlangt weiterhin Bestätigung")
+		app._confirm_action()
+		var shopping_test_still_present := ShoppingManager.get_items().any(
+			func(item: Dictionary) -> bool:
+				return str(item.get("id", "")) == shopping_test_id
+		)
+		_assert_equal(
+			shopping_test_still_present,
+			false,
+			"Bestätigtes Löschen entfernt den Einkaufsartikel"
+		)
 	app._show_page("dashboard")
+	_assert_equal(app.desktop_backdrop.visible, false, "Mobiles Dashboard bleibt unverändert aufgeräumt")
 	app.size = Vector2(1440, 900)
 	app._apply_responsive_layout()
 	_assert_equal(app._compact_layout, false, "Desktoplayout bei großer Breite")
@@ -594,6 +954,19 @@ func _test_responsive_layout() -> void:
 	_assert_equal(app.mobile_navigation.visible, false, "Mobile Navigation am Desktop verborgen")
 	_assert_equal(app.dashboard_body.vertical, false, "Budgetinhalt am Desktop nebeneinander")
 	_assert_equal(app.dashboard_body.get_child(0), app.world_view, "Landschaft steht am Desktop wieder links")
+	app._show_page("weekly_planning")
+	_assert_equal(app.sidebar_panel.visible, true, "Wochenplanung bleibt am Desktop in der Hauptnavigation")
+	_assert_equal(app.app_bar.visible, true, "Kontostatus bleibt über der Desktop-Wochenplanung sichtbar")
+	_assert_equal(
+		app.sidebar_nav_buttons["weekly_planning"].get_meta("navigation_active"),
+		true,
+		"Desktopnavigation markiert den tatsächlich geöffneten Planungsbereich"
+	)
+	_assert_equal(
+		app.sidebar_nav_buttons["dashboard"].get_meta("navigation_active"),
+		false,
+		"Dashboard-Markierung bleibt auf Unterseiten nicht fälschlich aktiv"
+	)
 	app._show_page("fixed_costs")
 	app.size = Vector2(960, 640)
 	app._queue_responsive_layout()
@@ -617,6 +990,25 @@ func _test_responsive_layout() -> void:
 		app.fixed_list_panel.size.y > 300.0,
 		true,
 		"Fixkosteninhalt wächst beim erneuten Maximieren wieder mit"
+	)
+	app._show_page("weekly_planning")
+	app.size = Vector2(960, 640)
+	app._queue_responsive_layout()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_assert_equal(
+		app.weekly_planning_page._compact,
+		true,
+		"Wochenplanung stapelt sich auch im schmalen Windows-Desktopfenster"
+	)
+	app.size = Vector2(1440, 900)
+	app._queue_responsive_layout()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_assert_equal(
+		app.weekly_planning_page._compact,
+		false,
+		"Wochenplanung kehrt nach dem Maximieren in die Sieben-Spalten-Ansicht zurück"
 	)
 	app._show_page("dashboard")
 	_assert_equal(

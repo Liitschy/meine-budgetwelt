@@ -68,6 +68,74 @@ Die sichtbare Admin-Oberfläche verwaltet Benutzer, Sperren, Budgetgruppen,
 Rollen und Einladungen. Der Installer öffnet keinen Port in der Firewall und
 verändert keine bestehende Datenbank oder einen fremden Dienst.
 
+## KI-Wochenplanung
+
+Der geschützte Endpunkt
+`POST /api/planning/groups/{groupId}/weekly-plan` erstellt einen Entwurf aus
+Wochenbudget, Sicherheitspuffer, Personen, Ernährungswünschen, Allergien,
+ausgeschlossenen Zutaten, Vorräten und bestätigten Preisangaben. Er akzeptiert
+keine Bankumsätze, IBAN, PIN, TAN oder Bankzugangsdaten. Der Entwurf wird vor
+der Rückgabe erneut serverseitig auf sieben Tage, Rezeptverweise, doppelte
+Einkaufsartikel, Kostenrechnung, Budgetgrenze und gesperrte Zutaten geprüft.
+Er verändert weder Buchungen noch synchronisierte Daten; die Übernahme erfolgt
+später ausdrücklich im Client.
+
+Installierte Server aktivieren die lokale KI standardmäßig über
+`LocalAi:Enabled`. Budgetwelt verwendet dieselbe Ollama-Laufzeit und dasselbe
+Modell `qwen3.5:4b` wie Blenk Voice, spricht sie aber ausschließlich direkt
+über `http://127.0.0.1:11434/api/chat` an. Entfernte KI-Adressen werden vom
+Server abgelehnt. Es gibt keinen API-Schlüssel und keine nutzungsabhängigen
+KI-Gebühren. Anfragen erzwingen ein strukturiertes JSON-Schema und werden vor
+der Rückgabe vollständig validiert.
+
+Die deterministischen Prüfungen laufen ohne API-Schlüssel:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass \
+  -File .\tools\verify-ai-planning.ps1
+```
+
+## Read-only-Bankabruf
+
+Der geschützte Bankbereich verwendet GoCardless Bank Account Data ausschließlich
+lesend. `GET /api/banking/status` meldet ausdrücklich `read-only`, keine
+automatische Aktualisierung und keine Zahlungen. Banken, Verbindungen,
+Kontostände und Buchungsvorschauen sind an Anmeldung und Budgetgruppe gebunden.
+Nur `owner` und `manager` dürfen Bankfreigaben anlegen oder trennen. Es gibt
+keinen Endpunkt für Überweisungen oder andere Zahlungen.
+
+GoCardless-Secret-ID, Secret-Key und Zugriffstoken bleiben ausschließlich im
+Serverprozess. PIN, TAN und Banking-Kennwort werden nur bei der Bank eingegeben.
+Importierte Buchungen werden erst nach Auswahl im Client gespeichert und über
+stabile Provider-ID beziehungsweise Fallback-Fingerabdruck dedupliziert.
+
+Nach Installation werden lokale KI und/oder GoCardless in einer als
+Administrator gestarteten PowerShell eingerichtet. Nur GoCardless fragt dabei
+Geheimnisse ab; die lokale KI benötigt keinen Schlüssel:
+
+```powershell
+& 'C:\Program Files\Meine Budgetwelt Server\tools\Configure-Integrations.ps1' `
+  -Integration GoCardless `
+  -GoCardlessMode Sandbox
+```
+
+Das Werkzeug fragt geheime Werte verdeckt ab, hinterlegt sie nur in der
+geschützten Windows-Dienstumgebung, aktiviert den passenden Abschnitt in der
+externen `appsettings.json` und startet ausschließlich den Budgetwelt-Dienst
+neu. Die vorherige Konfiguration wird ohne Geheimnisse gesichert.
+
+Der lokale Anbieter-Vertragstest benötigt weder Geheimnisse noch Netzwerk:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File .\tools\verify-banking.ps1
+```
+
+Im Sandbox-Modus wird zusaetzlich die offizielle GoCardless-Testbank
+`SANDBOXFINANCE_SFIN0000` angeboten. Nach erfolgreicher Abnahme wird derselbe
+Befehl mit `-GoCardlessMode Production` erneut ausgefuehrt; dann verschwindet
+die Testbank und nur die regulaeren Banken des konfigurierten Landes bleiben.
+
 ## Windows-Installer
 
 ```powershell
@@ -78,7 +146,7 @@ powershell -NoProfile -ExecutionPolicy Bypass \
 Das Setup fragt lokalen Port sowie Name, E-Mail und Kennwort des ersten Admins
 ab. Das Kennwort wird nur über die vererbte Prozessumgebung an den Bootstrap
 gegeben und weder in Befehlszeile noch Installerprotokoll geschrieben. Der
-Der Dienst läuft als `LocalService`, bindet ausschließlich an Loopback und erhält
+Dienst läuft als `LocalService`, bindet ausschließlich an Loopback und erhält
 nur Änderungsrechte am eigenen Datenstamm. Vor einem Update wird über den
 Serverbefehl `backup` eine Sicherung erzeugt; bei fehlerhaftem Start wird die
 vorherige vollständige Programmversion wiederhergestellt. Eine Deinstallation entfernt

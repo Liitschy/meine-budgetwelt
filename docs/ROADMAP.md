@@ -1,6 +1,6 @@
 # Roadmap: Meine Budgetwelt
 
-Stand: 1. August 2026
+Stand: 2. August 2026
 
 Diese Roadmap beschreibt die verbindliche Weiterentwicklung nach Version
 0.39.2. Der veröffentlichte Stand bleibt bis zur jeweiligen Umsetzung
@@ -9,8 +9,9 @@ risikogerechten Prüfung veröffentlicht.
 
 ## Verbindliche Zielrichtung
 
-- Die KI-gestützte Wochenplanung mit OpenAI ist ein fester Bestandteil des
-  Zielprodukts und nicht optional.
+- Die kostenfreie KI-gestützte Wochenplanung ist ein fester Bestandteil des
+  Zielprodukts und nicht optional. Sie verwendet dieselbe lokale
+  Ollama-Laufzeit auf dem Root-Server wie Blenk Voice.
 - Die Online-Banking-Anbindung erfolgt über GoCardless Bank Account Data,
   ausschließlich lesend und nur nach einem ausdrücklichen Knopfdruck.
 - Wocheneinkauf, Rezepte und Speiseplan sind im Zielprodukt dauerhaft sichtbare
@@ -36,7 +37,7 @@ risikogerechten Prüfung veröffentlicht.
 - Budgetberechnungen, Preisprüfung und Sicherheitsgrenzen bleiben in
   deterministischen Calculators beziehungsweise Managern. KI-Ausgaben werden
   vor der Anzeige und Speicherung gegen diese Regeln validiert.
-- PIN, TAN, Banking-Passwörter sowie OpenAI- und GoCardless-Geheimnisse dürfen
+- PIN, TAN, Banking-Passwörter sowie GoCardless-Geheimnisse dürfen
   niemals in der PWA, der Windows-EXE oder dem Repository gespeichert werden.
 
 ## Phase 0: Fehlerbereinigung und belastbare Tests
@@ -76,9 +77,9 @@ Abnahmekriterien:
 
 ## Phase 1: Automatische Updateprüfung und Status
 
-Status: **Autonome Windows-Aktualisierung einschließlich sicherem Download,
-Datensicherung, stiller Installation, Neustart und Installer-Rückfall im
-lokalen Entwicklungsstand umgesetzt; noch nicht veröffentlicht**
+Status: **mit Version 0.39.4 veröffentlicht; autonome Windows-Aktualisierung
+einschließlich sicherem Download, Datensicherung, stiller Installation,
+Neustart und Installer-Rückfall umgesetzt**
 
 Die bereits vorhandene manuelle Manifestprüfung wird zu einem sicheren
 Startablauf erweitert.
@@ -157,9 +158,10 @@ Abnahmekriterien:
 
 ## Phase 1a: Eigener Server, Konten, Synchronisation und PWA-Zugangsschutz
 
-Status: **lokale Server-, Konto-, Login-, Synchronisations-, Admin-,
-Windows-Dienst- und Auto-Update-Grundlage umgesetzt und durchgängig geprüft;
-Root-Server-Installation und echte Geräteabnahme noch offen**
+Status: **Server, Konto, Login, Synchronisation, Admin-Oberfläche,
+Windows-Dienst, Caddy/HTTPS, autonome Updates und geschützte PWA auf dem
+Root-Server eingerichtet; Desktop/PWA-Synchronisation auf echten Geräten
+erfolgreich verwendet**
 
 **Umgesetzt am 31. Juli 2026:** Das Repository wurde auf `unique1986`
 übertragen und die öffentliche GitHub-Pages-Site in den Repository-Einstellungen
@@ -254,13 +256,11 @@ Benutzer zugeordnet, zeigt der Bestätigungsdialog Anzahl und Folgen deutlich
 an; erst die exakte Eingabe des Gruppennamens erlaubt das dauerhafte Entfernen
 der Gruppenzuordnungen, synchronisierten Daten und Versionshistorie.
 
-**Domain vorbereitet:** Der installierte Server ist auf
-`https://budget.leno.info` vorkonfiguriert. Ein konfliktfreier Caddy-Block für
-den ausschließlich lokalen Upstream `127.0.0.1:48732` liegt unter
-`ops/caddy/budget.leno.info.caddy`; eine zusammengeführte Prüffassung der vom
-Projekteigentümer bereitgestellten Caddy-Datei wurde erzeugt. Die echte
-Installation, Caddy-Validierung, HTTPS-Abnahme und Mobilgeräteprüfung auf dem
-Root-Server bleiben offen.
+**Produktiv eingerichtet:** Der installierte Server, Caddy/HTTPS und die
+geschützte PWA laufen unter `https://budget.leno.info`. Desktop und PWA greifen
+über dieselben Konten und Budgetgruppen auf denselben Datenbestand zu. Der
+konfliktfreie Caddy-Block für den ausschließlich lokalen Upstream
+`127.0.0.1:48732` bleibt unter `ops/caddy/budget.leno.info.caddy` dokumentiert.
 
 ### Verbindliche Serverarchitektur
 
@@ -285,9 +285,9 @@ Root-Server bleiben offen.
 7. Desktop-App und PWA verwenden dieselbe Authentifizierung und
    Synchronisations-API. Lokale Daten dienen danach als Offline-Kopie und
    Sicherung, nicht als voneinander getrennter Hauptdatenbestand.
-8. OpenAI- und GoCardless-Geheimnisse sowie Bankzugriffstoken liegen
-   ausschließlich im Serverdienst und niemals in Client, PWA-Cache oder
-   Repository.
+8. Die KI ist nur über Loopback erreichbar. GoCardless-Geheimnisse und
+   Bankzugriffstoken liegen ausschließlich im Serverdienst und niemals in
+   Client, PWA-Cache oder Repository.
 9. Der Server prüft selbständig nach dem Start und täglich auf signierte
    Updates. Vor der Installation sichert er Datenbank und Konfiguration,
    installiert atomar und führt einen Gesundheitstest aus. Bei einem Fehler
@@ -347,7 +347,7 @@ Abnahmekriterien:
 - nach Abmeldung sind private Daten nicht mehr aus Cache oder Verlauf abrufbar;
 - es existiert keine offene Registrierung;
 - der Zugriff jedes freigeschalteten Kontos kann einzeln entzogen werden;
-- PWA, OpenAI-Backend und GoCardless-Backend verwenden denselben verbindlichen
+- PWA, lokales KI-Backend und GoCardless-Backend verwenden denselben verbindlichen
   Benutzer- und Sitzungsgrenzschutz.
 - Desktop und PWA zeigen nach abgeschlossener Synchronisation denselben
   fachlichen Datenstand;
@@ -356,9 +356,42 @@ Abnahmekriterien:
 - Serverinstallation und -updates verändern keine bestehenden Datenbanken oder
   Dienste und fallen bei einem fehlgeschlagenen Update automatisch zurück.
 
-## Phase 2: Sichtbarer Wocheneinkauf, Rezepte und Speiseplan
+## Phase 2: Wocheneinkauf, Rezepte, Speiseplan und KI als ein Funktionsblock
 
-Status: **nach Server-, Konto- und Synchronisationsgrundlage aus Phase 1a**
+Status: **lokal umgesetzt und automatisiert geprüft; Durchstichtest mit der
+bereits von Blenk Voice verwendeten Ollama-Laufzeit, Geräteabnahme und
+Veröffentlichung bleiben offen**
+
+Die frühere Trennung zwischen Phase 2 und Phase 3 ist nur eine technische
+Untergliederung. Fachlich wird ein gemeinsamer Ablauf gebaut: Angaben und
+Wochenbudget festlegen, KI-Entwurf erzeugen, serverseitig prüfen, Vorschau
+bestätigen und anschließend Rezepte, sieben Tage sowie Einkaufsliste gemeinsam
+in den synchronisierten Bestand übernehmen.
+
+**Begonnen am 2. August 2026:** Die geeigneten internen Manager und Datenformate
+für Rezepte, Speisepläne und Einkaufslisten wurden geprüft. Der Server besitzt
+einen authentifizierten, auf Budgetgruppen begrenzten und gedrosselten
+KI-Planungsendpunkt. Er sendet nur bestätigte Planungsdaten an die lokale,
+loopback-gebundene Ollama-Laufzeit, verlangt ein strukturiertes Schema und lehnt zu teure,
+rechnerisch falsche, doppelte oder mit ausgeschlossenen Zutaten beziehungsweise
+Allergenen belastete Ergebnisse deterministisch ab. Es ist kein KI-Schlüssel
+und kein kostenpflichtiger KI-Zugang erforderlich. Die freigegebene sichtbare Oberfläche ist
+lokal in Desktop- und Mobilnavigation integriert. Sie zeigt Angaben, Entwurf
+und einen getrennten Bestätigungsschritt. Erst nach Bestätigung werden mit
+vorheriger Datensicherung Rezepte, genau sieben Tage und Einkaufsliste gemeinsam
+gespeichert; Buchungen bleiben unverändert. Die aktive Woche und der dauerhafte
+Wocheneinkauf sind im selben Bereich sichtbar. Manuelle Artikel können ergänzt,
+abgehakt und bestätigt gelöscht werden; das Verbuchen bleibt eine getrennte,
+eindeutige Benutzeraktion für die tatsächlich gekauften Artikel. Dieser Stand
+ist noch nicht veröffentlicht.
+
+Rezeptbibliothek und persönliche Preisbasis sind inzwischen ebenfalls
+datengebunden umgesetzt und visuell freigegeben. Rezepte lassen sich anlegen,
+bearbeiten, suchen, favorisieren, einem Wochentag zuordnen, zum Einkauf
+hinzufügen und bestätigt löschen. Schätzpreise und letzte Kassenpreise bleiben
+getrennt; tatsächlich eingetragene Einkaufspreise haben bei der späteren
+Verbuchung Vorrang und bilden zusammen mit Vorräten die persönliche
+KI-Planungsgrundlage.
 
 1. Die vorhandenen internen Rezept-, Einkaufs- und Speiseplanmodule prüfen und
    nur die weiterhin geeigneten Teile kontrolliert reaktivieren.
@@ -383,11 +416,12 @@ Abnahmekriterien:
 - Kosten pro Rezept, Tag und Woche sind vor dem Einkauf sichtbar;
 - ältere gespeicherte Einkaufsdaten werden nicht ungefragt gelöscht.
 
-## Phase 3: Verbindliche KI-Planung mit OpenAI
+## Phase 3: Technischer KI-Teil des gemeinsamen Planungsbereichs
 
-Status: **fester Zielumfang nach Phase 2**
+Status: **technisch lokal umgesetzt; echter Durchstichtest über die gemeinsame
+Ollama-Laufzeit auf dem Root-Server bleibt vor Veröffentlichung offen**
 
-Die OpenAI-Unterstützung erstellt passend zum verfügbaren Wochenbudget einen
+Die lokale Qwen-Unterstützung erstellt passend zum verfügbaren Wochenbudget einen
 alltagstauglichen Plan mit Rezepten, Resteverwertung und Einkaufsliste.
 
 Vorgesehene Eingaben:
@@ -410,28 +444,29 @@ Vorgesehene Ergebnisse:
 
 Technische und fachliche Grenzen:
 
-- Die Integration verwendet die OpenAI Responses API über einen kleinen
-  geschützten Backenddienst.
+- Die Integration verwendet Ollamas lokale Chat-API ausschließlich über
+  `http://127.0.0.1:11434/api/chat`.
 - Antworten werden als strukturiertes, schema-validiertes Ergebnis verarbeitet.
 - Das verwendete Modell wird serverseitig konfiguriert und vor der Festlegung
-  anhand von Qualität, Kosten und Latenz bewertet; es wird nicht fest in der
+  anhand von Qualität, Hardwarebedarf und Latenz bewertet; es wird nicht fest in der
   Godot-Oberfläche verdrahtet.
 - Die KI darf keine Budgetwerte buchen oder Finanzdaten verändern.
 - Berechnete Packungskosten und Budgetgrenzen werden nach der KI-Antwort erneut
   durch lokale Calculator-Logik geprüft.
 - Rohumsätze, IBAN, Kontoinhaber, PIN, TAN oder Bankzugangsdaten werden nicht an
-  OpenAI übertragen. Zulässig sind nur die für die Planung benötigten, vom
+  die KI übertragen. Zulässig sind nur die für die Planung benötigten, vom
   Benutzer bestätigten Angaben und abgeleiteten Budgetwerte.
-- API-Schlüssel werden niemals in Clientcode oder lokalen Datensicherungen
-  abgelegt.
+- Die lokale KI benötigt keinen API-Schlüssel und überträgt keine
+  Planungsdaten an einen Cloudanbieter.
 - Bei einer Dienststörung bleiben gespeicherte Pläne, manuelle Planung und alle
   Finanzfunktionen verfügbar. Das ist eine Ausfallsicherung; die KI-Planung
   bleibt dennoch verbindlicher Produktbestandteil.
 
 Offizielle technische Referenzen:
 
-- [OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs)
-- [OpenAI Safety Best Practices](https://developers.openai.com/api/docs/guides/safety-best-practices)
+- [Ollama Structured Outputs](https://docs.ollama.com/capabilities/structured-outputs)
+- [Ollama Windows und lokale API](https://docs.ollama.com/windows)
+- [Qwen 3.5 4B in Ollama](https://ollama.com/library/qwen3.5:4b)
 
 Abnahmekriterien:
 
@@ -443,10 +478,27 @@ Abnahmekriterien:
 
 ## Phase 4: Read-only-Bankanbindung mit GoCardless
 
-Status: **verbindlicher Zielumfang nach der KI-Planungsgrundlage**
+Status: **Backend, Clientlogik und freigegebene responsive Oberfläche lokal
+umgesetzt; GoCardless-Sandbox- und Produktivtest mit Servergeheimnissen offen**
 
 GoCardless Bank Account Data wird ausschließlich für einen manuellen,
 lesenden Abruf verwendet.
+
+**Lokal umgesetzt am 2. August 2026:** Der isolierte Server besitzt eine eigene
+Schema-Version und Tabelle ausschließlich für Bankfreigaben, authentifizierte
+und gedrosselte Endpunkte sowie einen serverseitigen GoCardless-Client mit
+Token-Erneuerung. Der Client zeigt Kontostände und Buchungen zuerst als
+Vorschau, markiert Dubletten und vorgemerkte Umsätze als nicht auswählbar und
+übernimmt nur ausdrücklich ausgewählte, gebuchte EUR-Umsätze. Stabile
+Import-IDs verhindern erneute Übernahmen. Bankauswahl und starke
+Authentifizierung erfolgen im Browser bei GoCardless beziehungsweise der Bank.
+Ein standardmaessig ausgeschalteter Server-Schalter blendet fuer die erste
+Abnahme gezielt die offizielle GoCardless-Testbank ein; im Produktivmodus wird
+sie nicht angeboten.
+Nur `owner` und `manager` dürfen eine Verbindung anlegen oder trennen; der
+Abruf bleibt für Mitglieder derselben Budgetgruppe bewusst manuell. Es gibt
+keinen Zahlungsendpunkt. Die freigegebene Desktop- und Mobiloberfläche ist in
+den Buchungsbereich integriert, aber noch nicht veröffentlicht.
 
 Damit werden umgesetzt:
 
@@ -521,7 +573,7 @@ Referenz für die kostenlose Open-Source-Prüfung:
 
 - Überweisungen, Lastschriften oder andere Zahlungsauslösungen;
 - Speicherung von PIN, TAN oder Online-Banking-Passwörtern;
-- automatische Weitergabe vollständiger Bankumsätze an OpenAI;
+- automatische Weitergabe vollständiger Bankumsätze an die KI;
 - Zwang zur Bankverbindung, damit die manuellen Finanzfunktionen arbeiten;
 - unkontrollierte Updateinstallation ohne Manifest-, Herkunfts- und
   Integritätsprüfung;

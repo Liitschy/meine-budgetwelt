@@ -2,6 +2,8 @@ using System.Reflection;
 using System.Net;
 using System.Threading.RateLimiting;
 using MeineBudgetwelt.Server.Accounts;
+using MeineBudgetwelt.Server.Banking;
+using MeineBudgetwelt.Server.Planning;
 using MeineBudgetwelt.Server.Storage;
 using MeineBudgetwelt.Server.Sync;
 using Microsoft.AspNetCore.Identity;
@@ -97,6 +99,14 @@ builder.Services.Configure<AccountEmailOptions>(
 builder.Services.AddSingleton<IAccountEmailSender, AccountEmailSender>();
 builder.Services.AddSingleton<AccountService>();
 builder.Services.AddSingleton<SyncService>();
+builder.Services.Configure<LocalAiPlanningOptions>(
+    builder.Configuration.GetSection("LocalAi"));
+builder.Services.AddSingleton<WeeklyPlanningValidator>();
+builder.Services.AddHttpClient<LocalAiWeeklyPlanningService>();
+builder.Services.Configure<GoCardlessOptions>(
+    builder.Configuration.GetSection("GoCardless"));
+builder.Services.AddHttpClient<GoCardlessClient>();
+builder.Services.AddSingleton<BankingService>();
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders =
@@ -127,6 +137,28 @@ builder.Services.AddRateLimiter(options =>
             {
                 PermitLimit = 5,
                 Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true,
+            }));
+    options.AddPolicy(
+        "ai-planning",
+        context => RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 4,
+                Window = TimeSpan.FromMinutes(10),
+                QueueLimit = 0,
+                AutoReplenishment = true,
+            }));
+    options.AddPolicy(
+        "banking",
+        context => RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 20,
+                Window = TimeSpan.FromMinutes(10),
                 QueueLimit = 0,
                 AutoReplenishment = true,
             }));
@@ -258,12 +290,25 @@ if (!string.IsNullOrWhiteSpace(configuredPwaRoot))
 
 app.MapAccountEndpoints();
 app.MapSyncEndpoints();
+app.MapPlanningEndpoints();
+app.MapBankingEndpoints();
 app.MapGet("/admin", () => Results.File(adminIndexPath, "text/html"));
 
 app.MapGet("/health", async (CancellationToken cancellationToken) =>
 {
     var database = await store.CheckHealthAsync(cancellationToken);
     var automaticUpdates = builder.Configuration.GetValue<bool>("Updates:Enabled");
+    var aiPlanningEnabled =
+        builder.Configuration.GetValue<bool>("LocalAi:Enabled");
+    var aiPlanningProvider = aiPlanningEnabled
+        ? "local-ollama"
+        : "disabled";
+    var bankDataEnabled =
+        builder.Configuration.GetValue<bool>("GoCardless:Enabled")
+        && !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(
+            GoCardlessClient.SecretIdEnvironmentVariable))
+        && !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(
+            GoCardlessClient.SecretKeyEnvironmentVariable));
     var version = Assembly.GetExecutingAssembly()
         .GetName()
         .Version?
@@ -277,6 +322,9 @@ app.MapGet("/health", async (CancellationToken cancellationToken) =>
             version,
             database = "ok",
             automaticUpdates,
+            aiPlanningEnabled,
+            aiPlanningProvider,
+            bankDataEnabled,
             utc = DateTimeOffset.UtcNow,
         })
         : Results.Json(
@@ -287,6 +335,8 @@ app.MapGet("/health", async (CancellationToken cancellationToken) =>
                 version,
                 database = database.Error,
                 automaticUpdates,
+                aiPlanningEnabled,
+                bankDataEnabled,
                 utc = DateTimeOffset.UtcNow,
             },
             statusCode: StatusCodes.Status503ServiceUnavailable);

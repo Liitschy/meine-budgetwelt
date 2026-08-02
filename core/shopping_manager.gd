@@ -2,10 +2,14 @@ extends Node
 
 signal shopping_changed(items: Array, summary: Dictionary, booked: bool)
 signal active_week_changed(week: int)
+signal personal_prices_changed(prices: Array)
+signal planning_profile_changed(profile: Dictionary)
 
 const ShoppingCalculator := preload("res://core/shopping_calculator.gd")
 
 var _months: Dictionary = {}
+var _personal_prices: Array = []
+var _planning_profile: Dictionary = {}
 var _active_week := 1
 
 
@@ -18,8 +22,145 @@ func _ready() -> void:
 func reload_from_storage(emit_change: bool = true) -> void:
 	var saved := StorageManager.load_shopping_data()
 	_months = saved.get("months", {}) if saved.get("months", {}) is Dictionary else {}
+	_personal_prices = (
+		saved.get("personal_prices", []).duplicate(true)
+		if saved.get("personal_prices", []) is Array
+		else []
+	)
+	_planning_profile = (
+		saved.get("planning_profile", {}).duplicate(true)
+		if saved.get("planning_profile", {}) is Dictionary
+		else {}
+	)
 	if emit_change:
 		_emit_current()
+		personal_prices_changed.emit(get_personal_prices())
+		planning_profile_changed.emit(get_planning_profile())
+
+
+func get_personal_prices() -> Array:
+	return _personal_prices.duplicate(true)
+
+
+func get_planning_profile() -> Dictionary:
+	return _planning_profile.duplicate(true)
+
+
+func save_planning_profile(profile: Dictionary) -> bool:
+	var allowed_keys := [
+		"people",
+		"servingsPerMeal",
+		"safetyBufferCents",
+		"maxActiveMinutes",
+		"dietaryStyle",
+		"planningStyle",
+		"allergies",
+		"excludedIngredients",
+		"preferredIngredients",
+		"pantry",
+	]
+	var clean: Dictionary = {}
+	for key: String in allowed_keys:
+		if profile.has(key):
+			clean[key] = profile[key]
+	_planning_profile = clean.duplicate(true)
+	var saved := _save_and_emit()
+	planning_profile_changed.emit(get_planning_profile())
+	return saved
+
+
+func get_personal_price(price_id: String) -> Dictionary:
+	for price: Variant in _personal_prices:
+		if price is Dictionary and str(price.get("id", "")) == price_id:
+			return (price as Dictionary).duplicate(true)
+	return {}
+
+
+func save_personal_price(
+	price_id: String,
+	name: String,
+	package_quantity: String,
+	package_price: float,
+	checkout_price: float = -1.0,
+	store: String = ""
+) -> String:
+	var clean_name := name.strip_edges()
+	var clean_quantity := package_quantity.strip_edges()
+	if clean_name.is_empty() or clean_quantity.is_empty() or package_price < 0.0:
+		return ""
+	if checkout_price < -0.0001:
+		checkout_price = -1.0
+	var clean_id := price_id.strip_edges()
+	if clean_id.is_empty():
+		clean_id = "personal_price_%d" % Time.get_ticks_usec()
+	var data := {
+		"id": clean_id,
+		"name": clean_name,
+		"package_quantity": clean_quantity,
+		"package_price": package_price,
+		"checkout_price": checkout_price,
+		"store": store.strip_edges(),
+		"updated_unix": int(Time.get_unix_time_from_system()),
+	}
+	var replaced := false
+	for index in _personal_prices.size():
+		var current: Variant = _personal_prices[index]
+		if current is Dictionary and str(current.get("id", "")) == clean_id:
+			_personal_prices[index] = data
+			replaced = true
+			break
+	if not replaced:
+		_personal_prices.append(data)
+	_save_and_emit(true)
+	return clean_id
+
+
+func remove_personal_price(price_id: String) -> bool:
+	for index in _personal_prices.size():
+		var current: Variant = _personal_prices[index]
+		if current is Dictionary and str(current.get("id", "")) == price_id:
+			_personal_prices.remove_at(index)
+			return _save_and_emit(true)
+	return false
+
+
+func get_ai_personal_prices(limit: int = 40) -> Array:
+	var result: Array = []
+	if limit <= 0:
+		return result
+	for raw_price: Variant in _personal_prices:
+		if not raw_price is Dictionary:
+			continue
+		var price: Dictionary = raw_price
+		var selected_price := float(price.get("checkout_price", -1.0))
+		if selected_price < 0.0:
+			selected_price = float(price.get("package_price", 0.0))
+		var name := str(price.get("name", "")).strip_edges()
+		var quantity := str(price.get("package_quantity", "")).strip_edges()
+		if name.is_empty() or quantity.is_empty() or selected_price < 0.0:
+			continue
+		result.append({
+			"name": name,
+			"quantity": quantity,
+			"priceCents": roundi(selected_price * 100.0),
+		})
+		if result.size() >= limit:
+			break
+	return result
+
+
+func set_actual_price(item_id: String, actual_price: float) -> bool:
+	if is_booked() or actual_price < 0.0:
+		return false
+	var week_data := _get_week_data()
+	var items: Array = week_data.items
+	for item: Dictionary in items:
+		if str(item.get("id", "")) == item_id:
+			item.actual_price = actual_price
+			week_data.items = items
+			_set_week_data(week_data)
+			return _save_and_emit()
+	return false
 
 
 func get_active_week() -> int:
@@ -200,12 +341,16 @@ func _set_week_data(data: Dictionary) -> void:
 	_months[month_id] = month
 
 
-func _save_and_emit() -> bool:
+func _save_and_emit(emit_personal_prices: bool = false) -> bool:
 	var saved := StorageManager.save_shopping_data({
-		"schema_version": 1,
+		"schema_version": 2,
 		"months": _months,
+		"personal_prices": _personal_prices,
+		"planning_profile": _planning_profile,
 	})
 	_emit_current()
+	if emit_personal_prices:
+		personal_prices_changed.emit(get_personal_prices())
 	return saved
 
 

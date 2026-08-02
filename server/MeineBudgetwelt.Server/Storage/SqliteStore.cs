@@ -201,6 +201,36 @@ public sealed class SqliteStore(
             """,
             cancellationToken);
 
+        await ExecuteAsync(
+            connection,
+            """
+            CREATE TABLE IF NOT EXISTS bank_connections (
+                connection_id TEXT PRIMARY KEY,
+                group_id TEXT NOT NULL,
+                created_by_user_id TEXT NOT NULL,
+                provider TEXT NOT NULL CHECK(provider = 'gocardless-bad'),
+                requisition_id TEXT NOT NULL UNIQUE,
+                institution_id TEXT NOT NULL,
+                institution_name TEXT NOT NULL,
+                status TEXT NOT NULL,
+                account_ids_json TEXT NOT NULL DEFAULT '[]',
+                created_utc TEXT NOT NULL,
+                updated_utc TEXT NOT NULL,
+                last_refresh_utc TEXT NULL,
+                FOREIGN KEY(group_id) REFERENCES budget_groups(group_id)
+                    ON DELETE CASCADE,
+                FOREIGN KEY(created_by_user_id) REFERENCES users(user_id)
+                    ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_bank_connections_group
+                ON bank_connections(group_id, created_utc DESC);
+
+            INSERT OR IGNORE INTO schema_versions(version, applied_utc)
+            VALUES (5, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+            """,
+            cancellationToken);
+
         logger.LogInformation(
             "Isolierte Budgetwelt-Datenbank initialisiert: {DatabasePath}",
             paths.DatabasePath);
@@ -239,9 +269,9 @@ public sealed class SqliteStore(
 
             await using var command = connection.CreateCommand();
             command.CommandText =
-                "SELECT COUNT(*) FROM schema_versions WHERE version IN (1, 2, 3, 4);";
+                "SELECT COUNT(*) FROM schema_versions WHERE version IN (1, 2, 3, 4, 5);";
             var result = await command.ExecuteScalarAsync(cancellationToken);
-            return Convert.ToInt64(result) == 4
+            return Convert.ToInt64(result) == 5
                 ? DatabaseHealth.Healthy()
                 : DatabaseHealth.Unhealthy("Schema-Version fehlt.");
         }

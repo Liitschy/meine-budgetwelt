@@ -12,6 +12,7 @@ $publishRoot = Join-Path $repositoryRoot "build\server\win-x64"
 $webRoot = Join-Path $repositoryRoot "web"
 $installerScript = Join-Path $repositoryRoot "installer\meine-budgetwelt-server.nsi"
 $updaterSourceRoot = Join-Path $repositoryRoot "installer\server-updater"
+$serverToolsSourceRoot = Join-Path $repositoryRoot "installer\server-tools"
 
 [xml]$projectXml = Get-Content -LiteralPath $serverProject -Raw
 $serverVersion = [string]$projectXml.Project.PropertyGroup.Version
@@ -64,6 +65,9 @@ Copy-Item -Path (Join-Path $webRoot "*") -Destination $publishedPwaRoot -Recurse
 $publishedUpdaterRoot = Join-Path $publishRoot "updater"
 New-Item -ItemType Directory -Force -Path $publishedUpdaterRoot | Out-Null
 Copy-Item -Path (Join-Path $updaterSourceRoot "*") -Destination $publishedUpdaterRoot -Recurse -Force
+$publishedToolsRoot = Join-Path $publishRoot "tools"
+New-Item -ItemType Directory -Force -Path $publishedToolsRoot | Out-Null
+Copy-Item -Path (Join-Path $serverToolsSourceRoot "*") -Destination $publishedToolsRoot -Recurse -Force
 foreach ($updaterFile in @(
     "ServerUpdate.ps1",
     "Install-ServerUpdateTask.ps1",
@@ -72,6 +76,9 @@ foreach ($updaterFile in @(
     if (-not (Test-Path -LiteralPath (Join-Path $publishedUpdaterRoot $updaterFile) -PathType Leaf)) {
         throw "Server-Updater-Datei fehlt: $updaterFile"
     }
+}
+if (-not (Test-Path -LiteralPath (Join-Path $publishedToolsRoot "Configure-Integrations.ps1") -PathType Leaf)) {
+    throw "Server-Konfigurationswerkzeug fehlt: Configure-Integrations.ps1"
 }
 
 if ([string]::IsNullOrWhiteSpace($MakensisPath)) {

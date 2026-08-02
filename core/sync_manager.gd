@@ -256,6 +256,145 @@ func push_local_snapshot() -> Dictionary:
 	}
 
 
+func request_weekly_plan(planning_data: Dictionary) -> Dictionary:
+	if not is_logged_in():
+		return _failure("Bitte zuerst mit deinem Budgetwelt-Konto anmelden.")
+	if active_group_id.is_empty():
+		return _failure("Keine Budgetgruppe für die Wochenplanung ausgewählt.")
+	var response := await _request_json(
+		HTTPClient.METHOD_POST,
+		"/api/planning/groups/%s/weekly-plan" % active_group_id.uri_encode(),
+		planning_data,
+		true,
+		120.0
+	)
+	if int(response.code) == 401:
+		clear_session()
+		return _failure("Die Sitzung ist abgelaufen. Bitte erneut anmelden.")
+	if int(response.code) == 403:
+		return _failure("Dieses Konto darf die ausgewählte Budgetgruppe nicht planen.")
+	if int(response.code) == 429:
+		return _failure("Zu viele Planungsanfragen. Bitte in einigen Minuten erneut versuchen.")
+	if int(response.code) != 200 or not response.data is Dictionary:
+		return _failure(_response_message(
+			response,
+			"Der KI-Wochenplan konnte nicht erstellt werden."
+		))
+	return {
+		"success": true,
+		"draft": (response.data as Dictionary).duplicate(true),
+		"message": "Der geprüfte Wochenplan-Entwurf ist bereit.",
+	}
+
+
+func request_banking_status() -> Dictionary:
+	return await _banking_request(
+		HTTPClient.METHOD_GET,
+		"/api/banking/status",
+		null,
+		200,
+		"Der Bankstatus konnte nicht geladen werden."
+	)
+
+
+func request_bank_institutions(country: String = "DE") -> Dictionary:
+	return await _banking_request(
+		HTTPClient.METHOD_GET,
+		"/api/banking/institutions?country=%s" % country.uri_encode(),
+		null,
+		200,
+		"Die Bankenliste konnte nicht geladen werden."
+	)
+
+
+func request_bank_connections() -> Dictionary:
+	if active_group_id.is_empty():
+		return _failure("Keine Budgetgruppe für die Bankverbindung ausgewählt.")
+	return await _banking_request(
+		HTTPClient.METHOD_GET,
+		"/api/banking/groups/%s/connections" % active_group_id.uri_encode(),
+		null,
+		200,
+		"Die Bankverbindungen konnten nicht geladen werden."
+	)
+
+
+func create_bank_connection(institution_id: String) -> Dictionary:
+	if active_group_id.is_empty():
+		return _failure("Keine Budgetgruppe für die Bankverbindung ausgewählt.")
+	return await _banking_request(
+		HTTPClient.METHOD_POST,
+		"/api/banking/groups/%s/connections" % active_group_id.uri_encode(),
+		{"institutionId": institution_id},
+		200,
+		"Die Bankverbindung konnte nicht vorbereitet werden."
+	)
+
+
+func refresh_bank_connection(connection_id: String, known_import_ids: Array[String]) -> Dictionary:
+	if active_group_id.is_empty():
+		return _failure("Keine Budgetgruppe für den Bankabruf ausgewählt.")
+	return await _banking_request(
+		HTTPClient.METHOD_POST,
+		"/api/banking/groups/%s/connections/%s/refresh" % [
+			active_group_id.uri_encode(),
+			connection_id.uri_encode(),
+		],
+		{"knownImportIds": known_import_ids},
+		200,
+		"Die Bankdaten konnten nicht aktualisiert werden.",
+		60.0
+	)
+
+
+func disconnect_bank_connection(connection_id: String) -> Dictionary:
+	if active_group_id.is_empty():
+		return _failure("Keine Budgetgruppe für die Bankverbindung ausgewählt.")
+	return await _banking_request(
+		HTTPClient.METHOD_DELETE,
+		"/api/banking/groups/%s/connections/%s" % [
+			active_group_id.uri_encode(),
+			connection_id.uri_encode(),
+		],
+		null,
+		204,
+		"Die Bankverbindung konnte nicht getrennt werden."
+	)
+
+
+func _banking_request(
+	method: HTTPClient.Method,
+	path: String,
+	body: Variant,
+	expected_code: int,
+	fallback: String,
+	timeout_seconds: float = 30.0
+) -> Dictionary:
+	if not is_logged_in():
+		return _failure("Bitte zuerst mit deinem Budgetwelt-Konto anmelden.")
+	var response := await _request_json(
+		method,
+		path,
+		body,
+		true,
+		timeout_seconds
+	)
+	if int(response.code) == 401:
+		clear_session()
+		return _failure("Die Sitzung ist abgelaufen. Bitte erneut anmelden.")
+	if int(response.code) == 403:
+		return _failure("Dieses Konto darf die Bankverbindung nicht verwalten.")
+	if int(response.code) == 429:
+		return _failure("Zu viele Bankanfragen. Bitte später erneut versuchen.")
+	if int(response.code) != expected_code:
+		return _failure(_response_message(response, fallback))
+	return {
+		"success": true,
+		"data": response.data,
+		"message": "Bankanfrage erfolgreich.",
+	}
+
+
 func request_password_reset(email: String) -> Dictionary:
 	var response := await _request_json(
 		HTTPClient.METHOD_POST,
@@ -310,13 +449,14 @@ func _request_json(
 	method: HTTPClient.Method,
 	path: String,
 	body: Variant = null,
-	use_session: bool = true
+	use_session: bool = true,
+	timeout_seconds: float = 20.0
 ) -> Dictionary:
 	while _request_in_progress:
 		await get_tree().process_frame
 	_request_in_progress = true
 	var request := HTTPRequest.new()
-	request.timeout = 20.0
+	request.timeout = clampf(timeout_seconds, 5.0, 180.0)
 	add_child(request)
 	var headers := PackedStringArray(["Accept: application/json"])
 	if use_session and not _token.is_empty():

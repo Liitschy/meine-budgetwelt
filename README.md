@@ -26,15 +26,17 @@ Fixkosten und einen kompakten Monatsfluss vom Kontostand bis zum Sparziel.
 - lokale Datenspeicherung und Sicherungen;
 - Update-Prüfung über ein GitHub-Release-Manifest mit sicherem Setup-Download.
 
-Der frühere Wocheneinkauf und Speiseplan sind nicht mehr Teil der sichtbaren
-Anwendung. Bereits vorhandene Einkaufsdaten werden nicht ungefragt gelöscht.
+Wocheneinkauf, Rezeptbibliothek und Sieben-Tage-Speiseplan sind im aktuellen
+Entwicklungsstand wieder sichtbar. Bereits vorhandene Einkaufsdaten werden
+nicht ungefragt gelöscht.
 
 ## Verbindliche Weiterentwicklung
 
 Nach der aktuellen Fehlerbereinigung werden folgende Funktionen kontrolliert
 neu aufgebaut:
 
-- KI-gestützte Wochenplanung mit OpenAI für Rezepte, Einkaufsliste,
+- kostenfreie lokale KI-Wochenplanung über die bereits auf dem Root-Server
+  vorhandene Ollama-Laufzeit für Rezepte, Einkaufsliste,
   Resteverwertung und die Einhaltung des Wochenbudgets;
 - dauerhaft sichtbarer Wocheneinkauf, Rezeptbereich und Sieben-Tage-Speiseplan
   mit voraussichtlichen Kosten pro Rezept, Tag und Woche;
@@ -95,13 +97,12 @@ Der separate Glas-Anmeldebildschirm wurde zusätzlich in einer echten
 390 × 844-Pixel-Browseransicht ohne horizontales Abschneiden geprüft.
 
 Der installierbare Serverdienst, die responsive Admin-Oberfläche und das
-autonome kryptografisch signierte Serverupdate sind lokal umgesetzt. Ein
+autonome kryptografisch signierte Serverupdate sind umgesetzt. Ein
 vollständiger erhöhter Windows-Test hat Erstinstallation, eigenen Dienst,
 Updateaufgabe, Admin-Anmeldung, Datensicherung, Update, erneuten gesunden Start
-und Deinstallation geprüft. `budget.leno.info` ist in Server und Caddy-Fragment
-vorbereitet; die Installation auf dem echten Root-Server, HTTPS-Abnahme und
-Abnahme auf realen Mobilgeräten stehen noch aus. Es wurde noch nichts
-veröffentlicht.
+und Deinstallation geprüft. Der eigenständige Serverdienst, Caddy/HTTPS und
+die geschützte PWA laufen auf dem Root-Server unter `https://budget.leno.info`.
+Die gemeinsame lokale Ollama-KI wird mit Serverversion 0.1.1 aktiviert.
 
 Vollständige lokale Prüfungen:
 
@@ -150,7 +151,8 @@ mit seiner SHA-256-Prüfsumme.
 
 ## Datenschutz
 
-Version 0.39.2 speichert Budget- und Buchungsdaten ausschließlich lokal und
-enthält noch keine Online-Banking- oder KI-Verbindung. Die geplanten OpenAI-
-und GoCardless-Funktionen verwenden geschützte Backenddienste; API-Schlüssel,
-PIN und TAN dürfen niemals in der App oder im Repository gespeichert werden.
+Version 0.39.4 speichert Budget- und Buchungsdaten ausschließlich lokal und
+enthält noch keine Online-Banking- oder KI-Verbindung. Die geplante lokale KI
+läuft ausschließlich über Ollama auf dem eigenen Root-Server. GoCardless-
+Geheimnisse, PIN und TAN dürfen niemals in der App oder im Repository
+gespeichert werden.

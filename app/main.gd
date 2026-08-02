@@ -5,6 +5,8 @@ const MonthUtils := preload("res://core/month_utils.gd")
 const RecipeCatalog := preload("res://core/recipe_catalog.gd")
 const WeeklyNeedCalculator := preload("res://core/weekly_need_calculator.gd")
 const PackPlanner := preload("res://core/pack_planner.gd")
+const WeeklyPlanningPage := preload("res://ui/weekly_planning_page.gd")
+const BankingPanel := preload("res://ui/banking_panel.gd")
 
 const COLORS := {
 	"background": Color("#02151e"),
@@ -50,6 +52,7 @@ var pending_month_id := ""
 var sidebar_panel: Control
 var mobile_navigation: Control
 var mobile_nav_buttons: Dictionary = {}
+var sidebar_nav_buttons: Dictionary = {}
 var book_navigation_controls: Array[Control] = []
 var app_shell: VBoxContainer
 var app_bar: Control
@@ -99,6 +102,12 @@ var deposit_amount_input: SpinBox
 var deposit_goal_id := ""
 var deposit_goal_title: Label
 var transactions_page: Control
+var banking_panel: Control
+var bank_institution_dialog: ConfirmationDialog
+var bank_institution_input: OptionButton
+var bank_institution_status: Label
+var _bank_institutions: Array = []
+var weekly_planning_page: Control
 var transaction_list: VBoxContainer
 var transaction_summary_values: Dictionary = {}
 var transaction_summary_row: BoxContainer
@@ -405,6 +414,15 @@ func _build_interface() -> void:
 	transactions_page.visible = false
 	root.add_child(transactions_page)
 
+	weekly_planning_page = WeeklyPlanningPage.new()
+	weekly_planning_page.visible = false
+	weekly_planning_page.status_message.connect(_on_weekly_planning_status)
+	weekly_planning_page.request_remove_shopping_item.connect(_remove_shopping_item)
+	weekly_planning_page.request_book_shopping.connect(_book_shopping)
+	weekly_planning_page.request_remove_recipe.connect(_remove_weekly_recipe)
+	weekly_planning_page.request_remove_personal_price.connect(_remove_personal_price)
+	root.add_child(weekly_planning_page)
+
 
 	setup_panel = _build_setup_panel()
 	setup_panel.visible = false
@@ -603,6 +621,7 @@ func _begin_account_startup() -> void:
 		if SyncManager.is_logged_in():
 			login_panel.visible = false
 			_apply_account_identity(SyncManager.current_user)
+			call_deferred("_resume_banking_callback")
 		else:
 			login_status_label.text = "Bitte mit deinem Konto anmelden."
 		return
@@ -611,6 +630,7 @@ func _begin_account_startup() -> void:
 	if bool(result.get("success", false)):
 		login_panel.visible = false
 		_apply_account_identity(SyncManager.current_user)
+		call_deferred("_resume_banking_callback")
 	else:
 		login_status_label.text = "Bitte mit deinem Konto anmelden."
 
@@ -636,6 +656,7 @@ func _perform_login() -> void:
 	if bool(result.get("success", false)):
 		login_panel.visible = false
 		_apply_account_identity(SyncManager.current_user)
+		call_deferred("_resume_banking_callback")
 
 
 func _perform_registration() -> void:
@@ -662,6 +683,7 @@ func _perform_registration() -> void:
 	if bool(result.get("success", false)):
 		login_panel.visible = false
 		_apply_account_identity(SyncManager.current_user)
+		call_deferred("_resume_banking_callback")
 
 
 func _request_login_password_reset() -> void:
@@ -694,6 +716,34 @@ func _update_login_server_label() -> void:
 		return
 	var server_target := SyncManager.server_url.trim_prefix("https://").trim_prefix("http://")
 	login_server_label.text = "●  Serverziel: %s" % server_target
+
+
+func _resume_banking_callback() -> void:
+	if not OS.has_feature("web") or not SyncManager.is_logged_in():
+		return
+	var browser_window: JavaScriptObject = JavaScriptBridge.get_interface("window")
+	if browser_window == null:
+		return
+	var query := str(browser_window.location.search)
+	if not query.contains("banking="):
+		return
+	_show_page("transactions")
+	await _show_bank_import()
+	var callback_message := (
+		"Die Bankfreigabe wurde bestätigt. Du kannst die Bank jetzt manuell aktualisieren."
+		if query.contains("banking=connected")
+		else "Die Bankfreigabe ist noch nicht abgeschlossen."
+		if query.contains("banking=pending")
+		else "Die Bankfreigabe konnte nicht bestätigt werden."
+	)
+	banking_panel.set_message(
+		callback_message,
+		"success" if query.contains("banking=connected") else "error"
+	)
+	JavaScriptBridge.eval(
+		"window.history.replaceState({}, document.title, window.location.pathname);",
+		true
+	)
 
 
 func _on_account_session_changed(user: Dictionary) -> void:
@@ -1143,6 +1193,7 @@ func _build_mobile_navigation() -> Control:
 	for item in [
 		["res://assets/icons/home.svg", "Budget", "dashboard"],
 		["res://assets/icons/fixed-costs.svg", "Fixkosten", "fixed_costs"],
+		["res://assets/icons/meal-plan.svg", "Plan", "weekly_planning"],
 		["res://assets/icons/savings.svg", "Sparen", "savings"],
 		["res://assets/icons/bookings.svg", "Buchungen", "transactions"],
 	]:
@@ -1169,7 +1220,7 @@ func _build_mobile_navigation() -> Control:
 		label.text = item[1]
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		label.add_theme_font_override("font", display_font)
-		label.add_theme_font_size_override("font_size", 13)
+		label.add_theme_font_size_override("font_size", 12)
 		label.add_theme_color_override("font_color", Color("#d9c99d"))
 		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		content.add_child(label)
@@ -1209,10 +1260,11 @@ func _build_sidebar() -> Control:
 	column.add_spacer(false)
 
 	var items := [
-		["res://assets/icons/home.svg", "Deine Budgetwelt"],
-		["res://assets/icons/fixed-costs.svg", "Fixkosten"],
-		["res://assets/icons/savings.svg", "Sparen"],
-		["res://assets/icons/bookings.svg", "Buchungen"],
+		["res://assets/icons/home.svg", "Deine Budgetwelt", "dashboard"],
+		["res://assets/icons/fixed-costs.svg", "Fixkosten", "fixed_costs"],
+		["res://assets/icons/meal-plan.svg", "Wochenplanung", "weekly_planning"],
+		["res://assets/icons/savings.svg", "Sparen", "savings"],
+		["res://assets/icons/bookings.svg", "Buchungen", "transactions"],
 	]
 	for index in items.size():
 		var item: Array = items[index]
@@ -1229,16 +1281,9 @@ func _build_sidebar() -> Control:
 			_style(Color("#0a4952") if index == 0 else Color.TRANSPARENT, 12)
 		)
 		button.add_theme_stylebox_override("hover", _style(Color("#0d5660"), 12))
-		if index == 0:
-			button.pressed.connect(_show_page.bind("dashboard"))
-		elif index == 1:
-			button.pressed.connect(_show_page.bind("fixed_costs"))
-		elif index == 2:
-			button.pressed.connect(_show_page.bind("savings"))
-		elif index == 3:
-			button.pressed.connect(_show_page.bind("transactions"))
-		else:
-			button.pressed.connect(_show_not_ready.bind(str(item[1])))
+		button.pressed.connect(_show_page.bind(str(item[2])))
+		button.set_meta("navigation_active", index == 0)
+		sidebar_nav_buttons[str(item[2])] = button
 		column.add_child(button)
 
 	var spacer := Control.new()
@@ -2472,6 +2517,7 @@ func _build_transactions_page() -> Control:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 8)
 	list_panel.add_child(column)
+	column.add_child(_build_transaction_mode_tabs())
 	var list_header := BoxContainer.new()
 	list_header.vertical = false
 	transaction_list_header = list_header
@@ -2512,7 +2558,239 @@ func _build_transactions_page() -> Control:
 	transaction_list.add_theme_constant_override("separation", 8)
 	scroll.add_child(transaction_list)
 	_build_book_navigation(page, "transactions")
+
+	banking_panel = BankingPanel.new()
+	banking_panel.visible = false
+	banking_panel.manual_view_requested.connect(_show_manual_transactions)
+	banking_panel.refresh_requested.connect(_refresh_bank_connection)
+	banking_panel.import_requested.connect(_import_selected_bank_transactions)
+	banking_panel.disconnect_requested.connect(_request_disconnect_bank)
+	banking_panel.connect_requested.connect(_open_bank_selection)
+	page.add_child(banking_panel)
 	return page
+
+
+func _build_transaction_mode_tabs() -> Control:
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override(
+		"panel",
+		_style(Color("#07191ddd"), 12, Color("#8a642f"))
+	)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	panel.add_child(row)
+	var manual := Button.new()
+	manual.text = "Manuell"
+	manual.disabled = true
+	manual.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	manual.custom_minimum_size.y = 42
+	manual.add_theme_color_override("font_color", Color("#20150a"))
+	manual.add_theme_stylebox_override(
+		"normal",
+		_style(Color("#dfbd6a"), 11, Color("#f2d78d"))
+	)
+	row.add_child(manual)
+	var banking := Button.new()
+	banking.text = "Bankimport"
+	banking.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	banking.custom_minimum_size.y = 42
+	banking.pressed.connect(_show_bank_import)
+	row.add_child(banking)
+	return panel
+
+
+func _show_manual_transactions() -> void:
+	if is_instance_valid(banking_panel):
+		banking_panel.visible = false
+	_rebuild_transaction_rows()
+
+
+func _show_bank_import() -> void:
+	if not is_instance_valid(banking_panel):
+		return
+	if not transactions_page.visible:
+		_show_page("transactions")
+	banking_panel.visible = true
+	banking_panel.move_to_front()
+	banking_panel.set_compact(_compact_layout)
+	banking_panel.set_busy(true, "Bankstatus wird sicher geprüft.")
+	var status_result := await BankingManager.reload_status()
+	if not bool(status_result.get("success", false)):
+		banking_panel.set_message(str(status_result.get(
+			"message",
+			"Der Bankstatus konnte nicht geladen werden."
+		)), "error")
+		return
+	var banking_status: Dictionary = status_result.get("status", {})
+	banking_panel.set_status(banking_status)
+	if not bool(banking_status.get("enabled", false)):
+		banking_panel.set_message(
+			"Die Bankanbindung ist auf diesem Server noch nicht eingerichtet.",
+			"info"
+		)
+		return
+	var connections_result := await BankingManager.reload_connections()
+	if not bool(connections_result.get("success", false)):
+		banking_panel.set_message(str(connections_result.get(
+			"message",
+			"Die Bankverbindungen konnten nicht geladen werden."
+		)), "error")
+		return
+	banking_panel.set_connections(connections_result.get("connections", []))
+	banking_panel.set_message(
+		"Bankverbindungen wurden geprüft. Ein Bankabruf erfolgt weiterhin nur auf Knopfdruck.",
+		"success"
+	)
+
+
+func _refresh_bank_connection(connection_id: String) -> void:
+	if connection_id.is_empty() or not is_instance_valid(banking_panel):
+		return
+	banking_panel.set_busy(true, "Kontostand und Buchungen werden ausschließlich lesend abgerufen.")
+	var result := await BankingManager.refresh_connection(connection_id)
+	if not bool(result.get("success", false)):
+		banking_panel.set_message(str(result.get(
+			"message",
+			"Die Bankdaten konnten nicht geladen werden."
+		)), "error")
+		return
+	var connections_result := await BankingManager.reload_connections()
+	if bool(connections_result.get("success", false)):
+		banking_panel.set_connections(connections_result.get("connections", []))
+	banking_panel.set_data(result.get("preview", {}))
+	banking_panel.set_message(
+		"Aktuelle Bankdaten geladen. Es wurde noch keine Buchung übernommen.",
+		"success"
+	)
+
+
+func _import_selected_bank_transactions(import_ids: Array[String]) -> void:
+	var result := BankingManager.import_transactions(import_ids)
+	if not bool(result.get("success", false)):
+		banking_panel.set_message(str(result.get(
+			"message",
+			"Die ausgewählten Buchungen konnten nicht übernommen werden."
+		)), "error")
+		return
+	banking_panel.set_data(BankingManager.get_preview())
+	banking_panel.set_message(
+		"%d Buchung(en) übernommen; %d Dublette(n) übersprungen." % [
+			int(result.get("imported", 0)),
+			int(result.get("duplicates", 0)),
+		],
+		"success"
+	)
+
+
+func _request_disconnect_bank(connection_id: String) -> void:
+	if connection_id.is_empty():
+		return
+	_request_confirmation(
+		"Die Bankfreigabe wird widerrufen. Bereits bestätigte und importierte Buchungen bleiben erhalten.",
+		Callable(self, "_disconnect_bank").bind(connection_id)
+	)
+
+
+func _disconnect_bank(connection_id: String) -> void:
+	banking_panel.set_busy(true, "Bankverbindung wird sicher getrennt.")
+	var result := await BankingManager.disconnect_connection(connection_id)
+	if not bool(result.get("success", false)):
+		banking_panel.set_message(str(result.get(
+			"message",
+			"Die Bankverbindung konnte nicht getrennt werden."
+		)), "error")
+		return
+	banking_panel.set_connections(BankingManager.get_connections())
+	banking_panel.set_message("Bankverbindung wurde getrennt.", "success")
+
+
+func _open_bank_selection() -> void:
+	if not is_instance_valid(banking_panel):
+		return
+	banking_panel.set_busy(true, "Verfügbare Banken werden geladen.")
+	var result := await BankingManager.load_institutions("DE")
+	if not bool(result.get("success", false)):
+		banking_panel.set_message(str(result.get(
+			"message",
+			"Die Bankenliste konnte nicht geladen werden."
+		)), "error")
+		return
+	_bank_institutions = result.get("institutions", [])
+	_ensure_bank_institution_dialog()
+	bank_institution_input.clear()
+	for raw_institution: Variant in _bank_institutions:
+		if raw_institution is Dictionary:
+			bank_institution_input.add_item(str(raw_institution.get("name", "Bank")))
+	bank_institution_dialog.get_ok_button().disabled = _bank_institutions.is_empty()
+	bank_institution_status.text = (
+		"Keine Bank für Deutschland gefunden."
+		if _bank_institutions.is_empty()
+		else "Die Anmeldung erfolgt anschließend direkt bei deiner Bank im Browser."
+	)
+	banking_panel.set_message("Bankenliste geladen.", "success")
+	bank_institution_dialog.popup_centered(Vector2i(
+		mini(560, maxi(int(size.x) - 28, 300)),
+		260
+	))
+
+
+func _ensure_bank_institution_dialog() -> void:
+	if is_instance_valid(bank_institution_dialog):
+		return
+	bank_institution_dialog = ConfirmationDialog.new()
+	bank_institution_dialog.title = "Bank sicher verbinden"
+	bank_institution_dialog.ok_button_text = "Bei der Bank freigeben"
+	bank_institution_dialog.cancel_button_text = "Abbrechen"
+	bank_institution_dialog.confirmed.connect(_connect_selected_bank)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 10)
+	var explanation := Label.new()
+	explanation.text = "Budgetwelt erhält ausschließlich Lesezugriff. PIN, TAN und Kennwort werden nur auf der Seite deiner Bank eingegeben."
+	explanation.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(explanation)
+	bank_institution_input = OptionButton.new()
+	bank_institution_input.custom_minimum_size.y = 46
+	column.add_child(bank_institution_input)
+	bank_institution_status = Label.new()
+	bank_institution_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	bank_institution_status.add_theme_color_override("font_color", COLORS.muted)
+	column.add_child(bank_institution_status)
+	bank_institution_dialog.add_child(column)
+	add_child(bank_institution_dialog)
+
+
+func _connect_selected_bank() -> void:
+	var index := bank_institution_input.selected
+	if index < 0 or index >= _bank_institutions.size():
+		banking_panel.set_message("Bitte eine Bank auswählen.", "error")
+		return
+	var institution: Variant = _bank_institutions[index]
+	if not institution is Dictionary:
+		banking_panel.set_message("Die ausgewählte Bank ist ungültig.", "error")
+		return
+	banking_panel.set_busy(true, "Sichere Bankfreigabe wird vorbereitet.")
+	var result := await BankingManager.prepare_connection(str(institution.get("id", "")))
+	if not bool(result.get("success", false)):
+		banking_panel.set_message(str(result.get(
+			"message",
+			"Die Bankfreigabe konnte nicht vorbereitet werden."
+		)), "error")
+		return
+	var open_result := BankingManager.open_authorization(str(result.get(
+		"authorization_url",
+		""
+	)))
+	if not bool(open_result.get("success", false)):
+		banking_panel.set_message(str(open_result.get("message", "Browser konnte nicht geöffnet werden.")), "error")
+		return
+	bank_institution_dialog.hide()
+	var connections_result := await BankingManager.reload_connections()
+	if bool(connections_result.get("success", false)):
+		banking_panel.set_connections(connections_result.get("connections", []))
+	banking_panel.set_message(
+		"Bankfreigabe im Browser geöffnet. Kehre danach zurück und wähle ‚Freigabe prüfen‘.",
+		"success"
+	)
 
 
 func _transaction_summary_card(key: String, title_text: String, accent: Color) -> Control:
@@ -4310,7 +4588,10 @@ func _apply_responsive_layout() -> void:
 		or (is_instance_valid(transactions_page) and transactions_page.visible)
 	)
 	sidebar_panel.visible = not compact and not book_open
-	desktop_backdrop.visible = not compact
+	desktop_backdrop.visible = (
+		not compact
+		or (is_instance_valid(weekly_planning_page) and weekly_planning_page.visible)
+	)
 	mobile_navigation.visible = compact
 	if compact and app_shell.get_child(app_shell.get_child_count() - 1) != mobile_navigation:
 		app_shell.move_child(mobile_navigation, app_shell.get_child_count() - 1)
@@ -4356,6 +4637,10 @@ func _apply_responsive_layout() -> void:
 		dashboard_body.move_child(summary_panel, 1)
 	if world_view.has_method("set_compact_mode"):
 		world_view.set_compact_mode(compact)
+	if is_instance_valid(weekly_planning_page):
+		weekly_planning_page.set_compact_mode(compact)
+	if is_instance_valid(banking_panel):
+		banking_panel.set_compact(compact)
 	if is_instance_valid(week_cards):
 		week_cards.vertical = compact
 	fixed_header.vertical = false
@@ -4841,6 +5126,9 @@ func _update_mobile_navigation(active_page: String = "") -> void:
 	if active_page.is_empty():
 		active_page = (
 			"fixed_costs" if is_instance_valid(fixed_costs_page) and fixed_costs_page.visible
+			else "weekly_planning" if (
+				is_instance_valid(weekly_planning_page) and weekly_planning_page.visible
+			)
 			else "savings" if is_instance_valid(savings_page) and savings_page.visible
 			else "transactions" if is_instance_valid(transactions_page) and transactions_page.visible
 			else "dashboard"
@@ -4861,12 +5149,25 @@ func _update_mobile_navigation(active_page: String = "") -> void:
 		)
 
 
+func _update_sidebar_navigation(active_page: String) -> void:
+	for key: String in sidebar_nav_buttons:
+		var button: Button = sidebar_nav_buttons[key]
+		var active := key == active_page
+		button.set_meta("navigation_active", active)
+		button.add_theme_stylebox_override(
+			"normal",
+			_style(Color("#0a4952"), 12, Color("#32d8c4")) if active
+			else _style(Color.TRANSPARENT, 12)
+		)
+
+
 func _show_page(page: String) -> void:
 	var book_page := page in ["fixed_costs", "savings", "transactions"]
 	dashboard_scroll.visible = page == "dashboard"
 	fixed_costs_page.visible = page == "fixed_costs"
 	savings_page.visible = page == "savings"
 	transactions_page.visible = page == "transactions"
+	weekly_planning_page.visible = page == "weekly_planning"
 	if is_instance_valid(app_bar):
 		app_bar.visible = not _compact_layout and not book_page
 	if is_instance_valid(sidebar_panel):
@@ -4877,13 +5178,19 @@ func _show_page(page: String) -> void:
 		shopping_page.visible = false
 	if is_instance_valid(meal_plan_page):
 		meal_plan_page.visible = false
+	if is_instance_valid(desktop_backdrop):
+		desktop_backdrop.visible = not _compact_layout or page == "weekly_planning"
 	_update_mobile_navigation(page)
+	_update_sidebar_navigation(page)
 	if page == "fixed_costs":
 		_rebuild_fixed_cost_rows()
 	elif page == "savings":
 		_rebuild_savings_rows()
 	elif page == "transactions":
 		_rebuild_transaction_rows()
+	elif page == "weekly_planning":
+		weekly_planning_page.refresh_view()
+		weekly_planning_page.set_compact_mode(_compact_layout)
 	elif page == "shopping":
 		_apply_shopping_state()
 		_rebuild_shopping_rows()
@@ -4893,6 +5200,11 @@ func _show_page(page: String) -> void:
 
 func _show_not_ready(page_name: String) -> void:
 	status_label.text = "%s folgt in einem späteren Entwicklungsschritt." % page_name
+
+
+func _on_weekly_planning_status(message: String) -> void:
+	if is_instance_valid(status_label):
+		status_label.text = message
 
 
 func _open_add_cost() -> void:
@@ -5164,6 +5476,26 @@ func _remove_shopping_item(item_id: String) -> void:
 	_request_confirmation(
 		"Der Artikel wird aus der aktuellen Wochenliste entfernt.",
 		Callable(ShoppingManager, "remove_item").bind(item_id)
+	)
+
+
+func _remove_weekly_recipe(recipe_id: String) -> void:
+	var recipe := CustomRecipeManager.get_recipe(recipe_id)
+	if recipe.is_empty():
+		return
+	_request_confirmation(
+		"Das Rezept „%s“ wird dauerhaft aus deiner synchronisierten Sammlung gelöscht." % str(recipe.get("title", "")),
+		Callable(weekly_planning_page, "remove_recipe_confirmed").bind(recipe_id)
+	)
+
+
+func _remove_personal_price(price_id: String) -> void:
+	var price := ShoppingManager.get_personal_price(price_id)
+	if price.is_empty():
+		return
+	_request_confirmation(
+		"Der persönliche Preis für „%s“ wird dauerhaft gelöscht." % str(price.get("name", "")),
+		Callable(weekly_planning_page, "remove_personal_price_confirmed").bind(price_id)
 	)
 
 
