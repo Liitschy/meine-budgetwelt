@@ -1,6 +1,7 @@
 param(
     [string]$Configuration = "Release",
     [string]$MakensisPath = "",
+    [string]$GodotPath = "",
     [switch]$SkipPwaBuild,
     [switch]$SkipRestore
 )
@@ -21,7 +22,9 @@ if ($serverVersion -notmatch '^\d+\.\d+\.\d+$') {
 }
 
 if (-not $SkipPwaBuild) {
-    & (Join-Path $PSScriptRoot "verify-pwa.ps1") -Configuration $Configuration
+    & (Join-Path $PSScriptRoot "verify-pwa.ps1") `
+        -Configuration $Configuration `
+        -GodotPath $GodotPath
     if ($LASTEXITCODE -ne 0) {
         throw "PWA-Prüfung vor dem Serverpaket ist fehlgeschlagen."
     }
