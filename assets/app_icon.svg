@@ -1,18 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none">
   <defs>
-    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#062630"/>
-      <stop offset="1" stop-color="#0b6d68"/>
-    </linearGradient>
-    <linearGradient id="leaf" x1="0" y1="1" x2="1" y2="0">
-      <stop offset="0" stop-color="#43dac5"/>
-      <stop offset="1" stop-color="#9cf08c"/>
+    <radialGradient id="space" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(208 184) rotate(50) scale(430)">
+      <stop stop-color="#3A2335"/>
+      <stop offset="0.48" stop-color="#17131F"/>
+      <stop offset="1" stop-color="#090B13"/>
+    </radialGradient>
+    <linearGradient id="orbit" x1="112" y1="110" x2="410" y2="402" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E4C99A"/>
+      <stop offset="0.55" stop-color="#B8734B"/>
+      <stop offset="1" stop-color="#D6A8B6"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="112" fill="url(#background)"/>
-  <circle cx="256" cy="266" r="150" fill="#0a3039" stroke="#43dac5" stroke-width="14"/>
-  <path d="M255 374c-5-96 22-170 92-226" fill="none" stroke="#d8fff7" stroke-width="18" stroke-linecap="round"/>
-  <path d="M272 272c39-76 93-91 131-91-2 64-35 115-131 91Z" fill="url(#leaf)"/>
-  <path d="M242 323c-62-67-119-63-158-48 27 63 76 98 158 48Z" fill="url(#leaf)"/>
-  <circle cx="256" cy="385" r="24" fill="#ffd166"/>
+  <rect width="512" height="512" rx="112" fill="url(#space)"/>
+  <circle cx="256" cy="256" r="48" fill="#E4C99A"/>
+  <ellipse cx="256" cy="256" rx="176" ry="76" transform="rotate(-23 256 256)" stroke="url(#orbit)" stroke-width="18"/>
+  <ellipse cx="256" cy="256" rx="176" ry="76" transform="rotate(57 256 256)" stroke="url(#orbit)" stroke-width="14" opacity="0.86"/>
+  <circle cx="401" cy="184" r="22" fill="#F5EADB"/>
+  <path d="M111 107l10 26 27 8-27 9-10 26-10-26-27-9 27-8 10-26Z" fill="#E4C99A"/>
+  <circle cx="154" cy="376" r="9" fill="#D6A8B6"/>
 </svg>

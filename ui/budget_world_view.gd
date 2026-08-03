@@ -1,6 +1,6 @@
 extends Control
 
-const WORLD_ART := preload("res://assets/world/budget_world_island.png")
+const WORLD_ART := preload("res://assets/space/cosmic-star-atlas-background.png")
 
 var snapshot: Dictionary = {}
 var _time := 0.0
@@ -74,34 +74,34 @@ func _art_point(rect: Rect2, relative: Vector2) -> Vector2:
 func _draw_income_badge(position: Vector2, shimmer: float) -> void:
 	var box := Rect2(position - Vector2(116, 43), Vector2(232, 86))
 	draw_style_box(
-		_panel_style(Color(0.02, 0.28, 0.27, 0.94), 42, Color("#43dac5") * shimmer),
+		_panel_style(Color("#17131ef0"), 42, Color("#e4c99a") * shimmer),
 		box
 	)
-	_draw_centered_text(position + Vector2(0, -8), "KONTOSTAND", 12, Color("#c8fff6"))
+	_draw_centered_text(position + Vector2(0, -8), "KONTOSTAND", 12, Color("#e4c99a"))
 	_draw_centered_text(position + Vector2(0, 25), _money(float(snapshot.balance)), 25, Color.WHITE)
 
 
 func _draw_fixed_cost_badge(position: Vector2) -> void:
 	var box := Rect2(position - Vector2(91, 34), Vector2(182, 68))
-	draw_style_box(_panel_style(Color(0.10, 0.12, 0.11, 0.91), 15, Color("#ffae63")), box)
-	_draw_centered_text(position + Vector2(0, -6), "FIXKOSTEN RESERVIERT", 10, Color("#ffd1a7"))
+	draw_style_box(_panel_style(Color("#1a1319ed"), 15, Color("#b8734b")), box)
+	_draw_centered_text(position + Vector2(0, -6), "FIXKOSTEN RESERVIERT", 10, Color("#d8a27f"))
 	_draw_centered_text(position + Vector2(0, 20), _money(float(snapshot.fixed_costs_total)), 19, Color.WHITE)
 
 
 func _draw_savings_badge(position: Vector2) -> void:
 	var box := Rect2(position - Vector2(82, 31), Vector2(164, 62))
-	draw_style_box(_panel_style(Color(0.10, 0.25, 0.08, 0.92), 15, Color("#8de56f")), box)
-	_draw_centered_text(position + Vector2(0, -5), "SPARZIEL", 11, Color("#bdf4a7"))
+	draw_style_box(_panel_style(Color("#211720ed"), 15, Color("#9a6474")), box)
+	_draw_centered_text(position + Vector2(0, -5), "SPARZIEL", 11, Color("#d6a8b6"))
 	_draw_centered_text(position + Vector2(0, 19), _money(float(snapshot.savings_goal)), 18, Color.WHITE)
 
 
 func _draw_available_badge(position: Vector2, shimmer: float) -> void:
 	var box := Rect2(position - Vector2(116, 36), Vector2(232, 72))
 	draw_style_box(
-		_panel_style(Color(0.02, 0.48, 0.44, 0.88), 17, Color("#43e0cc") * shimmer),
+		_panel_style(Color("#24151ced"), 17, Color("#e4c99a") * shimmer),
 		box
 	)
-	_draw_centered_text(position + Vector2(0, -8), "NACH ALLEN FIXKOSTEN FREI", 10, Color("#c8fff6"))
+	_draw_centered_text(position + Vector2(0, -8), "NACH ALLEN FIXKOSTEN FREI", 10, Color("#e4c99a"))
 	_draw_centered_text(position + Vector2(0, 21), _money(float(snapshot.freely_available)), 24, Color.WHITE)
 
 
@@ -118,9 +118,9 @@ func _draw_cost_labels(art_rect: Rect2) -> void:
 		var position := _art_point(art_rect, positions[index])
 		var paid := bool(cost.get("paid", false))
 		var status := "✓ bezahlt" if paid else "• offen"
-		var status_color := Color("#75e4a1") if paid else Color("#ff9c62")
+		var status_color := Color("#a9c493") if paid else Color("#d18a65")
 		var box := Rect2(position - Vector2(78, 18), Vector2(156, 36))
-		draw_style_box(_panel_style(Color(0.05, 0.10, 0.10, 0.76), 18, Color(0.5, 0.7, 0.65, 0.35)), box)
+		draw_style_box(_panel_style(Color("#15111bc2"), 18, Color("#b8734b59")), box)
 		_draw_centered_text(position + Vector2(0, -2), str(cost.get("name", "Fixkosten")), 11, Color.WHITE)
 		_draw_centered_text(position + Vector2(0, 12), status, 9, status_color)
 
@@ -281,7 +281,7 @@ func _draw_income_source(center: Vector2, radius: float) -> void:
 	var position := center + Vector2(0, -radius * 1.22)
 	var box := Rect2(position - Vector2(116, 42), Vector2(232, 84))
 	draw_style_box(_panel_style(Color(0.04, 0.34, 0.32, 0.96), 42, WATER_LIGHT), box)
-	_draw_centered_text(position + Vector2(0, -8), "KONTOSTAND", 12, Color("#c8fff6"))
+	_draw_centered_text(position + Vector2(0, -8), "KONTOSTAND", 12, Color("#e4c99a"))
 	_draw_centered_text(position + Vector2(0, 25), _money(float(snapshot.balance)), 25, Color.WHITE)
 
 

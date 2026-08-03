@@ -10,15 +10,15 @@ const RecipeCatalog := preload("res://core/recipe_catalog.gd")
 const PackPlanner := preload("res://core/pack_planner.gd")
 
 const COLORS := {
-	"panel": Color("#041d24e8"),
-	"panel_soft": Color("#082d35ed"),
-	"card": Color("#06262de8"),
-	"accent": Color("#39dfc8"),
-	"gold": Color("#d7a84f"),
-	"text": Color("#f5ead0"),
-	"muted": Color("#b8c9bf"),
-	"success": Color("#83db84"),
-	"warning": Color("#e6b85c"),
+	"panel": Color("#15111be8"),
+	"panel_soft": Color("#211923ed"),
+	"card": Color("#19141ee8"),
+	"accent": Color("#e4c99a"),
+	"gold": Color("#b8734b"),
+	"text": Color("#f5eadb"),
+	"muted": Color("#b9a9ad"),
+	"success": Color("#a9c493"),
+	"warning": Color("#d18a65"),
 }
 
 var _compact := false
@@ -79,6 +79,7 @@ var _price_store_input: LineEdit
 var _field_rows: Array[BoxContainer] = []
 var _form_state: Dictionary = {}
 var _rebuild_queued := false
+var _planning_message := ""
 
 
 func _ready() -> void:
@@ -205,7 +206,7 @@ func _build_step_panel() -> Control:
 	var panel := PanelContainer.new()
 	panel.add_theme_stylebox_override(
 		"panel",
-		_style(Color("#041b22df"), 18, Color("#a97c35"))
+		_style(Color("#15111bdf"), 18, Color("#a97c35"))
 	)
 	_step_row = BoxContainer.new()
 	_step_row.vertical = false
@@ -221,12 +222,12 @@ func _build_step_panel() -> Control:
 		var active := step_number == _step
 		button.add_theme_color_override(
 			"font_color",
-			Color("#03272c") if active else COLORS.text
+			Color("#1a1117") if active else COLORS.text
 		)
 		button.add_theme_stylebox_override(
 			"normal",
 			_style(COLORS.accent, 14, COLORS.gold) if active
-			else _style(Color("#082a31aa"), 14, Color("#6a5838"))
+			else _style(Color("#211923aa"), 14, Color("#6a5838"))
 		)
 		button.pressed.connect(_set_step.bind(step_number))
 		_step_buttons.append(button)
@@ -236,7 +237,7 @@ func _build_step_panel() -> Control:
 
 func _build_preview_section_tabs() -> Control:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _style(Color("#041b22df"), 18, Color("#a97c35")))
+	panel.add_theme_stylebox_override("panel", _style(Color("#15111bdf"), 18, Color("#a97c35")))
 	var row := BoxContainer.new()
 	row.vertical = false
 	row.add_theme_constant_override("separation", 8)
@@ -248,11 +249,11 @@ func _build_preview_section_tabs() -> Control:
 		button.custom_minimum_size.y = 48
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var active := key == _active_section
-		button.add_theme_color_override("font_color", Color("#03272c") if active else COLORS.text)
+		button.add_theme_color_override("font_color", Color("#1a1117") if active else COLORS.text)
 		button.add_theme_stylebox_override(
 			"normal",
 			_style(COLORS.accent, 14, COLORS.gold)
-			if active else _style(Color("#082a31aa"), 14, Color("#6a5838"))
+			if active else _style(Color("#211923aa"), 14, Color("#6a5838"))
 		)
 		button.pressed.connect(_set_active_section.bind(key))
 		row.add_child(button)
@@ -299,7 +300,7 @@ func _build_recipe_library_preview() -> Control:
 		filter.text = str(filter_data[1])
 		filter.custom_minimum_size.y = 44
 		if filter_key == _recipe_filter:
-			filter.add_theme_color_override("font_color", Color("#03272c"))
+			filter.add_theme_color_override("font_color", Color("#1a1117"))
 			filter.add_theme_stylebox_override("normal", _style(COLORS.accent, 12, COLORS.gold))
 		filter.pressed.connect(_set_recipe_filter.bind(filter_key))
 		search_row.add_child(filter)
@@ -487,7 +488,7 @@ func _build_recipe_editor() -> Control:
 	save.text = "Rezept speichern"
 	save.custom_minimum_size.y = 46
 	save.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	save.add_theme_color_override("font_color", Color("#03272c"))
+	save.add_theme_color_override("font_color", Color("#1a1117"))
 	save.add_theme_stylebox_override("normal", _style(COLORS.accent, 13, COLORS.gold))
 	save.pressed.connect(_save_recipe_editor)
 	buttons.add_child(save)
@@ -822,7 +823,7 @@ func _build_personal_price_editor() -> Control:
 	save.text = "Preis speichern"
 	save.custom_minimum_size.y = 44
 	save.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	save.add_theme_color_override("font_color", Color("#03272c"))
+	save.add_theme_color_override("font_color", Color("#1a1117"))
 	save.add_theme_stylebox_override("normal", _style(COLORS.accent, 12, COLORS.gold))
 	save.pressed.connect(_save_personal_price)
 	buttons.add_child(save)
@@ -900,7 +901,7 @@ func _preview_title_row(
 	var action := Button.new()
 	action.text = action_text
 	action.custom_minimum_size.y = 46
-	action.add_theme_color_override("font_color", Color("#03272c"))
+	action.add_theme_color_override("font_color", Color("#1a1117"))
 	action.add_theme_stylebox_override("normal", _style(COLORS.accent, 13, COLORS.gold))
 	if action_callable.is_valid():
 		action.pressed.connect(action_callable)
@@ -1027,13 +1028,20 @@ func _build_input_step() -> Control:
 	_status_label = Label.new()
 	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_status_label.add_theme_color_override("font_color", COLORS.muted)
+	_status_label.text = _planning_message
 	column.add_child(_status_label)
 
 	_generate_button = Button.new()
-	_generate_button.text = "✦  KI-Wochenplan erstellen"
+	var planning_busy := AiPlanningManager.is_request_in_progress()
+	_generate_button.text = (
+		"✦  KI erstellt den Wochenplan …"
+		if planning_busy
+		else "✦  KI-Wochenplan erstellen"
+	)
+	_generate_button.disabled = planning_busy
 	_generate_button.custom_minimum_size.y = 54
 	_generate_button.add_theme_font_size_override("font_size", 18)
-	_generate_button.add_theme_color_override("font_color", Color("#03272c"))
+	_generate_button.add_theme_color_override("font_color", Color("#1a1117"))
 	_generate_button.add_theme_stylebox_override(
 		"normal",
 		_style(COLORS.accent, 16, COLORS.gold)
@@ -1097,7 +1105,7 @@ func _build_week_selector() -> Control:
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.custom_minimum_size.y = 44
 		if button.button_pressed:
-			button.add_theme_color_override("font_color", Color("#03272c"))
+			button.add_theme_color_override("font_color", Color("#1a1117"))
 			button.add_theme_stylebox_override("normal", _style(COLORS.accent, 12, COLORS.gold))
 		button.pressed.connect(ShoppingManager.set_active_week.bind(week))
 		row.add_child(button)
@@ -1160,7 +1168,7 @@ func _build_current_shopping_panel() -> Control:
 		var add_button := Button.new()
 		add_button.text = "+  Artikel"
 		add_button.custom_minimum_size.y = 44
-		add_button.add_theme_color_override("font_color", Color("#03272c"))
+		add_button.add_theme_color_override("font_color", Color("#1a1117"))
 		add_button.add_theme_stylebox_override("normal", _style(COLORS.accent, 12, COLORS.gold))
 		add_button.pressed.connect(_add_shopping_item)
 		add_row.add_child(add_button)
@@ -1186,7 +1194,7 @@ func _build_current_shopping_panel() -> Control:
 	)
 	book_button.disabled = booked or float(summary.checked) <= 0.0
 	book_button.custom_minimum_size.y = 48
-	book_button.add_theme_color_override("font_color", Color("#03272c"))
+	book_button.add_theme_color_override("font_color", Color("#1a1117"))
 	book_button.add_theme_stylebox_override("normal", _style(COLORS.accent, 12, COLORS.gold))
 	book_button.pressed.connect(func() -> void: request_book_shopping.emit())
 	column.add_child(book_button)
@@ -1195,7 +1203,7 @@ func _build_current_shopping_panel() -> Control:
 
 func _build_current_shopping_row(item: Dictionary, booked: bool) -> Control:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _style(COLORS.card, 12, Color("#315d59")))
+	panel.add_theme_stylebox_override("panel", _style(COLORS.card, 12, Color("#684853")))
 	var row := BoxContainer.new()
 	row.vertical = _compact
 	row.add_theme_constant_override("separation", 8)
@@ -1446,7 +1454,7 @@ func _build_draft_summary(draft: Dictionary) -> Control:
 	review.text = "✓  Plan prüfen"
 	review.custom_minimum_size.y = 52
 	review.add_theme_font_size_override("font_size", 18)
-	review.add_theme_color_override("font_color", Color("#03272c"))
+	review.add_theme_color_override("font_color", Color("#1a1117"))
 	review.add_theme_stylebox_override("normal", _style(COLORS.accent, 14, COLORS.gold))
 	review.pressed.connect(_set_step.bind(3))
 	column.add_child(review)
@@ -1508,7 +1516,7 @@ func _build_review_step(draft: Dictionary) -> Control:
 	_apply_button.text = "✓  Jetzt vollständig übernehmen"
 	_apply_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_apply_button.custom_minimum_size.y = 50
-	_apply_button.add_theme_color_override("font_color", Color("#03272c"))
+	_apply_button.add_theme_color_override("font_color", Color("#1a1117"))
 	_apply_button.add_theme_stylebox_override("normal", _style(COLORS.accent, 14, COLORS.gold))
 	_apply_button.pressed.connect(_apply_ai_plan)
 	buttons.add_child(_apply_button)
@@ -1537,16 +1545,23 @@ func _request_ai_plan() -> void:
 	}
 	_form_state = data.duplicate(true)
 	ShoppingManager.save_planning_profile(_form_state)
+	_planning_message = "Die KI-Planung wird sicher auf dem Server erstellt …"
 	_generate_button.disabled = true
-	_status_label.text = "Die KI-Planung wird sicher auf dem Server erstellt …"
+	_generate_button.text = "✦  KI erstellt den Wochenplan …"
+	_status_label.text = _planning_message
 	var result := await AiPlanningManager.request_draft(data)
-	_generate_button.disabled = false
+	if is_instance_valid(_generate_button):
+		_generate_button.disabled = false
+		_generate_button.text = "✦  KI-Wochenplan erstellen"
 	if bool(result.get("success", false)):
+		_planning_message = str(result.get("message", "Der geprüfte KI-Entwurf ist bereit."))
 		_step = 2
 		_rebuild_content()
 	else:
-		_status_label.text = str(result.get("message", "Die Planung ist fehlgeschlagen."))
-		status_message.emit(_status_label.text)
+		_planning_message = str(result.get("message", "Die Planung ist fehlgeschlagen."))
+		if is_instance_valid(_status_label):
+			_status_label.text = _planning_message
+		status_message.emit(_planning_message)
 
 
 func _apply_ai_plan() -> void:
@@ -1603,6 +1618,7 @@ func _on_draft_changed(_draft: Dictionary) -> void:
 
 
 func _on_planning_status_changed(_status: String, message: String) -> void:
+	_planning_message = message
 	if is_instance_valid(_status_label):
 		_status_label.text = message
 
@@ -1809,6 +1825,10 @@ func _style(fill: Color, radius: int, border: Color = Color.TRANSPARENT) -> Styl
 		style.border_width_right = 1
 		style.border_width_bottom = 1
 		style.border_color = border
+	if fill.a > 0.15 and radius >= 12:
+		style.shadow_color = Color("#00000066")
+		style.shadow_size = 7
+		style.shadow_offset = Vector2(0, 3)
 	return style
 
 

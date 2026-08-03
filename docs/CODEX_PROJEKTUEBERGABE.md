@@ -1,7 +1,7 @@
 # Codex-Projektübergabe: Meine Budgetwelt
 
-Stand: **0.41.0** vom 2. August 2026;
-zuletzt veröffentlicht ist **0.41.0**
+Stand: **0.41.1** vom 3. August 2026;
+veröffentlicht sind Client **0.41.1** und Server **0.1.5**
 
 Diese Datei enthält den aktuellen Projektstand und kann zusammen mit dem
 Repository an einen neuen Codex-Task übergeben werden. Repository-Code und
@@ -317,10 +317,10 @@ gezeigten dunklen Glas-Stil. Die Überschrift wird durch `Guten Morgen`,
 - Landschaftsansicht: `ui/budget_world_view.gd`
 - Renderer: GL Compatibility
 - Desktop-Viewport: 1440 × 900
-- lokaler Entwicklungsstand: 0.41.0
-- lokaler Server-Entwicklungsstand: 0.1.4
-- zuletzt veröffentlichte Serverversion: 0.1.4
-- zuletzt veröffentlichte Version: 0.41.0
+- lokaler Entwicklungsstand: 0.41.1
+- lokaler Server-Entwicklungsstand: 0.1.5
+- zuletzt veröffentlichte Serverversion: 0.1.5
+- zuletzt veröffentlichte Version: 0.41.1
 
 Wichtige Autoloads aus `project.godot`:
 
@@ -558,9 +558,10 @@ Versionsnummer, Git-Tag und Dateiname müssen übereinstimmen.
 ## 15. Aktueller Repository-Zustand bei Erstellung dieser Übergabe
 
 - Branch: `main`
-- Version/Tag: `v0.41.0`
-- eigener Start-/Updatebildschirm und dynamische Fensterneuberechnung ergänzt
-- Windows-Release-Workflow für 0.41.0 freigegeben
+- Versionen: Client `0.41.1`, Server `0.1.5`
+- Cosmic-Star-Atlas-Design für Start, Login, Dashboard und Untermenüs umgesetzt
+- dynamische Fensterneuberechnung und Scrollbarkeit für Windows, Android und iPhone geprüft
+- KI-Wochenplanung stabilisiert und Android-PWA-Anmeldung samt Cacheverhalten korrigiert
 - vor Erstellung dieser Datei bestanden bereits lokale Änderungen an:
   - `assets/ui/fixed_costs_ledger_background.png.import`
   - `assets/ui/transactions_ledger_background.png.import`
