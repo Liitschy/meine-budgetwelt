@@ -15,6 +15,7 @@ public sealed class LocalAiWeeklyPlanningService
     private readonly HttpClient _httpClient;
     private readonly LocalAiPlanningOptions _options;
     private readonly Uri _endpoint;
+    private readonly Uri _tagsEndpoint;
 
     public LocalAiWeeklyPlanningService(
         HttpClient httpClient,
@@ -23,6 +24,7 @@ public sealed class LocalAiWeeklyPlanningService
         _httpClient = httpClient;
         _options = options.Value;
         _endpoint = ValidateEndpoint(_options.Endpoint);
+        _tagsEndpoint = new Uri(_endpoint, "/api/tags");
         _httpClient.Timeout = TimeSpan.FromSeconds(
             Math.Clamp(_options.TimeoutSeconds, 30, 600));
     }
@@ -39,7 +41,8 @@ public sealed class LocalAiWeeklyPlanningService
         }
 
         _ = userId;
-        var model = ValidateModel(_options.Model);
+        var configuredModel = ValidateModel(_options.Model);
+        var model = await ResolveInstalledModelAsync(configuredModel, cancellationToken);
         var keepAlive = ValidateKeepAlive(_options.KeepAlive);
         var contextTokens = Math.Clamp(_options.ContextTokens, 4_096, 65_536);
         var inputJson = JsonSerializer.Serialize(request, SerializerOptions);
@@ -104,10 +107,29 @@ public sealed class LocalAiWeeklyPlanningService
         {
             if (!response.IsSuccessStatusCode)
             {
+                var providerError = string.Empty;
+                try
+                {
+                    var errorPayload = await response.Content.ReadAsStringAsync(cancellationToken);
+                    using var errorDocument = JsonDocument.Parse(errorPayload);
+                    if (
+                        errorDocument.RootElement.TryGetProperty("error", out var error)
+                        && error.ValueKind == JsonValueKind.String
+                    )
+                    {
+                        providerError = error.GetString() ?? string.Empty;
+                    }
+                }
+                catch (JsonException)
+                {
+                    providerError = string.Empty;
+                }
                 throw new PlanningProviderException(
                     response.StatusCode == System.Net.HttpStatusCode.NotFound
-                        ? "Das gemeinsame lokale KI-Modell ist noch nicht installiert."
-                        : "Die lokale KI konnte keinen Wochenplan erstellen.");
+                        ? $"Das lokale KI-Modell {model} ist in Ollama nicht verfügbar."
+                        : string.IsNullOrWhiteSpace(providerError)
+                            ? $"Ollama konnte keinen Wochenplan erstellen (HTTP {(int)response.StatusCode})."
+                            : $"Ollama hat die Planung abgelehnt: {providerError}");
             }
 
             await using var responseStream = await response.Content.ReadAsStreamAsync(
@@ -170,6 +192,73 @@ public sealed class LocalAiWeeklyPlanningService
             "Die lokale KI hat kein vollständiges Planungsergebnis geliefert.");
     }
 
+    private async Task<string> ResolveInstalledModelAsync(
+        string configuredModel,
+        CancellationToken cancellationToken)
+    {
+        HttpResponseMessage response;
+        try
+        {
+            response = await _httpClient.GetAsync(_tagsEndpoint, cancellationToken);
+        }
+        catch (HttpRequestException)
+        {
+            return configuredModel;
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return configuredModel;
+        }
+
+        using (response)
+        {
+            if (!response.IsSuccessStatusCode)
+            {
+                return configuredModel;
+            }
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            try
+            {
+                using var document = await JsonDocument.ParseAsync(
+                    stream,
+                    cancellationToken: cancellationToken);
+                if (
+                    !document.RootElement.TryGetProperty("models", out var models)
+                    || models.ValueKind != JsonValueKind.Array
+                )
+                {
+                    return configuredModel;
+                }
+                var installed = models
+                    .EnumerateArray()
+                    .Where(item => item.ValueKind == JsonValueKind.Object)
+                    .Select(item => item.TryGetProperty("name", out var name) ? name.GetString() : null)
+                    .Where(name => !string.IsNullOrWhiteSpace(name))
+                    .Select(name => name!)
+                    .ToArray();
+                var exact = installed.FirstOrDefault(name => string.Equals(
+                    name,
+                    configuredModel,
+                    StringComparison.OrdinalIgnoreCase));
+                if (!string.IsNullOrWhiteSpace(exact))
+                {
+                    return exact;
+                }
+                var compatible = installed.FirstOrDefault(name => string.Equals(
+                        name,
+                        "qwen3.5:9b",
+                        StringComparison.OrdinalIgnoreCase))
+                    ?? installed.FirstOrDefault(name => name.StartsWith(
+                        "qwen3.5:",
+                        StringComparison.OrdinalIgnoreCase));
+                return compatible ?? configuredModel;
+            }
+            catch (JsonException)
+            {
+                return configuredModel;
+            }
+        }
+    }
     private static string ValidateModel(string value)
     {
         var model = value?.Trim() ?? string.Empty;

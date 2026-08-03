@@ -22,6 +22,14 @@ func _ready() -> void:
 	add_child(app)
 	await get_tree().process_frame
 	await get_tree().process_frame
+	var preview_name := OS.get_environment("BUDGETWELT_VISUAL_NAME").strip_edges()
+	if not preview_name.is_empty():
+		SyncManager.current_user = {"displayName": preview_name}
+		app._update_account_greeting()
+	var preview_month := OS.get_environment("BUDGETWELT_VISUAL_MONTH").strip_edges()
+	if not preview_month.is_empty():
+		app.month_selector_label.text = preview_month
+		app.desktop_month_selector_label.text = "%s  ⌄" % preview_month
 	if resize_first:
 		get_window().size = Vector2i(preview_width, preview_height)
 		get_window().content_scale_size = Vector2i(preview_width, preview_height)

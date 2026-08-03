@@ -182,7 +182,7 @@ var localAi = new LocalAiWeeklyPlanningService(
     {
         Enabled = true,
         Endpoint = "http://127.0.0.1:11434/api/chat",
-        Model = "qwen3.5:4b",
+        Model = "qwen3.5:9b",
         ContextTokens = 16_384,
         TimeoutSeconds = 30,
         KeepAlive = "30m",
@@ -241,6 +241,20 @@ sealed class FakeOllamaHandler(WeeklyPlanningDraft draft) : HttpMessageHandler
         CancellationToken cancellationToken)
     {
         if (
+            request.Method == HttpMethod.Get
+            && request.RequestUri?.AbsoluteUri == "http://127.0.0.1:11434/api/tags"
+        )
+        {
+            var tagsJson = JsonSerializer.Serialize(new
+            {
+                models = new[] { new { name = "qwen3.5:9b" } },
+            });
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(tagsJson, Encoding.UTF8, "application/json"),
+            };
+        }
+        if (
             request.Method != HttpMethod.Post
             || request.RequestUri?.AbsoluteUri != "http://127.0.0.1:11434/api/chat"
             || request.Headers.Authorization is not null
@@ -253,7 +267,7 @@ sealed class FakeOllamaHandler(WeeklyPlanningDraft draft) : HttpMessageHandler
         using var requestDocument = JsonDocument.Parse(body);
         var root = requestDocument.RootElement;
         if (
-            root.GetProperty("model").GetString() != "qwen3.5:4b"
+            root.GetProperty("model").GetString() != "qwen3.5:9b"
             || root.GetProperty("stream").GetBoolean()
             || root.GetProperty("think").GetBoolean()
             || root.GetProperty("format").GetProperty("type").GetString() != "object"
@@ -269,7 +283,7 @@ sealed class FakeOllamaHandler(WeeklyPlanningDraft draft) : HttpMessageHandler
             new JsonSerializerOptions(JsonSerializerDefaults.Web));
         var responseJson = JsonSerializer.Serialize(new
         {
-            model = "qwen3.5:4b",
+            model = "qwen3.5:9b",
             message = new { role = "assistant", content = planJson },
             done = true,
         });

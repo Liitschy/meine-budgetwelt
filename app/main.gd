@@ -6,19 +6,20 @@ const RecipeCatalog := preload("res://core/recipe_catalog.gd")
 const WeeklyNeedCalculator := preload("res://core/weekly_need_calculator.gd")
 const PackPlanner := preload("res://core/pack_planner.gd")
 const WeeklyPlanningPage := preload("res://ui/weekly_planning_page.gd")
+const WeeklyBudgetChart := preload("res://ui/weekly_budget_chart.gd")
 const BankingPanel := preload("res://ui/banking_panel.gd")
 
 const COLORS := {
-	"background": Color("#090b13"),
-	"sidebar": Color("#14111bf2"),
-	"panel": Color("#18131fe8"),
-	"panel_soft": Color("#211923f2"),
-	"accent": Color("#e4c99a"),
-	"gold": Color("#b8734b"),
-	"text": Color("#f5eadb"),
-	"muted": Color("#b9a9ad"),
-	"warning": Color("#d18a65"),
-	"success": Color("#a9c493"),
+	"background": Color("#080a0f"),
+	"sidebar": Color("#090d12f2"),
+	"panel": Color("#0d1218e8"),
+	"panel_soft": Color("#10161cf2"),
+	"accent": Color("#f0d3ae"),
+	"gold": Color("#d58b5e"),
+	"text": Color("#f0d3ae"),
+	"muted": Color("#aaa4a4"),
+	"warning": Color("#d99a68"),
+	"success": Color("#9fbe9a"),
 }
 const BOOK_ART_SIZE := Vector2(1672.0, 941.0)
 
@@ -56,6 +57,12 @@ var sidebar_nav_buttons: Dictionary = {}
 var book_navigation_controls: Array[Control] = []
 var app_shell: VBoxContainer
 var app_bar: Control
+var desktop_nav_buttons: Dictionary = {}
+var desktop_nav_container: Control
+var desktop_month_control: Control
+var desktop_month_selector_label: Button
+var desktop_metric_row: Control
+var weekly_budget_chart: Control
 var app_local_status: Label
 var app_bar_back_button: Button
 var app_bar_leaf: Label
@@ -215,8 +222,8 @@ var custom_recipe_day_input: OptionButton
 var _editing_custom_recipe_id := ""
 var upcoming_cost_list: VBoxContainer
 var dashboard_flow_values: Dictionary = {}
-var display_font: SystemFont
-var interface_font: SystemFont
+var display_font: Font
+var interface_font: Font
 var _responsive_layout_queued := false
 
 
@@ -282,18 +289,23 @@ func _configure_web_content_scale() -> void:
 
 
 func _apply_design_theme() -> void:
-	interface_font = SystemFont.new()
-	interface_font.font_names = PackedStringArray([
-		"Segoe UI Variable Display",
-		"Segoe UI Variable Text",
-		"Segoe UI",
-	])
-	display_font = SystemFont.new()
-	display_font.font_names = PackedStringArray([
-		"Georgia",
-		"Palatino Linotype",
-	])
-
+	if DisplayServer.get_name() == "headless":
+		interface_font = ThemeDB.fallback_font
+		display_font = ThemeDB.fallback_font
+	else:
+		var interface_system_font := SystemFont.new()
+		interface_system_font.font_names = PackedStringArray([
+			"Segoe UI Variable Display",
+			"Segoe UI Variable Text",
+			"Segoe UI",
+		])
+		interface_font = interface_system_font
+		var display_system_font := SystemFont.new()
+		display_system_font.font_names = PackedStringArray([
+			"Georgia",
+			"Palatino Linotype",
+		])
+		display_font = display_system_font
 	var app_theme := Theme.new()
 	app_theme.default_font = interface_font
 	app_theme.default_font_size = 15
@@ -301,14 +313,14 @@ func _apply_design_theme() -> void:
 	app_theme.set_color("font_color", "Button", COLORS.text)
 	app_theme.set_color("font_hover_color", "Button", Color.WHITE)
 	app_theme.set_color("font_pressed_color", "Button", Color.WHITE)
-	app_theme.set_stylebox("normal", "Button", _style(Color("#1a1520e8"), 12, Color("#715044")))
-	app_theme.set_stylebox("hover", "Button", _style(Color("#2a1c29f2"), 12, COLORS.accent))
-	app_theme.set_stylebox("pressed", "Button", _style(Color("#3a222b"), 12, COLORS.gold))
+	app_theme.set_stylebox("normal", "Button", _style(Color("#171624e8"), 12, Color("#5b4031")))
+	app_theme.set_stylebox("hover", "Button", _style(Color("#292337f2"), 12, COLORS.accent))
+	app_theme.set_stylebox("pressed", "Button", _style(Color("#382838"), 12, COLORS.gold))
 	app_theme.set_stylebox("focus", "Button", _style(Color.TRANSPARENT, 12, COLORS.accent))
-	app_theme.set_stylebox("normal", "LineEdit", _style(Color("#12101af2"), 9, Color("#654950")))
-	app_theme.set_stylebox("focus", "LineEdit", _style(Color("#211923"), 9, COLORS.accent))
-	app_theme.set_stylebox("normal", "SpinBox", _style(Color("#12101af2"), 9, Color("#654950")))
-	app_theme.set_stylebox("normal", "OptionButton", _style(Color("#12101af2"), 9, Color("#654950")))
+	app_theme.set_stylebox("normal", "LineEdit", _style(Color("#10111cf2"), 9, Color("#665468")))
+	app_theme.set_stylebox("focus", "LineEdit", _style(Color("#10161c"), 9, COLORS.accent))
+	app_theme.set_stylebox("normal", "SpinBox", _style(Color("#10111cf2"), 9, Color("#665468")))
+	app_theme.set_stylebox("normal", "OptionButton", _style(Color("#10111cf2"), 9, Color("#665468")))
 	app_theme.set_color("font_color", "LineEdit", COLORS.text)
 	app_theme.set_color("font_color", "SpinBox", COLORS.text)
 	app_theme.set_color("font_color", "OptionButton", COLORS.text)
@@ -316,9 +328,9 @@ func _apply_design_theme() -> void:
 	app_theme.set_color("font_pressed_color", "CheckBox", COLORS.success)
 	app_theme.set_color("icon_normal_color", "CheckBox", COLORS.muted)
 	app_theme.set_color("icon_pressed_color", "CheckBox", COLORS.success)
-	app_theme.set_color("separator_color", "HSeparator", Color("#715044"))
-	app_theme.set_stylebox("background", "ProgressBar", _style(Color("#12101a"), 9, Color("#4c3842")))
-	app_theme.set_stylebox("fill", "ProgressBar", _style(Color("#b8734b"), 9, COLORS.accent))
+	app_theme.set_color("separator_color", "HSeparator", Color("#5b4031"))
+	app_theme.set_stylebox("background", "ProgressBar", _style(Color("#10111c"), 9, Color("#55485c")))
+	app_theme.set_stylebox("fill", "ProgressBar", _style(Color("#d58b5e"), 9, COLORS.accent))
 	theme = app_theme
 
 
@@ -352,7 +364,7 @@ func _build_interface() -> void:
 	add_child(desktop_backdrop)
 
 	var backdrop_tint := ColorRect.new()
-	backdrop_tint.color = Color("#090b1352")
+	backdrop_tint.color = Color("#080a0f52")
 	backdrop_tint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	backdrop_tint.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	desktop_backdrop.add_child(backdrop_tint)
@@ -385,7 +397,14 @@ func _build_interface() -> void:
 	dashboard_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	dashboard_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	dashboard_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	dashboard_scroll.add_child(dashboard_page)
+	var dashboard_margin := MarginContainer.new()
+	dashboard_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	dashboard_margin.add_theme_constant_override("margin_left", 24)
+	dashboard_margin.add_theme_constant_override("margin_right", 24)
+	dashboard_margin.add_theme_constant_override("margin_top", 14)
+	dashboard_margin.add_theme_constant_override("margin_bottom", 18)
+	dashboard_margin.add_child(dashboard_page)
+	dashboard_scroll.add_child(dashboard_margin)
 	root.add_child(dashboard_scroll)
 
 	dashboard_page.add_child(_build_header())
@@ -501,7 +520,7 @@ func _build_login_panel() -> Control:
 	backdrop.add_child(island)
 
 	var tint := ColorRect.new()
-	tint.color = Color("#090b1366")
+	tint.color = Color("#080a0f66")
 	tint.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	tint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	backdrop.add_child(tint)
@@ -533,7 +552,7 @@ func _build_login_panel() -> Control:
 
 	login_card = PanelContainer.new()
 	login_card.custom_minimum_size = Vector2(440, 0)
-	var glass := _style(Color("#17131ef2"), 28, Color("#b8734baa"))
+	var glass := _style(Color("#17131ef2"), 28, Color("#d58b5eaa"))
 	glass.content_margin_left = 34
 	glass.content_margin_right = 34
 	glass.content_margin_top = 30
@@ -798,8 +817,12 @@ func _update_account_greeting() -> void:
 	var hour := int(Time.get_time_dict_from_system().hour)
 	var greeting := "Guten Morgen" if hour < 11 else "Guten Tag" if hour < 18 else "Guten Abend"
 	var name := str(SyncManager.current_user.get("displayName", "")).strip_edges()
-	dashboard_title.text = "%s, %s" % [greeting, name] if not name.is_empty() else greeting
-
+	if name.is_empty():
+		dashboard_title.text = greeting
+	elif _compact_layout:
+		dashboard_title.text = "%s, %s" % [greeting, name]
+	else:
+		dashboard_title.text = "%s,\n%s" % [greeting, name]
 
 func _logout_account() -> void:
 	await SyncManager.logout()
@@ -855,7 +878,7 @@ func _apply_login_layout() -> void:
 
 func _build_startup_status_panel() -> Control:
 	var backdrop := ColorRect.new()
-	backdrop.color = Color("#090b13f5")
+	backdrop.color = Color("#080a0ff5")
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 	var center := CenterContainer.new()
@@ -993,305 +1016,350 @@ func _open_confirmed_update() -> void:
 
 func _build_app_bar() -> Control:
 	var bar := PanelContainer.new()
-	bar.custom_minimum_size.y = 48
-	bar.add_theme_stylebox_override("panel", _style(Color("#100d16f2"), 0, Color("#5f4852")))
+	bar.custom_minimum_size.y = 62
+	var bar_style := _style(Color("#080b10f7"), 0, Color("#684632"))
+	bar_style.border_width_left = 0
+	bar_style.border_width_right = 0
+	bar_style.border_width_top = 0
+	bar_style.border_width_bottom = 1
+	bar.add_theme_stylebox_override("panel", bar_style)
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("margin_left", 18)
-	row.add_theme_constant_override("margin_right", 18)
+	row.add_theme_constant_override("separation", 12)
+	row.add_theme_constant_override("margin_left", 32)
+	row.add_theme_constant_override("margin_right", 24)
 	bar.add_child(row)
 
 	app_bar_back_button = Button.new()
 	app_bar_back_button.text = "‹"
 	app_bar_back_button.tooltip_text = "Zurück"
-	app_bar_back_button.custom_minimum_size = Vector2(42, 38)
+	app_bar_back_button.custom_minimum_size = Vector2(42, 42)
 	app_bar_back_button.flat = true
 	app_bar_back_button.visible = false
 	app_bar_back_button.pressed.connect(_navigate_back)
 	row.add_child(app_bar_back_button)
 
-	var leaf := Label.new()
-	app_bar_leaf = leaf
-	leaf.text = "◈"
-	leaf.add_theme_font_size_override("font_size", 22)
-	leaf.add_theme_color_override("font_color", COLORS.accent)
-	row.add_child(leaf)
+	var brand := Label.new()
+	app_bar_title = brand
+	brand.text = "Meine Budgetwelt"
+	brand.custom_minimum_size.x = 310
+	brand.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	brand.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	brand.add_theme_font_override("font", display_font)
+	brand.add_theme_font_size_override("font_size", 26)
+	brand.add_theme_color_override("font_color", Color("#d99569"))
+	row.add_child(brand)
 
-	var title := Label.new()
-	app_bar_title = title
-	title.text = "Meine Budgetwelt"
-	title.add_theme_font_size_override("font_size", 15)
-	title.add_theme_color_override("font_color", COLORS.text)
-	row.add_child(title)
+	app_bar_leaf = Label.new()
+	app_bar_leaf.visible = false
 
-	var spacer := Control.new()
-	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(spacer)
+	var nav := HBoxContainer.new()
+	desktop_nav_container = nav
+	nav.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	nav.alignment = BoxContainer.ALIGNMENT_CENTER
+	nav.add_theme_constant_override("separation", 8)
+	row.add_child(nav)
+	for definition: Array in [
+		["✦", "Übersicht", "dashboard"],
+		["⌁", "Fixkosten", "fixed_costs"],
+		["✣", "Sparen", "savings"],
+		["⌁", "Buchungen", "transactions"],
+		["✧", "Wochenplanung", "weekly_planning"],
+		["✥", "Einstellungen", "settings"],
+	]:
+		var button := Button.new()
+		button.text = "%s  %s" % [definition[0], definition[1]]
+		button.flat = true
+		button.custom_minimum_size = Vector2(126 if definition[2] != "weekly_planning" else 158, 54)
+		button.add_theme_font_size_override("font_size", 13)
+		button.add_theme_color_override("font_color", Color("#a9a1a2"))
+		button.add_theme_stylebox_override("normal", _style(Color.TRANSPARENT, 0))
+		button.add_theme_stylebox_override("hover", _style(Color("#17191fbb"), 0, Color("#6f4935")))
+		button.pressed.connect(_show_page.bind(str(definition[2])))
+		desktop_nav_buttons[str(definition[2])] = button
+		nav.add_child(button)
 
-	var local_status := Label.new()
-	local_status.text = "●  Anmeldung erforderlich"
-	app_local_status = local_status
-	local_status.add_theme_font_size_override("font_size", 12)
-	local_status.add_theme_color_override("font_color", COLORS.success)
-	row.add_child(local_status)
+	var month_panel := PanelContainer.new()
+	desktop_month_control = month_panel
+	month_panel.custom_minimum_size = Vector2(190, 42)
+	month_panel.add_theme_stylebox_override("panel", _style(Color("#10141af2"), 10, Color("#4e382c")))
+	var month_row := HBoxContainer.new()
+	month_panel.add_child(month_row)
+	desktop_month_selector_label = Button.new()
+	desktop_month_selector_label.text = "August 2026  ⌄"
+	desktop_month_selector_label.flat = true
+	desktop_month_selector_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	desktop_month_selector_label.add_theme_color_override("font_color", Color("#e6c7a7"))
+	desktop_month_selector_label.pressed.connect(_open_setup)
+	month_row.add_child(desktop_month_selector_label)
+	var calendar := Button.new()
+	calendar.text = "▣"
+	calendar.tooltip_text = "Monat einrichten"
+	calendar.flat = true
+	calendar.custom_minimum_size.x = 44
+	calendar.add_theme_color_override("font_color", Color("#d58b5e"))
+	calendar.pressed.connect(_open_setup)
+	month_row.add_child(calendar)
+	row.add_child(month_panel)
+
+	app_local_status = Label.new()
+	app_local_status.text = "●  Synchronisiert"
+	app_local_status.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	app_local_status.add_theme_font_size_override("font_size", 15)
+	app_local_status.add_theme_color_override("font_color", Color("#9ecb9c"))
+	app_local_status.visible = false
+	row.add_child(app_local_status)
 
 	app_bar_settings_button = Button.new()
-	app_bar_settings_button.text = "⚙"
-	app_bar_settings_button.tooltip_text = "Einstellungen"
-	app_bar_settings_button.custom_minimum_size = Vector2(42, 38)
-	app_bar_settings_button.flat = true
-	app_bar_settings_button.pressed.connect(_show_page.bind("settings"))
-	row.add_child(app_bar_settings_button)
-
+	app_bar_settings_button.visible = false
 	account_button = Button.new()
-	account_button.text = "Konto"
-	account_button.flat = true
-	account_button.tooltip_text = "Konto abmelden"
-	account_button.pressed.connect(_logout_account)
-	row.add_child(account_button)
+	account_button.visible = false
+	status_label = Label.new()
+	status_label.visible = false
 	return bar
-
 
 func _build_summary_column() -> Control:
 	var column := VBoxContainer.new()
-	column.custom_minimum_size.x = 345
-	column.add_theme_constant_override("separation", 16)
-	column.add_child(_build_summary())
+	column.custom_minimum_size.x = 385
+	column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_theme_constant_override("separation", 14)
 	column.add_child(_build_upcoming_costs())
 	return column
 
-
 func _build_upcoming_costs() -> Control:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 18, Color("#684853")))
+	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var panel_style := _style(Color("#0c1116f2"), 18, Color("#6f4935"))
+	panel_style.content_margin_left = 14
+	panel_style.content_margin_right = 14
+	panel_style.content_margin_top = 16
+	panel_style.content_margin_bottom = 14
+	panel.add_theme_stylebox_override("panel", panel_style)
 	var column := VBoxContainer.new()
+	column.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	column.add_theme_constant_override("separation", 8)
-	column.add_theme_constant_override("margin_left", 18)
-	column.add_theme_constant_override("margin_right", 18)
-	column.add_theme_constant_override("margin_top", 14)
-	column.add_theme_constant_override("margin_bottom", 14)
 	panel.add_child(column)
 
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 10)
+	column.add_child(header)
 	var title := Label.new()
-	title.text = "Nächste Fixkosten"
-	title.add_theme_font_size_override("font_size", 19)
-	title.add_theme_color_override("font_color", COLORS.text)
-	column.add_child(title)
+	title.text = "◌  Nächste Fixkosten"
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.add_theme_font_override("font", display_font)
+	title.add_theme_font_size_override("font_size", 17)
+	title.add_theme_color_override("font_color", Color("#f0d3ae"))
+	header.add_child(title)
+	var filter := Button.new()
+	filter.text = "Diese Woche  ⌄"
+	filter.custom_minimum_size = Vector2(104, 38)
+	filter.add_theme_color_override("font_color", Color("#d7c2ab"))
+	filter.add_theme_stylebox_override("normal", _style(Color("#14181df2"), 13, Color("#4e382c")))
+	filter.pressed.connect(_show_page.bind("fixed_costs"))
+	header.add_child(filter)
 	column.add_child(HSeparator.new())
 
 	upcoming_cost_list = VBoxContainer.new()
-	upcoming_cost_list.add_theme_constant_override("separation", 6)
+	upcoming_cost_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	upcoming_cost_list.add_theme_constant_override("separation", 0)
 	column.add_child(upcoming_cost_list)
-	return panel
 
+	var all_button := Button.new()
+	all_button.text = "Alle Fixkosten anzeigen  ›"
+	all_button.custom_minimum_size.y = 42
+	all_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	all_button.add_theme_color_override("font_color", Color("#d7c2ab"))
+	all_button.add_theme_stylebox_override("normal", _style(Color("#10151af2"), 12, Color("#4e382c")))
+	all_button.pressed.connect(_show_page.bind("fixed_costs"))
+	column.add_child(all_button)
+	return panel
 
 func _build_month_flow() -> Control:
-	var panel := PanelContainer.new()
-	panel.custom_minimum_size.y = 104
-	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 17, Color("#684853")))
-	var row := BoxContainer.new()
-	row.vertical = false
-	week_cards = row
-	row.add_theme_constant_override("separation", 10)
-	row.add_theme_constant_override("margin_left", 18)
-	row.add_theme_constant_override("margin_right", 18)
-	row.add_theme_constant_override("margin_top", 12)
-	row.add_theme_constant_override("margin_bottom", 12)
-	panel.add_child(row)
-
-	var definitions := [
-		["week_0", "❧", "Woche 1 · 01.–07.", COLORS.accent],
-		["week_1", "❧", "Woche 2 · 08.–14.", Color("#8f70e8")],
-		["week_2", "❧", "Woche 3 · 15.–21.", COLORS.warning],
-		["week_3", "❧", "Woche 4 · 22.–Monatsende", Color("#4c9de8")],
-	]
-	for definition in definitions:
-		var card := PanelContainer.new()
-		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		card.add_theme_stylebox_override("panel", _style(Color("#0b3942"), 14, definition[3]))
-		var card_row := HBoxContainer.new()
-		card_row.add_theme_constant_override("separation", 10)
-		card.add_child(card_row)
-		var icon := Label.new()
-		icon.text = definition[1]
-		icon.add_theme_font_size_override("font_size", 25)
-		icon.add_theme_color_override("font_color", definition[3])
-		card_row.add_child(icon)
-		var labels := VBoxContainer.new()
-		var caption := Label.new()
-		caption.text = definition[2]
-		caption.add_theme_color_override("font_color", COLORS.muted)
-		labels.add_child(caption)
-		var value := Label.new()
-		value.text = "0,00 € übrig"
-		value.add_theme_font_size_override("font_size", 18)
-		value.add_theme_color_override("font_color", COLORS.text)
-		labels.add_child(value)
-		dashboard_flow_values[definition[0]] = value
-		card_row.add_child(labels)
-		row.add_child(card)
-	return panel
-
-
-
+	weekly_budget_chart = WeeklyBudgetChart.new()
+	weekly_budget_chart.custom_minimum_size.y = 168
+	weekly_budget_chart.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	return weekly_budget_chart
 
 func _build_mobile_dashboard_metrics() -> Control:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
-	for definition in [
-		["balance", "KONTOSTAND", COLORS.accent],
-		["free", "FREI VERFÜGBAR", Color("#5ee8db")],
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 12)
+	grid.add_theme_constant_override("v_separation", 12)
+	for definition: Array in [
+		["balance", "Kontostand", "✦", Color("#d8a35f")],
+		["free", "Frei verfügbar", "✷", Color("#d98a5c")],
+		["weekly", "Wochenbudget", "◯", Color("#d8a35f")],
 	]:
 		var card := PanelContainer.new()
 		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		card.custom_minimum_size.y = 110
-		var card_style := _style(Color("#041b22ee"), 22, Color("#b8734b"))
-		card_style.set_border_width_all(2)
+		card.custom_minimum_size.y = 132
+		var card_style := _style(Color("#0d1218f2"), 18, Color("#5b4031"))
+		card_style.content_margin_left = 10
+		card_style.content_margin_right = 10
+		card_style.content_margin_top = 15
+		card_style.content_margin_bottom = 14
 		card.add_theme_stylebox_override("panel", card_style)
-		var labels := VBoxContainer.new()
-		labels.alignment = BoxContainer.ALIGNMENT_CENTER
-		var title := Label.new()
-		title.text = definition[1]
-		title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		title.add_theme_font_override("font", display_font)
-		title.add_theme_font_size_override("font_size", 15)
-		title.add_theme_color_override("font_color", Color("#e3c37d"))
-		labels.add_child(title)
-		var ornament := Label.new()
-		ornament.text = "◇"
-		ornament.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		ornament.add_theme_color_override("font_color", definition[2])
-		labels.add_child(ornament)
-		var value := Label.new()
-		value.text = "0,00 €"
-		value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		value.add_theme_font_override("font", display_font)
-		value.add_theme_font_size_override("font_size", 30)
-		value.add_theme_color_override("font_color", Color("#f5ead1"))
-		labels.add_child(value)
-		mobile_dashboard_values[definition[0]] = value
-		card.add_child(labels)
-		row.add_child(card)
-	return row
-
-
-func _build_mobile_dashboard_actions() -> Control:
-	var panel := PanelContainer.new()
-	var parchment := _style(Color("#cdb27cf2"), 24, Color("#8a642f"))
-	parchment.content_margin_left = 14
-	parchment.content_margin_right = 14
-	parchment.content_margin_top = 14
-	parchment.content_margin_bottom = 14
-	panel.add_theme_stylebox_override("panel", parchment)
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 12)
-	for definition in [
-		["fixed", "FIXKOSTEN", "fixed_costs"],
-		["weekly", "WOCHENBUDGET", "transactions"],
-	]:
-		var button := Button.new()
-		button.custom_minimum_size.y = 96
-		button.text = ""
-		button.add_theme_stylebox_override(
-			"normal",
-			_style(Color("#07191def"), 18, Color("#9f7638"))
-		)
-		button.pressed.connect(_show_page.bind(definition[2]))
+		var column := VBoxContainer.new()
+		column.add_theme_constant_override("separation", 8)
+		card.add_child(column)
 		var content := HBoxContainer.new()
-		content.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		content.add_theme_constant_override("margin_left", 18)
-		content.add_theme_constant_override("margin_right", 18)
-		var emblem := Label.new()
-		emblem.text = "▤" if definition[0] == "fixed" else "◉"
-		emblem.custom_minimum_size.x = 62
-		emblem.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		emblem.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		emblem.add_theme_font_size_override("font_size", 34)
-		emblem.add_theme_color_override("font_color", Color("#d8a958"))
-		content.add_child(emblem)
+		content.add_theme_constant_override("separation", 6)
+		column.add_child(content)
+		var icon := Label.new()
+		icon.text = definition[2]
+		icon.custom_minimum_size = Vector2(40, 48)
+		icon.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		icon.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		icon.add_theme_font_size_override("font_size", 28)
+		icon.add_theme_color_override("font_color", definition[3])
+		content.add_child(icon)
 		var labels := VBoxContainer.new()
-		labels.alignment = BoxContainer.ALIGNMENT_CENTER
 		labels.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var title := Label.new()
 		title.text = definition[1]
-		title.add_theme_font_override("font", display_font)
-		title.add_theme_font_size_override("font_size", 18)
-		title.add_theme_color_override("font_color", Color("#e4c783"))
+		title.add_theme_font_size_override("font_size", 12)
+		title.add_theme_color_override("font_color", Color("#d7c2ab"))
 		labels.add_child(title)
 		var value := Label.new()
 		value.text = "0,00 €"
 		value.add_theme_font_override("font", display_font)
-		value.add_theme_font_size_override("font_size", 30)
-		value.add_theme_color_override("font_color", Color("#f5ead1"))
+		value.add_theme_font_size_override("font_size", 22)
+		value.add_theme_color_override("font_color", Color("#f0d3ae") if definition[0] != "free" else Color("#d98a5c"))
 		labels.add_child(value)
 		mobile_dashboard_values[definition[0]] = value
 		content.add_child(labels)
-		var arrow := Label.new()
-		arrow.text = "›"
-		arrow.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		arrow.add_theme_font_size_override("font_size", 40)
-		arrow.add_theme_color_override("font_color", Color("#d8a958"))
-		content.add_child(arrow)
-		button.add_child(content)
-		column.add_child(button)
-	panel.add_child(column)
-	return panel
+		var progress := ProgressBar.new()
+		progress.show_percentage = false
+		progress.custom_minimum_size.y = 6
+		progress.value = 45.0
+		progress.add_theme_stylebox_override("background", _style(Color("#25282a"), 3))
+		progress.add_theme_stylebox_override("fill", _style(Color("#f0d3ae") if definition[0] != "free" else Color("#d98a5c"), 3))
+		mobile_dashboard_values["%s_progress" % definition[0]] = progress
+		column.add_child(progress)
+		grid.add_child(card)
+	return grid
 
+func _build_mobile_dashboard_actions() -> Control:
+	var button := Button.new()
+	button.text = ""
+	button.custom_minimum_size.y = 190
+	button.add_theme_stylebox_override("normal", _style(Color("#0d1218f2"), 18, Color("#5b4031")))
+	button.add_theme_stylebox_override("hover", _style(Color("#141a20f5"), 18, Color("#9a6547")))
+	button.pressed.connect(_show_page.bind("transactions"))
+	var column := VBoxContainer.new()
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	column.add_theme_constant_override("margin_left", 22)
+	column.add_theme_constant_override("margin_right", 22)
+	column.add_theme_constant_override("margin_top", 18)
+	column.add_theme_constant_override("margin_bottom", 18)
+	column.add_theme_constant_override("separation", 8)
+	var header := HBoxContainer.new()
+	var title := Label.new()
+	title.text = "▣  Diese Woche"
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.add_theme_font_size_override("font_size", 19)
+	title.add_theme_color_override("font_color", Color("#d7c2ab"))
+	header.add_child(title)
+	var arrow := Label.new()
+	arrow.text = "›"
+	arrow.add_theme_font_size_override("font_size", 36)
+	arrow.add_theme_color_override("font_color", Color("#f0d3ae"))
+	header.add_child(arrow)
+	column.add_child(header)
+	var value_row := HBoxContainer.new()
+	var value := Label.new()
+	value.text = "0,00 €"
+	value.add_theme_font_override("font", display_font)
+	value.add_theme_font_size_override("font_size", 42)
+	value.add_theme_color_override("font_color", Color("#d98a5c"))
+	mobile_dashboard_values["weekly_remaining"] = value
+	value_row.add_child(value)
+	var suffix := Label.new()
+	suffix.text = "übrig"
+	suffix.size_flags_vertical = Control.SIZE_SHRINK_END
+	suffix.add_theme_font_size_override("font_size", 18)
+	suffix.add_theme_color_override("font_color", Color("#c1b8b2"))
+	value_row.add_child(suffix)
+	column.add_child(value_row)
+	var progress := ProgressBar.new()
+	progress.show_percentage = false
+	progress.custom_minimum_size.y = 8
+	progress.add_theme_stylebox_override("background", _style(Color("#25282a"), 4))
+	progress.add_theme_stylebox_override("fill", _style(Color("#b8799c"), 4))
+	mobile_dashboard_values["weekly_remaining_progress"] = progress
+	column.add_child(progress)
+	var captions := HBoxContainer.new()
+	var spent := Label.new()
+	spent.text = "Verbraucht: 0,00 €"
+	spent.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	spent.add_theme_color_override("font_color", Color("#aaa4a4"))
+	mobile_dashboard_values["weekly_spent_caption"] = spent
+	captions.add_child(spent)
+	var budget := Label.new()
+	budget.text = "Wochenbudget: 0,00 €"
+	budget.add_theme_color_override("font_color", Color("#aaa4a4"))
+	mobile_dashboard_values["weekly_budget_caption"] = budget
+	captions.add_child(budget)
+	column.add_child(captions)
+	button.add_child(column)
+	return button
 
 func _build_mobile_navigation() -> Control:
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size.y = 88
-	panel.add_theme_stylebox_override("panel", _style(Color("#100d16f8"), 0, Color("#b8734b")))
+	panel.custom_minimum_size.y = 108
+	var panel_style := _style(Color("#090d12fa"), 0, Color("#5a3d2d"))
+	panel_style.border_width_left = 0
+	panel_style.border_width_right = 0
+	panel_style.border_width_bottom = 0
+	panel_style.border_width_top = 1
+	panel_style.content_margin_left = 10
+	panel_style.content_margin_right = 10
+	panel_style.content_margin_top = 6
+	panel_style.content_margin_bottom = 12
+	panel.add_theme_stylebox_override("panel", panel_style)
 
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 4)
-	row.add_theme_constant_override("margin_left", 8)
-	row.add_theme_constant_override("margin_right", 8)
-	row.add_theme_constant_override("margin_top", 6)
-	row.add_theme_constant_override("margin_bottom", 6)
 	panel.add_child(row)
-
-	for item in [
-		["res://assets/icons/home.svg", "Budget", "dashboard"],
-		["res://assets/icons/fixed-costs.svg", "Fixkosten", "fixed_costs"],
-		["res://assets/icons/meal-plan.svg", "Plan", "weekly_planning"],
-		["res://assets/icons/savings.svg", "Sparen", "savings"],
-		["res://assets/icons/bookings.svg", "Buchungen", "transactions"],
+	for item: Array in [
+		["◎", "Budget", "dashboard"],
+		["◌", "Fixkosten", "fixed_costs"],
+		["▤", "Buchungen", "transactions"],
+		["⌁", "Planung", "weekly_planning"],
+		["⋯", "Mehr", "settings"],
 	]:
 		var button := Button.new()
 		button.text = ""
-		button.custom_minimum_size.y = 72
+		button.custom_minimum_size.y = 88
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.add_theme_stylebox_override("normal", _style(Color.TRANSPARENT, 0))
-		button.add_theme_stylebox_override("hover", _style(Color("#241923"), 12, Color("#8e6048")))
-		button.pressed.connect(_show_page.bind(item[2]))
+		button.add_theme_stylebox_override("hover", _style(Color("#241a15aa"), 14, Color("#7a5038")))
+		button.pressed.connect(_show_page.bind(str(item[2])))
 		var content := VBoxContainer.new()
 		content.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		content.alignment = BoxContainer.ALIGNMENT_CENTER
-		var icon := TextureRect.new()
-		icon.texture = load(item[0])
-		icon.custom_minimum_size = Vector2(36, 36)
-		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		icon.modulate = Color("#d0aa64")
+		content.add_theme_constant_override("separation", 2)
+		var icon := Label.new()
+		icon.text = str(item[0])
+		icon.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		icon.add_theme_font_size_override("font_size", 31)
+		icon.add_theme_color_override("font_color", Color("#d8a276"))
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		content.add_child(icon)
 		var label := Label.new()
-		label.text = item[1]
+		label.text = str(item[1])
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		label.add_theme_font_override("font", display_font)
-		label.add_theme_font_size_override("font_size", 12)
-		label.add_theme_color_override("font_color", Color("#d9c99d"))
+		label.add_theme_font_size_override("font_size", 14)
+		label.add_theme_color_override("font_color", Color("#aaa4a4"))
 		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		content.add_child(label)
 		button.add_child(content)
 		button.set_meta("mobile_icon", icon)
 		button.set_meta("mobile_label", label)
-		mobile_nav_buttons[item[2]] = button
+		mobile_nav_buttons[str(item[2])] = button
 		row.add_child(button)
 	return panel
-
 
 func _build_sidebar() -> Control:
 	var panel := PanelContainer.new()
@@ -1310,7 +1378,7 @@ func _build_sidebar() -> Control:
 	emblem_center.custom_minimum_size.y = 112
 	var emblem := PanelContainer.new()
 	emblem.custom_minimum_size = Vector2(74, 74)
-	emblem.add_theme_stylebox_override("panel", _style(Color("#211722"), 37, COLORS.accent))
+	emblem.add_theme_stylebox_override("panel", _style(Color("#12171c"), 37, COLORS.accent))
 	var emblem_icon := TextureRect.new()
 	emblem_icon.texture = load("res://assets/icons/orbit.svg")
 	emblem_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -1341,9 +1409,9 @@ func _build_sidebar() -> Control:
 		button.add_theme_color_override("font_color", COLORS.text)
 		button.add_theme_stylebox_override(
 			"normal",
-			_style(Color("#0a4952") if index == 0 else Color.TRANSPARENT, 12)
+			_style(Color("#171b20") if index == 0 else Color.TRANSPARENT, 12)
 		)
-		button.add_theme_stylebox_override("hover", _style(Color("#0d5660"), 12))
+		button.add_theme_stylebox_override("hover", _style(Color("#1d2228"), 12))
 		button.pressed.connect(_show_page.bind(str(item[2])))
 		button.set_meta("navigation_active", index == 0)
 		sidebar_nav_buttons[str(item[2])] = button
@@ -1480,7 +1548,7 @@ func _open_banking_settings() -> void:
 
 
 func _build_settings_data_card() -> Control:
-	var parts := _settings_card("Daten & Updates", Color("#8f70e8"))
+	var parts := _settings_card("Daten & Updates", Color("#b8799c"))
 	var content := parts.content as VBoxContainer
 	var hint := Label.new()
 	hint.text = "Sicherungen, Wiederherstellung und die manuelle Updateprüfung sind hier zentral erreichbar."
@@ -1509,76 +1577,136 @@ func _build_header() -> Control:
 	var row := BoxContainer.new()
 	row.vertical = false
 	dashboard_header = row
-	row.custom_minimum_size.y = 74
+	row.custom_minimum_size.y = 126
+	row.add_theme_constant_override("separation", 20)
 
 	var titles := VBoxContainer.new()
+	titles.custom_minimum_size.x = 470
+	titles.alignment = BoxContainer.ALIGNMENT_CENTER
 	var title := Label.new()
-	title.text = "Deine Budgetwelt"
+	title.text = "Guten Abend, Alex"
 	dashboard_title = title
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	title.custom_minimum_size.x = 0
 	title.add_theme_font_override("font", display_font)
-	title.add_theme_font_size_override("font_size", 36)
-	title.add_theme_color_override("font_color", COLORS.text)
+	title.add_theme_font_size_override("font_size", 52)
+	title.add_theme_color_override("font_color", Color("#f0d3ae"))
 	titles.add_child(title)
-
+	var ornament := Label.new()
+	ornament.text = "━━━━━━━━━━━━  ✦"
+	ornament.add_theme_font_size_override("font_size", 12)
+	ornament.add_theme_color_override("font_color", Color("#d58b5e"))
+	titles.add_child(ornament)
 	var subtitle := Label.new()
 	subtitle.text = "Alles Wichtige auf einen Blick"
-	subtitle.add_theme_font_size_override("font_size", 15)
-	subtitle.add_theme_color_override("font_color", COLORS.muted)
+	subtitle.visible = false
 	dashboard_month_label = subtitle
 	titles.add_child(subtitle)
 	row.add_child(titles)
 
-	var spacer := Control.new()
-	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(spacer)
-
 	month_controls = HBoxContainer.new()
-	month_controls.add_theme_constant_override("separation", 4)
+	month_controls.visible = false
+	month_controls.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var month_button := Button.new()
+	month_edit_button = month_button
+	month_button.text = ""
+	month_button.custom_minimum_size.y = 66
+	month_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	month_button.add_theme_stylebox_override("normal", _style(Color("#0d1218f4"), 15, Color("#6f4935")))
+	month_button.pressed.connect(_open_setup)
+	var month_content := HBoxContainer.new()
+	month_content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	month_content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	month_content.add_theme_constant_override("margin_left", 18)
+	month_content.add_theme_constant_override("margin_right", 18)
+	var month_icon := Label.new()
+	month_icon.text = "▣"
+	month_icon.custom_minimum_size.x = 48
+	month_icon.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	month_icon.add_theme_font_size_override("font_size", 27)
+	month_icon.add_theme_color_override("font_color", Color("#d58b5e"))
+	month_content.add_child(month_icon)
+	month_selector_label = Label.new()
+	month_selector_label.text = "August 2026"
+	month_selector_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	month_selector_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	month_selector_label.add_theme_font_size_override("font_size", 22)
+	month_selector_label.add_theme_color_override("font_color", Color("#f0d3ae"))
+	month_content.add_child(month_selector_label)
+	var chevron := Label.new()
+	chevron.text = "⌄"
+	chevron.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	chevron.add_theme_font_size_override("font_size", 28)
+	chevron.add_theme_color_override("font_color", Color("#f0d3ae"))
+	month_content.add_child(chevron)
+	month_button.add_child(month_content)
+	month_controls.add_child(month_button)
 	row.add_child(month_controls)
 
-	var previous_month := Button.new()
-	previous_month.text = "‹"
-	previous_month.tooltip_text = "Vorheriger Monat"
-	previous_month.custom_minimum_size = Vector2(48, 48)
-	previous_month.add_theme_font_size_override("font_size", 24)
-	previous_month.pressed.connect(_request_month_change.bind(-1))
-	month_controls.add_child(previous_month)
-
-	var current_month := Label.new()
-	current_month.text = "Monat"
-	current_month.custom_minimum_size.x = 130
-	current_month.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	current_month.add_theme_font_size_override("font_size", 18)
-	current_month.add_theme_color_override("font_color", COLORS.text)
-	month_selector_label = current_month
-	month_controls.add_child(current_month)
-
-	var next_month := Button.new()
-	next_month.text = "›"
-	next_month.tooltip_text = "Nächster Monat"
-	next_month.custom_minimum_size = Vector2(48, 48)
-	next_month.add_theme_font_size_override("font_size", 24)
-	next_month.pressed.connect(_request_month_change.bind(1))
-	month_controls.add_child(next_month)
-
-	var edit_button := Button.new()
-	edit_button.text = "Monat einrichten"
-	edit_button.custom_minimum_size = Vector2(160, 48)
-	month_edit_button = edit_button
-	edit_button.add_theme_font_size_override("font_size", 16)
-	edit_button.add_theme_color_override("font_color", Color("#1a1117"))
-	edit_button.add_theme_stylebox_override("normal", _style(COLORS.accent, 14))
-	edit_button.add_theme_stylebox_override("hover", _style(Color("#f0d8ad"), 14))
-	edit_button.pressed.connect(_open_setup)
-	month_controls.add_child(edit_button)
-
+	var metrics := HBoxContainer.new()
+	desktop_metric_row = metrics
+	metrics.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	metrics.alignment = BoxContainer.ALIGNMENT_END
+	metrics.add_theme_constant_override("separation", 12)
+	metrics.add_child(_build_dashboard_metric_card("balance", "Kontostand", "◉", Color("#d8a35f")))
+	metrics.add_child(_build_dashboard_metric_card("fixed_costs_total", "Fixkosten reserviert", "◯", Color("#d58b5e")))
+	metrics.add_child(_build_dashboard_metric_card("freely_available", "Frei verfügbar", "✷", Color("#d58b5e")))
+	metrics.add_child(_build_dashboard_metric_card("weekly_free_budget", "Wochenbudget", "◌", Color("#d8a35f")))
+	row.add_child(metrics)
 	return row
 
+
+func _build_dashboard_metric_card(key: String, title_text: String, symbol: String, accent: Color) -> Control:
+	var card := PanelContainer.new()
+	card.custom_minimum_size = Vector2(190, 98)
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.add_theme_stylebox_override("panel", _style(Color("#0d1218f2"), 15, Color("#47352c")))
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("margin_left", 14)
+	column.add_theme_constant_override("margin_right", 14)
+	column.add_theme_constant_override("margin_top", 12)
+	column.add_theme_constant_override("margin_bottom", 10)
+	column.add_theme_constant_override("separation", 4)
+	card.add_child(column)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	column.add_child(row)
+	var icon := Label.new()
+	icon.text = symbol
+	icon.custom_minimum_size = Vector2(40, 40)
+	icon.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	icon.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	icon.add_theme_font_size_override("font_size", 30)
+	icon.add_theme_color_override("font_color", accent)
+	row.add_child(icon)
+	var labels := VBoxContainer.new()
+	labels.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var caption := Label.new()
+	caption.text = title_text
+	caption.add_theme_font_size_override("font_size", 12)
+	caption.add_theme_color_override("font_color", Color("#b9b1ac"))
+	labels.add_child(caption)
+	var value := Label.new()
+	value.text = "0,00 €"
+	value.add_theme_font_override("font", display_font)
+	value.add_theme_font_size_override("font_size", 23)
+	value.add_theme_color_override("font_color", Color("#f0d3ae") if key != "freely_available" else Color("#d98a5c"))
+	labels.add_child(value)
+	summary_values[key] = value
+	row.add_child(labels)
+	var progress := ProgressBar.new()
+	progress.value = 58.0 if key != "freely_available" else 82.0
+	progress.show_percentage = false
+	progress.custom_minimum_size.y = 4
+	progress.add_theme_stylebox_override("background", _style(Color("#24272a"), 2))
+	progress.add_theme_stylebox_override("fill", _style(Color("#e3c09f"), 2))
+	column.add_child(progress)
+	return card
 
 func _build_summary() -> Control:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size.x = 345
-	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 18, Color("#684853")))
+	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 18, Color("#5b4031")))
 
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 4)
@@ -1608,10 +1736,10 @@ func _build_summary() -> Control:
 		["fixed_costs_total", "Für Fixkosten reserviert", COLORS.warning],
 		["available_now", "Aktuell verfügbar", COLORS.success],
 		["freely_available", "Nach allen Fixkosten frei", COLORS.accent],
-		["weekly_free_budget", "Wochenbudget", Color("#59bde8")],
+		["weekly_free_budget", "Wochenbudget", Color("#9aa7c8")],
 		["weekly_expenses", "Diese Woche ausgegeben", COLORS.warning],
-		["weekly_budget_remaining", "Diese Woche noch übrig", Color("#59bde8")],
-		["after_savings", "Nach Sparziel verfügbar", Color("#b39dfa")],
+		["weekly_budget_remaining", "Diese Woche noch übrig", Color("#9aa7c8")],
+		["after_savings", "Nach Sparziel verfügbar", Color("#b99ac3")],
 	]
 	for definition in definitions:
 		column.add_child(HSeparator.new())
@@ -1693,7 +1821,7 @@ func _summary_row(key: String, title_text: String, accent: Color) -> Control:
 func _build_week_strip() -> Control:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size.y = 100
-	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 16, Color("#684853")))
+	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 16, Color("#5b4031")))
 
 	var row := BoxContainer.new()
 	row.vertical = false
@@ -1710,7 +1838,7 @@ func _build_week_strip() -> Control:
 		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		card.add_theme_stylebox_override(
 			"panel",
-			_style(Color("#0c3c45"), 14, Color("#1c6870"))
+			_style(Color("#211d2d"), 14, Color("#5b4031"))
 		)
 		var text := Label.new()
 		text.text = "Woche %d\nEinkaufsrahmen: 70,00 €" % week
@@ -1738,7 +1866,7 @@ func _build_fixed_costs_page() -> Control:
 	art.texture = load("res://assets/space/cosmic-star-atlas-background.png")
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	art.modulate = Color(1.0, 1.0, 1.0, 0.72)
+	art.modulate = Color(1.0, 1.0, 1.0, 0.52)
 	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	page.add_child(art)
@@ -1771,7 +1899,7 @@ func _build_fixed_costs_page() -> Control:
 	subtitle.text = "Wiederkehrende Kosten"
 	subtitle.add_theme_font_override("font", display_font)
 	subtitle.add_theme_font_size_override("font_size", 17)
-	subtitle.add_theme_color_override("font_color", Color("#d7bf88"))
+	subtitle.add_theme_color_override("font_color", Color("#c8b7a6"))
 	fixed_cost_month_label = subtitle
 	titles.add_child(subtitle)
 	header.add_child(titles)
@@ -1782,14 +1910,14 @@ func _build_fixed_costs_page() -> Control:
 	back_button.text = "←  Zurück"
 	back_button.custom_minimum_size = Vector2(150, 42)
 	back_button.add_theme_color_override("font_color", Color("#e4ca8c"))
-	back_button.add_theme_stylebox_override("normal", _ornament_button_style(Color("#091e22d8")))
+	back_button.add_theme_stylebox_override("normal", _ornament_button_style(Color("#161522d8")))
 	back_button.pressed.connect(_navigate_back)
 	header.add_child(back_button)
 	var add_button := Button.new()
 	add_button.text = "＋  Fixkosten hinzufügen"
 	add_button.custom_minimum_size = Vector2(195, 42)
 	add_button.add_theme_color_override("font_color", Color("#20150a"))
-	add_button.add_theme_stylebox_override("normal", _ornament_button_style(Color("#dfbd6a")))
+	add_button.add_theme_stylebox_override("normal", _ornament_button_style(Color("#f0d3ae")))
 	add_button.pressed.connect(_open_add_cost)
 	header.add_child(add_button)
 
@@ -1898,15 +2026,15 @@ func _build_book_navigation(page: Control, active_page: String) -> void:
 		button.add_theme_font_size_override("font_size", 16)
 		button.add_theme_color_override(
 			"font_color",
-			Color("#efbd5b") if item[1] == active_page else Color("#d9c99d")
+			Color("#f0d3ae") if item[1] == active_page else Color("#aaa4a4")
 		)
 		button.add_theme_stylebox_override(
 			"normal",
-			_style(Color("#07131422"), 12, Color.TRANSPARENT)
+			_style(Color("#15131e22"), 12, Color.TRANSPARENT)
 		)
 		button.add_theme_stylebox_override(
 			"hover",
-			_style(Color("#0d2f2dbb"), 12, Color("#b88a43"))
+			_style(Color("#2c2333bb"), 12, Color("#5b4031"))
 		)
 		button.pressed.connect(_show_page.bind(item[1]))
 		nav.add_child(button)
@@ -1927,19 +2055,19 @@ func _build_book_navigation(page: Control, active_page: String) -> void:
 	var save_button := Button.new()
 	save_button.text = "▣  Daten sichern"
 	save_button.add_theme_color_override("font_color", Color("#dfc98f"))
-	save_button.add_theme_stylebox_override("normal", _ornament_button_style(Color("#07191ad9")))
+	save_button.add_theme_stylebox_override("normal", _ornament_button_style(Color("#121321d9")))
 	save_button.pressed.connect(_create_data_backup)
 	utilities.add_child(save_button)
 	var restore_button := Button.new()
 	restore_button.text = "↶  Wiederherstellen"
 	restore_button.add_theme_color_override("font_color", Color("#dfc98f"))
-	restore_button.add_theme_stylebox_override("normal", _ornament_button_style(Color("#07191ad9")))
+	restore_button.add_theme_stylebox_override("normal", _ornament_button_style(Color("#121321d9")))
 	restore_button.pressed.connect(_open_restore_dialog)
 	utilities.add_child(restore_button)
 	var update_button := Button.new()
 	update_button.text = "◌  Updates suchen"
 	update_button.add_theme_color_override("font_color", Color("#dfc98f"))
-	update_button.add_theme_stylebox_override("normal", _ornament_button_style(Color("#07191ad9")))
+	update_button.add_theme_stylebox_override("normal", _ornament_button_style(Color("#121321d9")))
 	update_button.pressed.connect(_request_manual_update_check)
 	utilities.add_child(update_button)
 
@@ -1948,7 +2076,10 @@ func _fixed_summary_card(key: String, title_text: String, accent: Color) -> Cont
 	var panel := PanelContainer.new()
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	panel.custom_minimum_size.y = 112
-	panel.add_theme_stylebox_override("panel", _style(Color.TRANSPARENT, 0))
+	panel.add_theme_stylebox_override(
+		"panel",
+		_style(Color("#0d1218e8"), 18, Color(accent, 0.55))
+	)
 
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 14)
@@ -1961,7 +2092,7 @@ func _fixed_summary_card(key: String, title_text: String, accent: Color) -> Cont
 	emblem_panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	emblem_panel.add_theme_stylebox_override(
 		"panel",
-		_style(Color("#071f21cc"), 31, Color(accent, 0.75))
+		_style(Color("#181725cc"), 31, Color(accent, 0.75))
 	)
 	var emblem := Label.new()
 	emblem.text = {
@@ -1983,7 +2114,7 @@ func _fixed_summary_card(key: String, title_text: String, accent: Color) -> Cont
 	title.text = title_text
 	title.add_theme_font_override("font", display_font)
 	title.add_theme_font_size_override("font_size", 17)
-	title.add_theme_color_override("font_color", Color("#d9c89e"))
+	title.add_theme_color_override("font_color", Color("#aaa4a4"))
 	column.add_child(title)
 
 	var value := Label.new()
@@ -2025,7 +2156,7 @@ func _build_fixed_cost_row(cost: Dictionary) -> Control:
 	row_panel.custom_minimum_size.y = 205 if _compact_layout else 76
 	row_panel.add_theme_stylebox_override(
 		"panel",
-		_style(Color("#17131ef2"), 18, Color("#b8734b"))
+		_style(Color("#17131ef2"), 18, Color("#d58b5e"))
 	)
 
 	var row := BoxContainer.new()
@@ -2045,14 +2176,14 @@ func _build_fixed_cost_row(cost: Dictionary) -> Control:
 	category_emblem_panel.custom_minimum_size = Vector2(48, 48)
 	category_emblem_panel.add_theme_stylebox_override(
 		"panel",
-		_style(Color("#173638"), 24, Color("#b58a45"))
+		_style(Color("#221d2b"), 24, Color("#a57b65"))
 	)
 	var category_emblem := TextureRect.new()
 	category_emblem.texture = load("res://assets/icons/fixed-costs.svg")
 	category_emblem.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	category_emblem.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	category_emblem.custom_minimum_size = Vector2(30, 30)
-	category_emblem.modulate = Color("#1fd3c2")
+	category_emblem.modulate = Color("#f0d3ae")
 	category_emblem_panel.add_child(category_emblem)
 	identity.add_child(category_emblem_panel)
 	var identity_text := VBoxContainer.new()
@@ -2071,7 +2202,7 @@ func _build_fixed_cost_row(cost: Dictionary) -> Control:
 	}.get(str(cost.get("frequency", "monthly")), "Monatlich")
 	if not bool(cost.get("due_this_month", true)):
 		recurring.text += " · diesen Monat nicht fällig"
-	recurring.add_theme_color_override("font_color", Color("#a9c5bf"))
+	recurring.add_theme_color_override("font_color", Color("#aaa4a4"))
 	identity_text.add_child(recurring)
 	identity.add_child(identity_text)
 	row.add_child(identity)
@@ -2119,12 +2250,12 @@ func _build_fixed_cost_row(cost: Dictionary) -> Control:
 	paid.add_theme_color_override("font_color", Color("#e9dbb7"))
 	paid.add_theme_color_override("font_hover_color", Color.WHITE)
 	paid.add_theme_color_override("font_pressed_color", Color.WHITE)
-	var paid_status_style := _style(Color("#082c31ef"), 9, Color("#8e723f"))
+	var paid_status_style := _style(Color("#201a29ef"), 9, Color("#5b4031"))
 	paid_status_style.content_margin_top = 6
 	paid_status_style.content_margin_bottom = 6
 	paid.add_theme_stylebox_override("normal", paid_status_style)
-	paid.add_theme_stylebox_override("hover", _style(Color("#10444a"), 9, Color("#b48b4d")))
-	paid.add_theme_stylebox_override("pressed", _style(Color("#0a6262"), 9, COLORS.accent))
+	paid.add_theme_stylebox_override("hover", _style(Color("#2d2232"), 9, Color("#9a7480")))
+	paid.add_theme_stylebox_override("pressed", _style(Color("#3a2736"), 9, COLORS.accent))
 	paid.toggled.connect(_toggle_fixed_cost.bind(str(cost.id)))
 	payment_status.add_child(paid)
 	var progress := ProgressBar.new()
@@ -2134,8 +2265,8 @@ func _build_fixed_cost_row(cost: Dictionary) -> Control:
 	progress.custom_minimum_size.y = 13
 	progress.add_theme_font_size_override("font_size", 10)
 	progress.add_theme_color_override("font_color", COLORS.text)
-	progress.add_theme_stylebox_override("background", _style(Color("#b99b6970"), 6))
-	progress.add_theme_stylebox_override("fill", _style(Color("#0aa89b"), 6))
+	progress.add_theme_stylebox_override("background", _style(Color("#5f526d70"), 6))
+	progress.add_theme_stylebox_override("fill", _style(Color("#d58b5e"), 6))
 	payment_status.add_child(progress)
 	row.add_child(payment_status)
 
@@ -2221,7 +2352,7 @@ func _build_savings_page() -> Control:
 	art.texture = load("res://assets/space/cosmic-star-atlas-background.png")
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	art.modulate = Color(1.0, 1.0, 1.0, 0.72)
+	art.modulate = Color(1.0, 1.0, 1.0, 0.52)
 	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	page.add_child(art)
@@ -2250,7 +2381,7 @@ func _build_savings_page() -> Control:
 	subtitle.text = "Baue deine Rücklagen Schritt für Schritt auf"
 	subtitle.add_theme_font_override("font", display_font)
 	subtitle.add_theme_font_size_override("font_size", 17)
-	subtitle.add_theme_color_override("font_color", Color("#d7bf88"))
+	subtitle.add_theme_color_override("font_color", Color("#c8b7a6"))
 	titles.add_child(subtitle)
 	header.add_child(titles)
 	var spacer := Control.new()
@@ -2260,14 +2391,14 @@ func _build_savings_page() -> Control:
 	back_button.text = "←  Zurück"
 	back_button.custom_minimum_size = Vector2(150, 42)
 	back_button.add_theme_color_override("font_color", Color("#e4ca8c"))
-	back_button.add_theme_stylebox_override("normal", _ornament_button_style(Color("#091e22d8")))
+	back_button.add_theme_stylebox_override("normal", _ornament_button_style(Color("#161522d8")))
 	back_button.pressed.connect(_navigate_back)
 	header.add_child(back_button)
 	var add_button := Button.new()
 	add_button.text = "＋  Sparziel hinzufügen"
 	add_button.custom_minimum_size = Vector2(195, 42)
 	add_button.add_theme_color_override("font_color", Color("#20150a"))
-	add_button.add_theme_stylebox_override("normal", _ornament_button_style(Color("#dfbd6a")))
+	add_button.add_theme_stylebox_override("normal", _ornament_button_style(Color("#f0d3ae")))
 	add_button.pressed.connect(_open_add_goal)
 	header.add_child(add_button)
 
@@ -2287,7 +2418,7 @@ func _build_savings_page() -> Control:
 		_savings_summary_card("saved", "Bereits gespart", COLORS.success)
 	)
 	savings_summary_row.add_child(
-		_savings_summary_card("remaining", "Bis zu allen Zielen", Color("#b39dfa"))
+		_savings_summary_card("remaining", "Bis zu allen Zielen", Color("#b99ac3"))
 	)
 	savings_summary_row.add_child(
 		_savings_summary_card("monthly", "Monatlich reserviert", COLORS.accent)
@@ -2296,7 +2427,7 @@ func _build_savings_page() -> Control:
 
 	var list_panel := PanelContainer.new()
 	savings_list_panel = list_panel
-	list_panel.add_theme_stylebox_override("panel", _glass_relic_style(Color("#8f70e8")))
+	list_panel.add_theme_stylebox_override("panel", _glass_relic_style(Color("#b8799c")))
 	list_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
 	list_panel.anchor_left = 0.158
 	list_panel.anchor_top = 0.325
@@ -2333,8 +2464,8 @@ func _savings_summary_card(key: String, title_text: String, accent: Color) -> Co
 	var panel := PanelContainer.new()
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	panel.custom_minimum_size.y = 112
-	var plaque_content_style := _style(Color.TRANSPARENT, 0)
-	plaque_content_style.content_margin_left = 82 if key == "saved" else 42
+	var plaque_content_style := _style(Color("#0d1218e8"), 18, Color(accent, 0.55))
+	plaque_content_style.content_margin_left = 18
 	plaque_content_style.content_margin_right = 18
 	panel.add_theme_stylebox_override("panel", plaque_content_style)
 
@@ -2343,7 +2474,7 @@ func _savings_summary_card(key: String, title_text: String, accent: Color) -> Co
 	title.text = title_text
 	title.add_theme_font_override("font", display_font)
 	title.add_theme_font_size_override("font_size", 17)
-	title.add_theme_color_override("font_color", Color("#d9c89e"))
+	title.add_theme_color_override("font_color", Color("#aaa4a4"))
 	column.add_child(title)
 
 	var value := Label.new()
@@ -2381,7 +2512,7 @@ func _rebuild_savings_rows() -> void:
 func _build_savings_goal_card(goal: Dictionary) -> Control:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size.y = 190 if _compact_layout else 0
-	var card_style := _style(Color("#17131ef2"), 18, Color("#b8734b"))
+	var card_style := _style(Color("#17131ef2"), 18, Color("#d58b5e"))
 	card_style.content_margin_left = 18
 	card_style.content_margin_right = 18
 	card_style.content_margin_top = 14
@@ -2416,8 +2547,8 @@ func _build_savings_goal_card(goal: Dictionary) -> Control:
 	progress.value = float(goal.saved_amount)
 	progress.show_percentage = false
 	progress.custom_minimum_size.y = 18
-	progress.add_theme_stylebox_override("background", _style(Color("#b99b6970"), 8))
-	progress.add_theme_stylebox_override("fill", _style(Color("#0aa89b"), 8))
+	progress.add_theme_stylebox_override("background", _style(Color("#5f526d70"), 8))
+	progress.add_theme_stylebox_override("fill", _style(Color("#d58b5e"), 8))
 	column.add_child(progress)
 
 	var details := Label.new()
@@ -2426,7 +2557,7 @@ func _build_savings_goal_card(goal: Dictionary) -> Control:
 		_money(float(goal.target_amount)),
 		_money(float(goal.monthly_contribution)),
 	]
-	details.add_theme_color_override("font_color", Color("#b8cbc4"))
+	details.add_theme_color_override("font_color", Color("#aaa4a4"))
 	details.add_theme_font_size_override("font_size", 16 if _compact_layout else 15)
 	details.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(details)
@@ -2455,7 +2586,7 @@ func _build_savings_goal_card(goal: Dictionary) -> Control:
 func _build_add_goal_panel() -> PanelContainer:
 	var overlay := PanelContainer.new()
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	overlay.add_theme_stylebox_override("panel", _style(Color(0.01, 0.04, 0.05, 0.92), 0))
+	overlay.add_theme_stylebox_override("panel", _style(Color("#050610eb"), 0))
 
 	var center := CenterContainer.new()
 	overlay.add_child(center)
@@ -2532,7 +2663,7 @@ func _create_savings_money_input() -> SpinBox:
 func _build_deposit_panel() -> PanelContainer:
 	var overlay := PanelContainer.new()
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	overlay.add_theme_stylebox_override("panel", _style(Color(0.01, 0.04, 0.05, 0.92), 0))
+	overlay.add_theme_stylebox_override("panel", _style(Color("#050610eb"), 0))
 
 	var center := CenterContainer.new()
 	overlay.add_child(center)
@@ -2600,7 +2731,7 @@ func _build_transactions_page() -> Control:
 	art.texture = load("res://assets/space/cosmic-star-atlas-background.png")
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	art.modulate = Color(1.0, 1.0, 1.0, 0.72)
+	art.modulate = Color(1.0, 1.0, 1.0, 0.52)
 	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	page.add_child(art)
@@ -2629,7 +2760,7 @@ func _build_transactions_page() -> Control:
 	subtitle.text = "Einnahmen und Ausgaben des ausgewählten Monats"
 	subtitle.add_theme_font_override("font", display_font)
 	subtitle.add_theme_font_size_override("font_size", 17)
-	subtitle.add_theme_color_override("font_color", Color("#d7bf88"))
+	subtitle.add_theme_color_override("font_color", Color("#c8b7a6"))
 	titles.add_child(subtitle)
 	header.add_child(titles)
 	var spacer := Control.new()
@@ -2639,14 +2770,14 @@ func _build_transactions_page() -> Control:
 	back_button.text = "←  Zurück"
 	back_button.custom_minimum_size = Vector2(150, 42)
 	back_button.add_theme_color_override("font_color", Color("#e4ca8c"))
-	back_button.add_theme_stylebox_override("normal", _ornament_button_style(Color("#091e22d8")))
+	back_button.add_theme_stylebox_override("normal", _ornament_button_style(Color("#161522d8")))
 	back_button.pressed.connect(_navigate_back)
 	header.add_child(back_button)
 	var add_button := Button.new()
 	add_button.text = "＋  Buchung hinzufügen"
 	add_button.custom_minimum_size = Vector2(195, 42)
 	add_button.add_theme_color_override("font_color", Color("#20150a"))
-	add_button.add_theme_stylebox_override("normal", _ornament_button_style(Color("#dfbd6a")))
+	add_button.add_theme_stylebox_override("normal", _ornament_button_style(Color("#f0d3ae")))
 	add_button.pressed.connect(_open_add_transaction)
 	header.add_child(add_button)
 
@@ -2669,7 +2800,7 @@ func _build_transactions_page() -> Control:
 		_transaction_summary_card("expenses", "Freie Ausgaben", COLORS.warning)
 	)
 	transaction_summary_row.add_child(
-		_transaction_summary_card("savings", "Sparzahlungen", Color("#b39dfa"))
+		_transaction_summary_card("savings", "Sparzahlungen", Color("#b99ac3"))
 	)
 	transaction_summary_row.add_child(
 		_transaction_summary_card("available", "Aktuell verfügbar", COLORS.accent)
@@ -2749,7 +2880,7 @@ func _build_transaction_mode_tabs() -> Control:
 	var panel := PanelContainer.new()
 	panel.add_theme_stylebox_override(
 		"panel",
-		_style(Color("#07191ddd"), 12, Color("#8a642f"))
+		_style(Color("#0d1218dd"), 12, Color("#5b4031"))
 	)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
@@ -2762,7 +2893,7 @@ func _build_transaction_mode_tabs() -> Control:
 	manual.add_theme_color_override("font_color", Color("#20150a"))
 	manual.add_theme_stylebox_override(
 		"normal",
-		_style(Color("#dfbd6a"), 11, Color("#f2d78d"))
+		_style(Color("#f0d3ae"), 11, Color("#f2d78d"))
 	)
 	row.add_child(manual)
 	var banking := Button.new()
@@ -2972,8 +3103,8 @@ func _transaction_summary_card(key: String, title_text: String, accent: Color) -
 	var panel := PanelContainer.new()
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	panel.custom_minimum_size.y = 105
-	var plaque_content_style := _style(Color.TRANSPARENT, 0)
-	plaque_content_style.content_margin_left = 42
+	var plaque_content_style := _style(Color("#0d1218e8"), 18, Color(accent, 0.55))
+	plaque_content_style.content_margin_left = 18
 	plaque_content_style.content_margin_right = 14
 	panel.add_theme_stylebox_override("panel", plaque_content_style)
 
@@ -2981,7 +3112,7 @@ func _transaction_summary_card(key: String, title_text: String, accent: Color) -
 	var title := Label.new()
 	title.text = title_text
 	title.add_theme_font_override("font", display_font)
-	title.add_theme_color_override("font_color", Color("#d9c89e"))
+	title.add_theme_color_override("font_color", Color("#aaa4a4"))
 	column.add_child(title)
 
 	var value := Label.new()
@@ -3077,7 +3208,7 @@ func _on_weekly_filter_toggled(enabled: bool) -> void:
 func _build_transaction_row(transaction: Dictionary) -> Control:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size.y = 78 if _compact_layout else 0
-	var transaction_style := _style(Color("#17131ef2"), 14, Color("#b8734b"))
+	var transaction_style := _style(Color("#17131ef2"), 14, Color("#d58b5e"))
 	transaction_style.content_margin_left = 8
 	transaction_style.content_margin_right = 8
 	panel.add_theme_stylebox_override("panel", transaction_style)
@@ -3112,7 +3243,7 @@ func _build_transaction_row(transaction: Dictionary) -> Control:
 			3
 		) + 1
 		category.text = "Wochenbudget · Woche %d" % week_number
-	category.add_theme_color_override("font_color", Color("#a9c5bf"))
+	category.add_theme_color_override("font_color", Color("#aaa4a4"))
 	description_column.add_child(category)
 	row.add_child(description_column)
 
@@ -3127,10 +3258,10 @@ func _build_transaction_row(transaction: Dictionary) -> Control:
 	amount.add_theme_font_size_override("font_size", 17 if _compact_layout else 19)
 	amount.add_theme_color_override(
 		"font_color",
-		Color("#e6b85c") if kind == "weekly_credit"
-		else Color("#85dfa0") if kind == "income"
-		else Color("#b39dfa") if kind == "saving"
-		else Color("#ef9a5d")
+		Color("#d99a68") if kind == "weekly_credit"
+		else Color("#9fbe9a") if kind == "income"
+		else Color("#b99ac3") if kind == "saving"
+		else Color("#d99a68")
 	)
 	row.add_child(amount)
 
@@ -3151,7 +3282,7 @@ func _build_transaction_row(transaction: Dictionary) -> Control:
 func _build_add_transaction_panel() -> PanelContainer:
 	var overlay := PanelContainer.new()
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	overlay.add_theme_stylebox_override("panel", _style(Color(0.01, 0.04, 0.05, 0.92), 0))
+	overlay.add_theme_stylebox_override("panel", _style(Color("#050610eb"), 0))
 
 	var center := CenterContainer.new()
 	overlay.add_child(center)
@@ -3310,7 +3441,7 @@ func _build_shopping_page() -> VBoxContainer:
 
 	var list_panel := PanelContainer.new()
 	list_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	list_panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 18, Color("#684853")))
+	list_panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 18, Color("#5b4031")))
 	var list_column := VBoxContainer.new()
 	list_column.add_theme_constant_override("separation", 10)
 	list_column.add_theme_constant_override("margin_left", 18)
@@ -3386,7 +3517,7 @@ func _rebuild_shopping_rows() -> void:
 
 func _build_shopping_row(item: Dictionary, booked: bool) -> Control:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _style(Color("#211923"), 12))
+	panel.add_theme_stylebox_override("panel", _style(Color("#10161c"), 12))
 	var row := HBoxContainer.new()
 	panel.add_child(row)
 
@@ -3439,7 +3570,7 @@ func _build_shopping_row(item: Dictionary, booked: bool) -> Control:
 func _build_add_shopping_item_panel() -> PanelContainer:
 	var overlay := PanelContainer.new()
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	overlay.add_theme_stylebox_override("panel", _style(Color(0.01, 0.04, 0.05, 0.92), 0))
+	overlay.add_theme_stylebox_override("panel", _style(Color("#050610eb"), 0))
 	var center := CenterContainer.new()
 	overlay.add_child(center)
 	var dialog := PanelContainer.new()
@@ -3541,7 +3672,7 @@ func _build_meal_plan_page() -> VBoxContainer:
 
 	var panel := PanelContainer.new()
 	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 18, Color("#684853")))
+	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 18, Color("#5b4031")))
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	panel.add_child(scroll)
@@ -3593,7 +3724,7 @@ func _build_meal_day_row(
 	day: Dictionary
 ) -> Control:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _style(Color("#211923"), 12))
+	panel.add_theme_stylebox_override("panel", _style(Color("#10161c"), 12))
 	var content := VBoxContainer.new()
 	content.add_theme_constant_override("separation", 5)
 	panel.add_child(content)
@@ -3652,13 +3783,13 @@ func _build_meal_day_row(
 func _build_recipe_panel() -> PanelContainer:
 	var overlay := PanelContainer.new()
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	overlay.add_theme_stylebox_override("panel", _style(Color(0.01, 0.04, 0.05, 0.94), 0))
+	overlay.add_theme_stylebox_override("panel", _style(Color("#050610f0"), 0))
 
 	var center := CenterContainer.new()
 	overlay.add_child(center)
 	var dialog := PanelContainer.new()
 	dialog.custom_minimum_size = Vector2(620, 520)
-	dialog.add_theme_stylebox_override("panel", _style(COLORS.panel, 20, Color("#1b6770")))
+	dialog.add_theme_stylebox_override("panel", _style(COLORS.panel, 20, Color("#5b4031")))
 	center.add_child(dialog)
 	recipe_dialog = dialog
 
@@ -3721,12 +3852,12 @@ func _build_recipe_panel() -> PanelContainer:
 func _build_custom_recipe_panel() -> PanelContainer:
 	var overlay := PanelContainer.new()
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	overlay.add_theme_stylebox_override("panel", _style(Color(0.01, 0.04, 0.05, 0.96), 0))
+	overlay.add_theme_stylebox_override("panel", _style(Color("#050610f5"), 0))
 	var center := CenterContainer.new()
 	overlay.add_child(center)
 	var dialog := PanelContainer.new()
 	dialog.custom_minimum_size = Vector2(780, 720)
-	dialog.add_theme_stylebox_override("panel", _style(COLORS.panel, 20, Color("#1b6770")))
+	dialog.add_theme_stylebox_override("panel", _style(COLORS.panel, 20, Color("#5b4031")))
 	center.add_child(dialog)
 	custom_recipe_dialog = dialog
 	var column := VBoxContainer.new()
@@ -3864,7 +3995,7 @@ func _rebuild_custom_recipe_rows() -> void:
 		return
 	for recipe: Dictionary in recipes:
 		var panel := PanelContainer.new()
-		panel.add_theme_stylebox_override("panel", _style(Color("#211923"), 10))
+		panel.add_theme_stylebox_override("panel", _style(Color("#10161c"), 10))
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 8)
 		panel.add_child(row)
@@ -4196,7 +4327,7 @@ func _create_weekly_shopping_need() -> void:
 func _build_balance_panel() -> PanelContainer:
 	var overlay := PanelContainer.new()
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	overlay.add_theme_stylebox_override("panel", _style(Color(0.01, 0.04, 0.05, 0.92), 0))
+	overlay.add_theme_stylebox_override("panel", _style(Color("#050610eb"), 0))
 
 	var center := CenterContainer.new()
 	overlay.add_child(center)
@@ -4260,7 +4391,7 @@ func _build_balance_panel() -> PanelContainer:
 func _build_fixed_payment_panel() -> PanelContainer:
 	var overlay := PanelContainer.new()
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	overlay.add_theme_stylebox_override("panel", _style(Color(0.01, 0.04, 0.05, 0.92), 0))
+	overlay.add_theme_stylebox_override("panel", _style(Color("#050610eb"), 0))
 	var center := CenterContainer.new()
 	overlay.add_child(center)
 	var dialog := PanelContainer.new()
@@ -4318,7 +4449,7 @@ func _build_fixed_payment_panel() -> PanelContainer:
 func _build_confirmation_panel() -> PanelContainer:
 	var overlay := PanelContainer.new()
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	overlay.add_theme_stylebox_override("panel", _style(Color(0.01, 0.04, 0.05, 0.92), 0))
+	overlay.add_theme_stylebox_override("panel", _style(Color("#050610eb"), 0))
 
 	var center := CenterContainer.new()
 	overlay.add_child(center)
@@ -4370,7 +4501,7 @@ func _build_confirmation_panel() -> PanelContainer:
 func _build_add_cost_panel() -> PanelContainer:
 	var overlay := PanelContainer.new()
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	overlay.add_theme_stylebox_override("panel", _style(Color(0.01, 0.04, 0.05, 0.92), 0))
+	overlay.add_theme_stylebox_override("panel", _style(Color("#050610eb"), 0))
 
 	var center := CenterContainer.new()
 	overlay.add_child(center)
@@ -4475,7 +4606,7 @@ func _field_label(text: String) -> Label:
 func _build_month_change_panel() -> PanelContainer:
 	var overlay := PanelContainer.new()
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	overlay.add_theme_stylebox_override("panel", _style(Color(0.01, 0.04, 0.05, 0.92), 0))
+	overlay.add_theme_stylebox_override("panel", _style(Color("#050610eb"), 0))
 
 	var center := CenterContainer.new()
 	overlay.add_child(center)
@@ -4548,7 +4679,7 @@ func _build_month_change_panel() -> PanelContainer:
 func _build_setup_panel() -> PanelContainer:
 	var overlay := PanelContainer.new()
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	overlay.add_theme_stylebox_override("panel", _style(Color(0.01, 0.04, 0.05, 0.92), 0))
+	overlay.add_theme_stylebox_override("panel", _style(Color("#050610eb"), 0))
 
 	var center := CenterContainer.new()
 	overlay.add_child(center)
@@ -4723,12 +4854,12 @@ func _update_month_labels() -> void:
 	var month_name := MonthManager.get_active_month_name()
 	if is_instance_valid(month_selector_label):
 		month_selector_label.text = month_name
+	if is_instance_valid(desktop_month_selector_label):
+		desktop_month_selector_label.text = "%s  ⌄" % month_name
 	if is_instance_valid(dashboard_month_label):
-		dashboard_month_label.text = "%s  ·  Alles Wichtige auf einen Blick" % month_name
+		dashboard_month_label.text = "%s · Alles Wichtige auf einen Blick" % month_name
 	if is_instance_valid(fixed_cost_month_label):
 		fixed_cost_month_label.text = "Wiederkehrende Kosten für %s" % month_name
-
-
 static func _should_use_compact_layout(view_size: Vector2, is_web: bool) -> bool:
 	return view_size.x < 900.0 or (is_web and view_size.y > view_size.x)
 
@@ -4755,19 +4886,17 @@ func _apply_responsive_layout() -> void:
 	var layout_changed := compact != _compact_layout
 	_compact_layout = compact
 
-	sidebar_panel.visible = not compact
+	sidebar_panel.visible = false
 	desktop_backdrop.visible = true
 	mobile_navigation.visible = compact
 	if compact and app_shell.get_child(app_shell.get_child_count() - 1) != mobile_navigation:
 		app_shell.move_child(mobile_navigation, app_shell.get_child_count() - 1)
-	if is_instance_valid(app_local_status):
-		app_local_status.add_theme_font_size_override("font_size", 11 if compact else 12)
 	if is_instance_valid(app_bar):
 		app_bar.visible = true
 	_update_app_bar_layout(compact)
 	if is_instance_valid(settings_margin):
 		for side in ["margin_left", "margin_right"]:
-			settings_margin.add_theme_constant_override(side, 14 if compact else 28)
+			settings_margin.add_theme_constant_override(side, 18 if compact else 28)
 		settings_margin.add_theme_constant_override("margin_top", 14 if compact else 24)
 	if is_instance_valid(settings_header):
 		settings_header.vertical = compact
@@ -4775,64 +4904,69 @@ func _apply_responsive_layout() -> void:
 		settings_header_back.visible = not compact
 	if is_instance_valid(settings_title):
 		settings_title.add_theme_font_size_override("font_size", 32 if compact else 38)
+
+	var dashboard_margin := dashboard_page.get_parent() as MarginContainer
+	if is_instance_valid(dashboard_margin):
+		dashboard_margin.add_theme_constant_override("margin_left", 18 if compact else 24)
+		dashboard_margin.add_theme_constant_override("margin_right", 18 if compact else 24)
+		dashboard_margin.add_theme_constant_override("margin_top", 16 if compact else 14)
+		dashboard_margin.add_theme_constant_override("margin_bottom", 24 if compact else 18)
 	dashboard_header.vertical = compact
+	dashboard_header.add_theme_constant_override("separation", 18 if compact else 20)
 	var dashboard_titles := dashboard_header.get_child(0) as VBoxContainer
-	dashboard_titles.size_flags_horizontal = (
-		Control.SIZE_EXPAND_FILL if compact else Control.SIZE_SHRINK_BEGIN
-	)
+	dashboard_titles.custom_minimum_size.x = 0 if compact else 470
+	dashboard_titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL if compact else Control.SIZE_SHRINK_BEGIN
+	dashboard_titles.alignment = BoxContainer.ALIGNMENT_BEGIN if compact else BoxContainer.ALIGNMENT_CENTER
 	for heading: Label in dashboard_titles.get_children():
-		heading.horizontal_alignment = (
-			HORIZONTAL_ALIGNMENT_CENTER if compact else HORIZONTAL_ALIGNMENT_LEFT
-		)
+		heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	if is_instance_valid(dashboard_title):
 		_update_account_greeting()
-		dashboard_title.add_theme_font_size_override("font_size", 38 if compact else 36)
-	_apply_login_layout()
-	if is_instance_valid(month_selector_label):
-		month_selector_label.custom_minimum_size.x = 150 if compact else 130
-		month_selector_label.add_theme_font_override("font", display_font)
-		month_selector_label.add_theme_font_size_override("font_size", 20 if compact else 18)
+		dashboard_title.add_theme_font_size_override("font_size", 48 if compact else 52)
 	if is_instance_valid(month_controls):
-		month_controls.size_flags_horizontal = (
-			Control.SIZE_SHRINK_CENTER if compact else Control.SIZE_SHRINK_END
-		)
+		month_controls.visible = compact
+		month_controls.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if is_instance_valid(month_edit_button):
-		month_edit_button.text = "⚙" if compact else "Monat einrichten"
-		month_edit_button.custom_minimum_size.x = 52 if compact else 160
-	dashboard_body.vertical = stacked_content
+		month_edit_button.custom_minimum_size = Vector2(0, 66)
+	if is_instance_valid(month_selector_label):
+		month_selector_label.add_theme_font_override("font", interface_font)
+		month_selector_label.add_theme_font_size_override("font_size", 22)
+	if is_instance_valid(desktop_metric_row):
+		desktop_metric_row.visible = not compact
+
+	dashboard_body.vertical = compact or stacked_content
 	mobile_dashboard_metrics.visible = compact
 	mobile_dashboard_actions.visible = compact
-	summary_panel.visible = not compact
+	summary_panel.visible = true
 	month_flow_panel.visible = not compact
 	if compact:
 		dashboard_body.move_child(mobile_dashboard_metrics, 0)
 		dashboard_body.move_child(world_view, 1)
 		dashboard_body.move_child(mobile_dashboard_actions, 2)
-	elif dashboard_body.get_child(0) != world_view:
+		dashboard_body.move_child(summary_panel, 3)
+	else:
 		dashboard_body.move_child(world_view, 0)
 		dashboard_body.move_child(summary_panel, 1)
 	if world_view.has_method("set_compact_mode"):
 		world_view.set_compact_mode(compact)
 	if is_instance_valid(weekly_planning_page):
-		weekly_planning_page.set_compact_mode(compact)
+		weekly_planning_page.set_compact_mode(compact or responsive_size.x < 1180.0)
 	if is_instance_valid(banking_panel):
 		banking_panel.set_compact(compact)
-	if is_instance_valid(week_cards):
-		week_cards.vertical = compact
 	fixed_header.vertical = false
 	fixed_summary_row.vertical = false
 	fixed_list_header.visible = not compact
 
 	world_view.custom_minimum_size = (
-		Vector2(0, 320) if compact
-		else Vector2(0, 500) if stacked_content
-		else Vector2(700, clampf(responsive_size.y - 260.0, 620.0, 900.0))
+		Vector2(0, clampf(responsive_size.x * 1.38, 520.0, 610.0))
+		if compact
+		else Vector2(0, 520.0)
+		if stacked_content
+		else Vector2(760, 520)
 	)
-	summary_panel.custom_minimum_size.x = 0 if stacked_content else 345
-
-	dashboard_header.custom_minimum_size.y = 0 if compact else 74
+	summary_panel.custom_minimum_size = Vector2(0, 600) if compact else Vector2(385, 520)
+	dashboard_header.custom_minimum_size.y = 220 if compact else 126
 	fixed_header.custom_minimum_size.y = 0 if compact else 82
-
+	_apply_login_layout()
 	var dialog_width := maxf(responsive_size.x - 32.0, 280.0)
 	if is_instance_valid(add_cost_dialog):
 		add_cost_dialog.custom_minimum_size.x = minf(540.0, dialog_width)
@@ -5067,10 +5201,10 @@ func _book_art_cover_scale(page_size: Vector2) -> float:
 func _style_mobile_section_label(label: Label, compact: bool) -> void:
 	label.add_theme_color_override("font_color", Color("#f0d99b"))
 	label.add_theme_color_override(
-		"font_outline_color", Color("#021318e8") if compact else Color.TRANSPARENT
+		"font_outline_color", Color("#090a13e8") if compact else Color.TRANSPARENT
 	)
 	label.add_theme_constant_override("outline_size", 4 if compact else 0)
-	var label_style := _style(Color("#031a20cc"), 10, Color("#9f7738"))
+	var label_style := _style(Color("#11121ecc"), 10, Color("#5b4031"))
 	label_style.content_margin_left = 10
 	label_style.content_margin_right = 10
 	label_style.content_margin_top = 5
@@ -5121,11 +5255,11 @@ func _style_mobile_book_header(header: BoxContainer, compact: bool, mobile_add_t
 		"font_size", 16 if compact else roundi(17 * desktop_scale)
 	)
 	title.add_theme_color_override(
-		"font_outline_color", Color("#021318f2") if compact else Color.TRANSPARENT
+		"font_outline_color", Color("#090a13f2") if compact else Color.TRANSPARENT
 	)
 	title.add_theme_constant_override("outline_size", 5 if compact else 0)
 	subtitle.add_theme_color_override(
-		"font_outline_color", Color("#021318f2") if compact else Color.TRANSPARENT
+		"font_outline_color", Color("#090a13f2") if compact else Color.TRANSPARENT
 	)
 	subtitle.add_theme_constant_override("outline_size", 4 if compact else 0)
 	if compact:
@@ -5152,7 +5286,7 @@ func _style_mobile_book_header(header: BoxContainer, compact: bool, mobile_add_t
 	)
 	if compact:
 		back_button.add_theme_stylebox_override(
-			"normal", _style(Color("#07191def"), 27, Color("#b8734b"))
+			"normal", _style(Color("#0d1218ef"), 27, Color("#d58b5e"))
 		)
 	add_button.text = "+" if compact else (
 		"＋  Fixkosten hinzufügen" if header == fixed_header
@@ -5169,7 +5303,7 @@ func _style_mobile_book_header(header: BoxContainer, compact: bool, mobile_add_t
 	)
 	if compact:
 		add_button.add_theme_stylebox_override(
-			"normal", _style(Color("#dfbd6a"), 27, Color("#f2d78d"))
+			"normal", _style(Color("#f0d3ae"), 27, Color("#f2d78d"))
 		)
 
 
@@ -5189,7 +5323,7 @@ func _style_mobile_fixed_summaries(compact: bool) -> void:
 		card.custom_minimum_size.y = 92 if compact else 112.0 * desktop_scale
 		card.clip_contents = compact
 		card.add_theme_stylebox_override(
-			"panel", _style(Color("#041b22e8"), 16, Color("#b8734b"))
+			"panel", _style(Color("#0d1218e8"), 16, Color("#d58b5e"))
 		)
 		var row := card.get_child(0) as HBoxContainer
 		row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -5252,7 +5386,7 @@ func _style_mobile_simple_summaries(row: BoxContainer, compact: bool) -> void:
 	for index in row.get_child_count():
 		var card := row.get_child(index) as Control
 		card.clip_contents = compact
-		var style := _style(Color("#041b22e8"), 16, Color("#b8734b"))
+		var style := _style(Color("#0d1218e8"), 16, Color("#d58b5e"))
 		style.content_margin_left = 8 if compact else 18
 		style.content_margin_right = 8 if compact else 18
 		style.content_margin_top = 8
@@ -5281,42 +5415,42 @@ func _style_mobile_simple_summaries(row: BoxContainer, compact: bool) -> void:
 
 func _update_mobile_navigation(active_page: String = "") -> void:
 	if active_page.is_empty():
-		active_page = (
-			"fixed_costs" if is_instance_valid(fixed_costs_page) and fixed_costs_page.visible
-			else "weekly_planning" if (
-				is_instance_valid(weekly_planning_page) and weekly_planning_page.visible
-			)
-			else "savings" if is_instance_valid(savings_page) and savings_page.visible
-			else "transactions" if is_instance_valid(transactions_page) and transactions_page.visible
-			else "dashboard"
-		)
+		active_page = _current_page
 	for key: String in mobile_nav_buttons:
 		var button: Button = mobile_nav_buttons[key]
 		var active := key == active_page
 		var label := button.get_meta("mobile_label") as Label
-		var icon := button.get_meta("mobile_icon") as TextureRect
+		var icon := button.get_meta("mobile_icon") as Label
 		label.add_theme_color_override(
-			"font_color", Color("#e4c99a") if active else Color("#d9c99d")
+			"font_color", Color("#f0d3ae") if active else Color("#aaa4a4")
 		)
-		icon.modulate = Color("#e4c99a") if active else Color("#d0aa64")
+		icon.add_theme_color_override(
+			"font_color", Color("#f0d3ae") if active else Color("#d08c62")
+		)
 		button.add_theme_stylebox_override(
 			"normal",
-			_style(Color("#241923cc"), 12, Color("#b8734b")) if active
+			_style(Color("#3a291ee6"), 15, Color("#6f4935")) if active
 			else _style(Color.TRANSPARENT, 0)
 		)
 
-
 func _update_sidebar_navigation(active_page: String) -> void:
 	for key: String in sidebar_nav_buttons:
-		var button: Button = sidebar_nav_buttons[key]
+		var sidebar_button: Button = sidebar_nav_buttons[key]
+		sidebar_button.set_meta("navigation_active", key == active_page)
+	for key: String in desktop_nav_buttons:
+		var button: Button = desktop_nav_buttons[key]
 		var active := key == active_page
 		button.set_meta("navigation_active", active)
-		button.add_theme_stylebox_override(
-			"normal",
-			_style(Color("#0a4952"), 12, Color("#32d8c4")) if active
-			else _style(Color.TRANSPARENT, 12)
+		button.add_theme_color_override(
+			"font_color", Color("#f0d3ae") if active else Color("#aaa4a4")
 		)
-
+		var nav_style := StyleBoxFlat.new()
+		nav_style.bg_color = Color("#15191dcc") if active else Color.TRANSPARENT
+		nav_style.border_color = Color("#d58b5e") if active else Color.TRANSPARENT
+		nav_style.border_width_bottom = 2 if active else 0
+		nav_style.corner_radius_top_left = 10
+		nav_style.corner_radius_top_right = 10
+		button.add_theme_stylebox_override("normal", nav_style)
 
 func _page_title(page: String) -> String:
 	return {
@@ -5330,19 +5464,29 @@ func _page_title(page: String) -> String:
 
 
 func _update_app_bar_layout(compact: bool = _compact_layout) -> void:
+	if is_instance_valid(app_bar):
+		app_bar.custom_minimum_size.y = 90 if compact else 62
 	if is_instance_valid(app_bar_back_button):
 		app_bar_back_button.visible = compact and _current_page != "dashboard"
-	if is_instance_valid(app_bar_leaf):
-		app_bar_leaf.visible = not compact or _current_page == "dashboard"
 	if is_instance_valid(app_bar_title):
-		app_bar_title.text = _page_title(_current_page) if compact else "Meine Budgetwelt"
+		app_bar_title.text = (
+			_page_title(_current_page)
+			if compact and _current_page != "dashboard"
+			else "Meine Budgetwelt"
+		)
+		app_bar_title.custom_minimum_size.x = 0 if compact else 310
+		app_bar_title.add_theme_font_size_override("font_size", 27 if compact else 26)
+	if is_instance_valid(desktop_nav_container):
+		desktop_nav_container.visible = not compact
+	if is_instance_valid(desktop_month_control):
+		desktop_month_control.visible = not compact
 	if is_instance_valid(app_local_status):
-		app_local_status.visible = not compact
+		app_local_status.visible = compact and _current_page == "dashboard"
 	if is_instance_valid(account_button):
-		account_button.visible = not compact
+		account_button.visible = false
 	if is_instance_valid(app_bar_settings_button):
-		app_bar_settings_button.visible = _current_page != "settings"
-
+		app_bar_settings_button.visible = false
+	_update_sidebar_navigation(_current_page)
 
 func _navigate_back() -> void:
 	if _page_history.is_empty():
@@ -5366,7 +5510,7 @@ func _show_page(page: String, remember_history: bool = true) -> void:
 	if is_instance_valid(app_bar):
 		app_bar.visible = true
 	if is_instance_valid(sidebar_panel):
-		sidebar_panel.visible = not _compact_layout
+		sidebar_panel.visible = false
 	if is_instance_valid(mobile_navigation):
 		mobile_navigation.visible = _compact_layout
 	if is_instance_valid(shopping_page):
@@ -5384,15 +5528,6 @@ func _show_page(page: String, remember_history: bool = true) -> void:
 		_rebuild_savings_rows()
 	elif page == "transactions":
 		_rebuild_transaction_rows()
-	elif page == "weekly_planning":
-		weekly_planning_page.refresh_view()
-		weekly_planning_page.set_compact_mode(_compact_layout)
-	elif page == "shopping":
-		_apply_shopping_state()
-		_rebuild_shopping_rows()
-	elif page == "meal_plan":
-		_rebuild_meal_plan_rows()
-
 
 func _show_not_ready(page_name: String) -> void:
 	status_label.text = "%s folgt in einem späteren Entwicklungsschritt." % page_name
@@ -5903,43 +6038,81 @@ func _rebuild_upcoming_costs() -> void:
 	if costs.is_empty():
 		var empty := Label.new()
 		empty.text = "Noch keine Fixkosten eingetragen."
-		empty.add_theme_color_override("font_color", COLORS.muted)
+		empty.add_theme_color_override("font_color", Color("#aaa4a4"))
 		upcoming_cost_list.add_child(empty)
 		return
 
-	for index in mini(costs.size(), 2):
+	var day_names := ["MO", "DI", "MI", "DO", "FR", "SA", "SO"]
+	for index in mini(costs.size(), 6):
 		var cost: Dictionary = costs[index]
+		var paid := bool(cost.get("paid", false))
+		var due_day := int(cost.get("due_day", 1))
 		var row := HBoxContainer.new()
-		row.custom_minimum_size.y = 48
-		var icon := Label.new()
-		icon.text = "✓" if bool(cost.get("paid", false)) else "⌂"
-		icon.custom_minimum_size.x = 30
-		icon.add_theme_font_size_override("font_size", 19)
-		icon.add_theme_color_override(
-			"font_color",
-			COLORS.success if bool(cost.get("paid", false)) else COLORS.warning
-		)
-		row.add_child(icon)
+		row.custom_minimum_size.y = 68
+		row.add_theme_constant_override("separation", 6)
+		var date := VBoxContainer.new()
+		date.custom_minimum_size.x = 38
+		var weekday := Label.new()
+		weekday.text = day_names[(due_day - 1) % 7]
+		weekday.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		weekday.add_theme_font_size_override("font_size", 10)
+		weekday.add_theme_color_override("font_color", Color("#aaa4a4"))
+		date.add_child(weekday)
+		var day := Label.new()
+		day.text = "%02d" % due_day
+		day.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		day.add_theme_font_override("font", display_font)
+		day.add_theme_font_size_override("font_size", 23)
+		day.add_theme_color_override("font_color", Color("#f0d3ae"))
+		date.add_child(day)
+		row.add_child(date)
+		var state := Label.new()
+		state.text = "●"
+		state.custom_minimum_size.x = 12
+		state.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		state.add_theme_color_override("font_color", Color("#73b883") if paid else Color("#d87b75"))
+		row.add_child(state)
+		var emblem := Label.new()
+		emblem.text = _fixed_cost_icon(str(cost.get("category", "Fixkosten")))
+		emblem.custom_minimum_size = Vector2(34, 40)
+		emblem.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		emblem.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		emblem.add_theme_font_size_override("font_size", 21)
+		emblem.add_theme_color_override("font_color", Color("#d58b5e"))
+		row.add_child(emblem)
 		var labels := VBoxContainer.new()
 		labels.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		labels.alignment = BoxContainer.ALIGNMENT_CENTER
 		var name := Label.new()
 		name.text = str(cost.get("name", "Fixkosten"))
-		name.add_theme_color_override("font_color", COLORS.text)
+		name.clip_text = true
+		name.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		name.add_theme_color_override("font_color", Color("#e7d4bf"))
 		labels.add_child(name)
-		var due := Label.new()
-		due.text = "Fällig am %02d." % int(cost.get("due_day", 1))
-		due.add_theme_font_size_override("font_size", 11)
-		due.add_theme_color_override("font_color", COLORS.muted)
-		labels.add_child(due)
+		var category := Label.new()
+		category.text = str(cost.get("category", "Fixkosten"))
+		category.add_theme_font_size_override("font_size", 11)
+		category.add_theme_color_override("font_color", Color("#858489"))
+		labels.add_child(category)
 		row.add_child(labels)
+		var amount_labels := VBoxContainer.new()
+		amount_labels.custom_minimum_size.x = 78
+		amount_labels.alignment = BoxContainer.ALIGNMENT_CENTER
 		var amount := Label.new()
 		amount.text = _money(float(cost.get("amount", 0.0)))
-		amount.add_theme_color_override("font_color", COLORS.text)
-		row.add_child(amount)
+		amount.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		amount.add_theme_color_override("font_color", Color("#e7d4bf"))
+		amount_labels.add_child(amount)
+		var status := Label.new()
+		status.text = "Bezahlt" if paid else "Geplant"
+		status.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		status.add_theme_font_size_override("font_size", 11)
+		status.add_theme_color_override("font_color", Color("#d58b5e") if paid else Color("#858489"))
+		amount_labels.add_child(status)
+		row.add_child(amount_labels)
 		upcoming_cost_list.add_child(row)
-		if index == 0:
+		if index < mini(costs.size(), 6) - 1:
 			upcoming_cost_list.add_child(HSeparator.new())
-
 
 func _apply_fixed_cost_summary(summary: Dictionary) -> void:
 	BudgetManager.update_budget({
@@ -5967,46 +6140,38 @@ func _refresh(snapshot: Dictionary) -> void:
 		var display_value := (
 			float(snapshot.current_balance)
 			if key == "balance"
-			else float(snapshot[key])
+			else float(snapshot.get(key, 0.0))
 		)
-		summary_values[key].text = _money(display_value)
+		var value_label: Label = summary_values[key]
+		value_label.text = _money(display_value)
+
+	var current_balance := float(snapshot.current_balance)
+	var free := float(snapshot.freely_available)
+	var weekly_budget := float(snapshot.weekly_free_budget)
+	var weekly_spent := float(snapshot.weekly_expenses)
+	var weekly_remaining := float(snapshot.get("weekly_budget_remaining", maxf(weekly_budget - weekly_spent, 0.0)))
 	if mobile_dashboard_values.has("balance"):
-		mobile_dashboard_values.balance.text = _money(float(snapshot.current_balance))
-		mobile_dashboard_values.free.text = _money(float(snapshot.freely_available))
-		mobile_dashboard_values.fixed.text = _money(float(snapshot.fixed_costs_total))
-		mobile_dashboard_values.weekly.text = _money(float(snapshot.weekly_free_budget))
-	var week_spending := [0.0, 0.0, 0.0, 0.0]
-	var week_credit := [0.0, 0.0, 0.0, 0.0]
-	for transaction: Dictionary in TransactionManager.get_active_transactions():
-		if str(transaction.get("category", "")) != "Wochenbudget":
-			continue
-		var week_index := mini(
-			floori(float(clampi(int(transaction.get("day", 1)), 1, 31) - 1) / 7.0),
-			3
-		)
-		if str(transaction.get("kind", "")) == "weekly_credit":
-			week_credit[week_index] += float(transaction.get("amount", 0.0))
-		elif str(transaction.get("kind", "")) == "expense":
-			week_spending[week_index] += float(transaction.get("amount", 0.0))
-	var base_weekly_budget := maxf(
-		float(snapshot.weekly_free_budget) - float(snapshot.get("weekly_credit", 0.0)),
-		0.0
-	)
-	for week_index in 4:
-		var weekly_budget := base_weekly_budget + float(week_credit[week_index])
-		var remaining := maxf(weekly_budget - float(week_spending[week_index]), 0.0)
-		var value: Label = dashboard_flow_values.get("week_%d" % week_index)
-		if is_instance_valid(value):
-			value.text = "%s / %s" % [
-				_money(remaining),
-				_money(weekly_budget),
-			]
+		(mobile_dashboard_values.balance as Label).text = _money(current_balance)
+		(mobile_dashboard_values.free as Label).text = _money(free)
+		(mobile_dashboard_values.weekly as Label).text = _money(weekly_budget)
+		(mobile_dashboard_values.weekly_remaining as Label).text = _money(weekly_remaining)
+		(mobile_dashboard_values.weekly_spent_caption as Label).text = "Verbraucht: %s" % _money(weekly_spent)
+		(mobile_dashboard_values.weekly_budget_caption as Label).text = "Wochenbudget: %s" % _money(weekly_budget)
+		var balance_progress := mobile_dashboard_values.balance_progress as ProgressBar
+		balance_progress.value = clampf(free / current_balance * 100.0 if current_balance > 0.0 else 0.0, 0.0, 100.0)
+		var free_progress := mobile_dashboard_values.free_progress as ProgressBar
+		free_progress.value = clampf(free / current_balance * 100.0 if current_balance > 0.0 else 0.0, 0.0, 100.0)
+		var weekly_progress := mobile_dashboard_values.weekly_progress as ProgressBar
+		weekly_progress.value = clampf(weekly_remaining / weekly_budget * 100.0 if weekly_budget > 0.0 else 0.0, 0.0, 100.0)
+		var remaining_progress := mobile_dashboard_values.weekly_remaining_progress as ProgressBar
+		remaining_progress.value = clampf(weekly_spent / weekly_budget * 100.0 if weekly_budget > 0.0 else 0.0, 0.0, 100.0)
+	if is_instance_valid(weekly_budget_chart):
+		weekly_budget_chart.set_data(weekly_budget, weekly_spent, "Diese Woche")
 	if fixed_summary_values.has("free"):
-		fixed_summary_values.free.text = _money(float(snapshot.freely_available))
+		fixed_summary_values.free.text = _money(free)
 	if transaction_summary_values.has("available"):
 		transaction_summary_values.available.text = _money(float(snapshot.available_now))
 	_apply_shopping_state()
-
 
 func _on_update_check_finished(result: Dictionary) -> void:
 	var message := str(result.get("message", "Update-Prüfung abgeschlossen."))
@@ -6136,50 +6301,38 @@ func _style(
 
 
 func _parchment_style() -> StyleBoxFlat:
-	var style := _style(Color("#d9c292f5"), 20, Color("#98713a"))
-	style.border_width_left = 5
-	style.border_width_right = 5
-	style.border_width_top = 3
-	style.border_width_bottom = 6
-	style.content_margin_left = 24
-	style.content_margin_right = 24
-	style.content_margin_top = 16
-	style.content_margin_bottom = 14
-	style.shadow_color = Color("#050302b8")
-	style.shadow_size = 16
+	var style := _style(Color("#0d1218f2"), 20, Color("#5b4031aa"))
+	style.content_margin_left = 20
+	style.content_margin_right = 20
+	style.content_margin_top = 18
+	style.content_margin_bottom = 18
+	style.shadow_color = Color("#00000088")
+	style.shadow_size = 12
 	return style
 
 
 func _parchment_row_style() -> StyleBoxFlat:
-	var style := _style(Color("#fff4d208"), 8, Color("#8e6e3f22"))
-	style.content_margin_left = 10
-	style.content_margin_right = 10
-	style.content_margin_top = 5
-	style.content_margin_bottom = 5
+	var style := _style(Color("#10161caa"), 12, Color("#5b403144"))
+	style.content_margin_left = 12
+	style.content_margin_right = 12
+	style.content_margin_top = 8
+	style.content_margin_bottom = 8
 	return style
 
 
 func _glass_relic_style(accent: Color) -> StyleBoxFlat:
-	var style := _style(Color("#092b2ddb"), 22, Color("#c19a50"))
-	style.border_width_left = 2
-	style.border_width_right = 2
-	style.border_width_top = 2
-	style.border_width_bottom = 2
-	style.shadow_color = Color(accent, 0.22)
-	style.shadow_size = 10
+	var border := Color("#5b4031").lerp(accent, 0.22)
+	var style := _style(Color("#0d1218e8"), 20, Color(border, 0.82))
+	style.shadow_color = Color("#00000088")
+	style.shadow_size = 12
 	return style
 
 
 func _ornament_button_style(background: Color) -> StyleBoxFlat:
-	var style := _style(background, 12, Color("#b68a46"))
-	style.border_width_left = 2
-	style.border_width_right = 2
-	style.border_width_top = 1
-	style.border_width_bottom = 2
-	style.shadow_color = Color("#05030288")
-	style.shadow_size = 4
+	var style := _style(background, 12, Color("#5b4031aa"))
+	style.shadow_color = Color("#00000066")
+	style.shadow_size = 6
 	return style
-
 
 func _fixed_cost_icon(category: String) -> String:
 	match category:

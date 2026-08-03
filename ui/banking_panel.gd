@@ -8,16 +8,16 @@ signal balance_adoption_requested(account_reference: String)
 signal manual_view_requested()
 
 const COLORS := {
-	"panel": Color("#15111bed"),
-	"panel_soft": Color("#211923ee"),
-	"card": Color("#19141ef2"),
-	"accent": Color("#e4c99a"),
-	"gold": Color("#b8734b"),
-	"text": Color("#f5eadb"),
-	"muted": Color("#b9a9ad"),
-	"success": Color("#a9c493"),
-	"warning": Color("#d18a65"),
-	"danger": Color("#c47878"),
+	"panel": Color("#0d1218ed"),
+	"panel_soft": Color("#10161cee"),
+	"card": Color("#181725f2"),
+	"accent": Color("#f0d3ae"),
+	"gold": Color("#d58b5e"),
+	"text": Color("#f0d3ae"),
+	"muted": Color("#aaa4a4"),
+	"success": Color("#9fbe9a"),
+	"warning": Color("#d99a68"),
+	"danger": Color("#d47b7b"),
 }
 
 var _compact := false
@@ -139,7 +139,7 @@ func _rebuild() -> void:
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(background)
 	var shade := ColorRect.new()
-	shade.color = Color("#090b1399")
+	shade.color = Color("#080a0f99")
 	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(shade)
@@ -202,7 +202,7 @@ func _build_header() -> Control:
 
 func _build_section_tabs() -> Control:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _style(Color("#15111bdd"), 15, Color("#6d5835")))
+	panel.add_theme_stylebox_override("panel", _style(Color("#0d1218dd"), 15, Color("#5b4031")))
 	var row := BoxContainer.new()
 	row.vertical = false
 	row.add_theme_constant_override("separation", 8)
@@ -240,7 +240,7 @@ func _build_message_card() -> Control:
 
 func _build_unavailable_card() -> Control:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 18, Color("#8a6a36")))
+	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 18, Color("#d58b5e")))
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 8)
 	panel.add_child(column)
@@ -260,7 +260,7 @@ func _build_unavailable_card() -> Control:
 
 func _build_empty_connection_card() -> Control:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 18, Color("#8a6a36")))
+	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 18, Color("#d58b5e")))
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 10)
 	panel.add_child(column)
@@ -288,7 +288,7 @@ func _build_empty_connection_card() -> Control:
 
 func _build_security_card() -> Control:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _style(Color("#211923e8"), 16, Color("#b8734baa")))
+	panel.add_theme_stylebox_override("panel", _style(Color("#10161ce8"), 16, Color("#d58b5eaa")))
 	var row := BoxContainer.new()
 	row.vertical = _compact
 	row.add_theme_constant_override("separation", 12)
@@ -321,7 +321,7 @@ func _build_security_card() -> Control:
 
 func _build_connection_card() -> Control:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 18, Color("#8a6a36")))
+	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 18, Color("#d58b5e")))
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 10)
 	panel.add_child(column)
@@ -407,7 +407,7 @@ func _build_metrics() -> Control:
 
 func _build_transactions_card() -> Control:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 18, Color("#705a35")))
+	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 18, Color("#5b4031")))
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 9)
 	panel.add_child(column)
@@ -461,7 +461,7 @@ func _build_transactions_card() -> Control:
 
 func _transaction_row(item: Dictionary) -> Control:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _style(COLORS.card, 13, Color("#8a6a5c66")))
+	panel.add_theme_stylebox_override("panel", _style(COLORS.card, 13, Color("#5b403166")))
 	var row := BoxContainer.new()
 	row.vertical = _compact
 	row.add_theme_constant_override("separation", 10)
@@ -504,7 +504,7 @@ func _transaction_row(item: Dictionary) -> Control:
 
 func _build_new_connection_card() -> Control:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _style(Color("#15111bdd"), 16, Color("#5e5948")))
+	panel.add_theme_stylebox_override("panel", _style(Color("#0d1218dd"), 16, Color("#5b4031")))
 	var row := BoxContainer.new()
 	row.vertical = _compact
 	row.add_theme_constant_override("separation", 10)
@@ -532,7 +532,7 @@ func _build_new_connection_card() -> Control:
 func _metric_card(title_text: String, value_text: String, color: Color) -> Control:
 	var panel := PanelContainer.new()
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.add_theme_stylebox_override("panel", _style(Color("#19141ee8"), 15, Color(color, 0.55)))
+	panel.add_theme_stylebox_override("panel", _style(Color("#181725e8"), 15, Color(color, 0.55)))
 	var column := VBoxContainer.new()
 	panel.add_child(column)
 	var title := Label.new()

@@ -58,7 +58,9 @@ function Invoke-GodotChecked {
 
     $engineErrors = @($output | Where-Object {
         $_ -match '(^|\s)(SCRIPT ERROR|ERROR):' -and
-        $_ -notmatch '^ERROR: Failed to read the root certificate store\.$'
+        $_ -notmatch '^ERROR: Failed to read the root certificate store\.$' -and
+        # Godot 4.7 Dummy-Renderer meldet beim sofortigen Testprozess-Ende nur seine RID-Cachebereinigung.
+        $_ -notmatch '^ERROR: \d+ RID allocations of type .* were leaked at exit\.$'
     })
     if ($engineErrors.Count -gt 0) {
         throw "Godot-Pruefung '$Label' enthaelt Engine- oder Skriptfehler. Siehe $logPath"

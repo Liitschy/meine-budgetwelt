@@ -10,15 +10,15 @@ const RecipeCatalog := preload("res://core/recipe_catalog.gd")
 const PackPlanner := preload("res://core/pack_planner.gd")
 
 const COLORS := {
-	"panel": Color("#15111be8"),
-	"panel_soft": Color("#211923ed"),
-	"card": Color("#19141ee8"),
-	"accent": Color("#e4c99a"),
-	"gold": Color("#b8734b"),
-	"text": Color("#f5eadb"),
-	"muted": Color("#b9a9ad"),
-	"success": Color("#a9c493"),
-	"warning": Color("#d18a65"),
+	"panel": Color("#0d1218e8"),
+	"panel_soft": Color("#10161ced"),
+	"card": Color("#181725e8"),
+	"accent": Color("#f0d3ae"),
+	"gold": Color("#d58b5e"),
+	"text": Color("#f0d3ae"),
+	"muted": Color("#aaa4a4"),
+	"success": Color("#9fbe9a"),
+	"warning": Color("#d99a68"),
 }
 
 var _compact := false
@@ -206,7 +206,7 @@ func _build_step_panel() -> Control:
 	var panel := PanelContainer.new()
 	panel.add_theme_stylebox_override(
 		"panel",
-		_style(Color("#15111bdf"), 18, Color("#a97c35"))
+		_style(Color("#0d1218df"), 18, Color("#d58b5e"))
 	)
 	_step_row = BoxContainer.new()
 	_step_row.vertical = false
@@ -227,7 +227,7 @@ func _build_step_panel() -> Control:
 		button.add_theme_stylebox_override(
 			"normal",
 			_style(COLORS.accent, 14, COLORS.gold) if active
-			else _style(Color("#211923aa"), 14, Color("#6a5838"))
+			else _style(Color("#10161caa"), 14, Color("#5b4031"))
 		)
 		button.pressed.connect(_set_step.bind(step_number))
 		_step_buttons.append(button)
@@ -237,7 +237,7 @@ func _build_step_panel() -> Control:
 
 func _build_preview_section_tabs() -> Control:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _style(Color("#15111bdf"), 18, Color("#a97c35")))
+	panel.add_theme_stylebox_override("panel", _style(Color("#0d1218df"), 18, Color("#d58b5e")))
 	var row := BoxContainer.new()
 	row.vertical = false
 	row.add_theme_constant_override("separation", 8)
@@ -253,7 +253,7 @@ func _build_preview_section_tabs() -> Control:
 		button.add_theme_stylebox_override(
 			"normal",
 			_style(COLORS.accent, 14, COLORS.gold)
-			if active else _style(Color("#211923aa"), 14, Color("#6a5838"))
+			if active else _style(Color("#10161caa"), 14, Color("#5b4031"))
 		)
 		button.pressed.connect(_set_active_section.bind(key))
 		row.add_child(button)
@@ -359,7 +359,7 @@ func _build_recipe_library_preview() -> Control:
 func _recipe_preview_card(recipe: Dictionary) -> Control:
 	var card := PanelContainer.new()
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	card.add_theme_stylebox_override("panel", _style(COLORS.card, 16, Color("#806638")))
+	card.add_theme_stylebox_override("panel", _style(COLORS.card, 16, Color("#9b6d60")))
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 8)
 	card.add_child(column)
@@ -715,7 +715,7 @@ func _build_price_library_preview() -> Control:
 
 func _price_preview_row(price: Dictionary) -> Control:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _style(COLORS.card, 14, Color("#6f5b39")))
+	panel.add_theme_stylebox_override("panel", _style(COLORS.card, 14, Color("#5b4031")))
 	var row := BoxContainer.new()
 	row.vertical = _compact
 	row.add_theme_constant_override("separation", 12)
@@ -772,7 +772,7 @@ func _price_preview_row(price: Dictionary) -> Control:
 func _build_personal_price_editor() -> Control:
 	var editing := ShoppingManager.get_personal_price(_editing_price_id)
 	var form := PanelContainer.new()
-	form.add_theme_stylebox_override("panel", _style(COLORS.panel_soft, 15, Color("#6f5b39")))
+	form.add_theme_stylebox_override("panel", _style(COLORS.panel_soft, 15, Color("#5b4031")))
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 8)
 	form.add_child(column)
@@ -1053,7 +1053,7 @@ func _build_input_step() -> Control:
 
 func _build_current_plan_panel() -> Control:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 18, Color("#705a35")))
+	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 18, Color("#5b4031")))
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 10)
 	panel.add_child(column)
@@ -1093,7 +1093,7 @@ func _build_current_plan_panel() -> Control:
 
 func _build_week_selector() -> Control:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 16, Color("#705a35")))
+	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 16, Color("#5b4031")))
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	panel.add_child(row)
@@ -1117,7 +1117,7 @@ func _build_current_shopping_panel() -> Control:
 	var summary := ShoppingManager.get_summary(weekly_budget)
 	var booked := ShoppingManager.is_booked()
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 18, Color("#705a35")))
+	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 18, Color("#5b4031")))
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 12)
 	panel.add_child(column)
@@ -1203,7 +1203,7 @@ func _build_current_shopping_panel() -> Control:
 
 func _build_current_shopping_row(item: Dictionary, booked: bool) -> Control:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _style(COLORS.card, 12, Color("#684853")))
+	panel.add_theme_stylebox_override("panel", _style(COLORS.card, 12, Color("#5b4031")))
 	var row := BoxContainer.new()
 	row.vertical = _compact
 	row.add_theme_constant_override("separation", 8)
@@ -1350,7 +1350,7 @@ func _build_draft_step(draft: Dictionary) -> Control:
 func _build_day_card(day: Dictionary, day_name: String) -> Control:
 	var panel := PanelContainer.new()
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var card_style := _style(COLORS.card, 14, Color("#a9803e"))
+	var card_style := _style(COLORS.card, 14, Color("#d58b5e"))
 	card_style.content_margin_left = 10
 	card_style.content_margin_right = 10
 	panel.add_theme_stylebox_override("panel", card_style)

@@ -479,6 +479,8 @@ func _request_json(
 	return {
 		"code": response_code,
 		"data": parsed if parsed != null else {},
+		"response_text": response_text,
+		"transport_error": OK,
 	}
 
 
@@ -599,6 +601,13 @@ static func _response_message(response: Dictionary, fallback: String) -> String:
 				var messages: Variant = errors[key]
 				if messages is Array and not messages.is_empty():
 					return str(messages[0])
+	var response_code := int(response.get("code", 0))
+	if response_code == 0:
+		return "Der Budgetwelt-Server ist momentan nicht erreichbar."
+	if response_code in [502, 503, 504]:
+		return "Der Budgetwelt-Server ist momentan nicht verfügbar (HTTP %d)." % response_code
+	if response_code >= 400:
+		return "%s (HTTP %d)" % [fallback, response_code]
 	return fallback
 
 
