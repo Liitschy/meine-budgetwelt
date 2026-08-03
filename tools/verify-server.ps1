@@ -161,7 +161,7 @@ try {
     foreach ($adminAsset in @(
         @{ Path = "admin.css"; Type = "text/css" },
         @{ Path = "admin.js"; Type = "javascript" },
-        @{ Path = "budget-world-island.png"; Type = "image/png" }
+        @{ Path = "cosmic-star-atlas-background.png"; Type = "image/png" }
     )) {
         $assetResponse = Invoke-WebRequest `
             -Uri "http://127.0.0.1:$port/admin/$($adminAsset.Path)" `

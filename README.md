@@ -3,13 +3,13 @@
 Eine einfache lokale Windows-Anwendung für Monatsbudget, Fixkosten, Sparziele
 und Buchungen.
 
-Die Startseite stellt das Monatsbudget als lebendige kleine Landschaft dar:
-Der Kontostand speist einen Wasserfall, Fixkosten liegen am Haus und der
-Sparfortschritt lässt den Sparbaum wachsen.
+Die Startseite stellt das Monatsbudget als persönlichen kosmischen Sternenatlas
+dar: Der Kontostand bildet das Zentrum, Fixkosten, Sparziele und frei verfügbares
+Geld liegen als klar lesbare Werte auf umlaufenden Bahnen.
 
-Das visuelle Design verwendet ein dunkles Navy-Türkis, leuchtende Akzente,
-feine Linien-Symbole, elegante Serifentitel und klar gegliederte Karten.
-
+Das verbindliche visuelle Design verwendet fast schwarzes Weltraumblau,
+dunkle violette Glaskarten, Kupfer, Champagner und gedecktes Rosé. App, PWA und
+Administration teilen dieselbe Bildsprache, Serifentitel und Linien-Symbole.
 Das Dashboard umfasst außerdem eine Monatsübersicht, die nächsten fälligen
 Fixkosten und einen kompakten Monatsfluss vom Kontostand bis zum Sparziel.
 

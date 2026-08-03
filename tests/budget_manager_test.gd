@@ -842,7 +842,7 @@ func _test_responsive_layout() -> void:
 		app.world_view,
 		"Landschaft bleibt mobil als zentrales Hauptmotiv erhalten"
 	)
-	_assert_equal(app.summary_panel.visible, false, "Kleine Desktop-Kennzahlenliste ist mobil verborgen")
+	_assert_equal(app.summary_panel.visible, true, "Fixkosten-Timeline bleibt mobil unter dem Wochenbudget erreichbar")
 	_assert_equal(app.mobile_dashboard_actions.visible, true, "Mobile Aktionskarten sind sichtbar")
 	_assert_equal(app.world_view._compact_mode, true, "Landschaft nutzt mobil den aufgeräumten Modus")
 	_assert_equal(
@@ -949,26 +949,26 @@ func _test_responsive_layout() -> void:
 	app.size = Vector2(1440, 900)
 	app._apply_responsive_layout()
 	_assert_equal(app._compact_layout, false, "Desktoplayout bei großer Breite")
-	_assert_equal(app.sidebar_panel.visible, true, "Seitenleiste am Desktop sichtbar")
+	_assert_equal(app.sidebar_panel.visible, false, "Alte Seitenleiste bleibt auch am Desktop entfernt")
 	_assert_equal(app.desktop_backdrop.visible, true, "Landschaft verbindet die Windows-Unterseiten optisch")
 	_assert_equal(app.mobile_navigation.visible, false, "Mobile Navigation am Desktop verborgen")
 	_assert_equal(app.dashboard_body.vertical, false, "Budgetinhalt am Desktop nebeneinander")
 	_assert_equal(app.dashboard_body.get_child(0), app.world_view, "Landschaft steht am Desktop wieder links")
 	app._show_page("weekly_planning")
-	_assert_equal(app.sidebar_panel.visible, true, "Wochenplanung bleibt am Desktop in der Hauptnavigation")
+	_assert_equal(app.desktop_nav_container.visible, true, "Wochenplanung bleibt in der horizontalen Desktopnavigation")
 	_assert_equal(app.app_bar.visible, true, "Kontostatus bleibt über der Desktop-Wochenplanung sichtbar")
 	_assert_equal(
-		app.sidebar_nav_buttons["weekly_planning"].get_meta("navigation_active"),
+		app.desktop_nav_buttons["weekly_planning"].get_meta("navigation_active"),
 		true,
 		"Desktopnavigation markiert den tatsächlich geöffneten Planungsbereich"
 	)
 	_assert_equal(
-		app.sidebar_nav_buttons["dashboard"].get_meta("navigation_active"),
+		app.desktop_nav_buttons["dashboard"].get_meta("navigation_active"),
 		false,
 		"Dashboard-Markierung bleibt auf Unterseiten nicht fälschlich aktiv"
 	)
 	app._show_page("fixed_costs")
-	_assert_equal(app.sidebar_panel.visible, true, "Fixkosten bleiben im gemeinsamen Desktop-Rahmen")
+	_assert_equal(app.desktop_nav_container.visible, true, "Fixkosten bleiben im gemeinsamen Desktop-Rahmen mit Topnavigation")
 	_assert_equal(app.app_bar.visible, true, "Kontostatus bleibt auch über Fixkosten sichtbar")
 	app.size = Vector2(960, 640)
 	app._queue_responsive_layout()
@@ -1013,7 +1013,7 @@ func _test_responsive_layout() -> void:
 		"Wochenplanung kehrt nach dem Maximieren in die Sieben-Spalten-Ansicht zurück"
 	)
 	app._show_page("dashboard")
-	_assert_equal(app.sidebar_nav_buttons.has("settings"), true, "Desktopnavigation enthält Einstellungen")
+	_assert_equal(app.desktop_nav_buttons.has("settings"), true, "Horizontale Desktopnavigation enthält Einstellungen")
 	app._show_page("settings")
 	_assert_equal(app.settings_page.visible, true, "Einstellungen sind als eigene Seite erreichbar")
 	app._navigate_back()
@@ -1051,6 +1051,8 @@ func _test_responsive_layout() -> void:
 	])
 	_assert_equal(weekly_entries.size(), 2, "Wochenbudget-Filter zeigt Ausgaben und Aufladungen")
 	app.queue_free()
+	await get_tree().process_frame
+	await get_tree().process_frame
 
 
 func _assert_equal(actual: Variant, expected: Variant, label: String) -> void:

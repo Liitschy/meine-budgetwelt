@@ -7,7 +7,7 @@ public sealed class LocalAiPlanningOptions
     public string Endpoint { get; init; } =
         "http://127.0.0.1:11434/api/chat";
 
-    public string Model { get; init; } = "qwen3.5:4b";
+    public string Model { get; init; } = "qwen3.5:9b";
 
     public int ContextTokens { get; init; } = 16_384;
 

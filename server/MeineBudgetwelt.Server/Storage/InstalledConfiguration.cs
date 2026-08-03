@@ -43,7 +43,7 @@ public static class InstalledConfiguration
             {
                 Enabled = true,
                 Endpoint = "http://127.0.0.1:11434/api/chat",
-                Model = "qwen3.5:4b",
+                Model = "qwen3.5:9b",
                 ContextTokens = 16_384,
                 TimeoutSeconds = 300,
                 KeepAlive = "30m",
@@ -98,11 +98,22 @@ public static class InstalledConfiguration
             {
                 ["Enabled"] = true,
                 ["Endpoint"] = "http://127.0.0.1:11434/api/chat",
-                ["Model"] = "qwen3.5:4b",
+                ["Model"] = "qwen3.5:9b",
                 ["ContextTokens"] = 16_384,
                 ["TimeoutSeconds"] = 300,
                 ["KeepAlive"] = "30m",
             };
+            changed = true;
+        }
+        else if (
+            configuration["LocalAi"] is JsonObject localAi
+            && string.Equals(
+                localAi["Model"]?.GetValue<string>(),
+                "qwen3.5:4b",
+                StringComparison.OrdinalIgnoreCase)
+        )
+        {
+            localAi["Model"] = "qwen3.5:9b";
             changed = true;
         }
 

@@ -1,7 +1,7 @@
 # Codex-Projektübergabe: Meine Budgetwelt
 
-Stand: **0.41.1** vom 3. August 2026;
-veröffentlicht sind Client **0.41.1** und Server **0.1.5**
+Stand: **0.42.0** vom 3. August 2026;
+veröffentlicht sind Client **0.42.0** und Server **0.1.6**
 
 Diese Datei enthält den aktuellen Projektstand und kann zusammen mit dem
 Repository an einen neuen Codex-Task übergeben werden. Repository-Code und
@@ -38,13 +38,12 @@ Den folgenden Text kann man vollständig in einen neuen Codex-Task kopieren:
 > niemals Zahlungen und speichere keine PIN, TAN oder Anbieter-Geheimnisse im
 > Client.
 >
-> Das festgelegte Design ist eine magische Budgetlandschaft mit dunklem
-> Navy-/Petrol-Hintergrund, leuchtendem türkisfarbenem Wasser, goldenen
-> Rahmen, warmen Serifentiteln und dunklen halbtransparenten Glaskarten.
-> Auf dem iPhone bleibt die Landschaft sichtbar. Verwende dort kein großes
-> Buch und keinen flächigen Papierhintergrund. Texte müssen über jedem Teil
-> der Landschaft gut lesbar sein und dürfen Rahmen nicht berühren.
->
+> Das verbindliche Design ist ein eigenständiges Weltraum-Universum: fast
+> schwarzes Weltraumblau, dunkle violette Glaskarten, Kupfer, Champagner und
+> gedecktes Rosé. Der Kontostand bildet im Sternenatlas das Zentrum; Fixkosten,
+> Sparziele und freies Geld liegen auf umlaufenden Bahnen. App, PWA und Admin
+> verwenden exakt dasselbe Designsystem. Alte Insel-, Wasser-, Pergament- oder
+> Türkisflächen dürfen nicht sichtbar mit dem Cosmic-Design gemischt werden.
 > Ändere nur den beauftragten Bereich. Führe danach die Godot-Tests,
 > `git diff --check` und einen passenden Export aus. Veröffentliche, committe,
 > tagge oder pushe nur, wenn ich das ausdrücklich verlange. Berühre keine
@@ -226,12 +225,13 @@ keine Finanzbuchung. Die aktive Woche zeigt anschließend Speiseplan,
 Rezeptdetails und den dauerhaften Wocheneinkauf; Artikel lassen sich manuell
 ergänzen, abhaken und nach Bestätigung löschen. Nur die ausdrücklich abgehakten
 Artikel können über die bestehende Funktion als Monatsausgabe verbucht werden.
-Desktop- und Mobilvorschau wurden freigegeben und aus der echten
-Godot-Oberfläche erneut auf vollständige Darstellung geprüft. Dieser
-Entwicklungsstand ist mit Version 0.41.0 veröffentlicht. Budgetwelt verwendet dafür
-dieselbe lokale Ollama-Laufzeit und `qwen3.5:4b` wie Blenk Voice. Die
-Verbindung ist fest auf `127.0.0.1` begrenzt und benötigt keinen API-Schlüssel.
-
+Desktop- und Mobilvorschau wurden aus der echten Godot-Oberfläche auf
+vollständige Darstellung geprüft. Version 0.41.0 konfigurierte ursprünglich
+`qwen3.5:4b`; auf dem Root-Server ist tatsächlich `qwen3.5:9b` installiert.
+Server 0.1.6 migriert die Konfiguration auf
+`qwen3.5:9b`, erkennt installierte Qwen-Modelle über Ollamas `/api/tags` und
+liefert konkrete Transport-/Providerfehler statt nur einer Sammelmeldung.
+Ollama bleibt serverseitig an Loopback gebunden und benötigt keinen API-Schlüssel.
 Ebenfalls am 2. August 2026 wurde die freigegebene read-only-Bankoberfläche in
 den Buchungsbereich integriert. Der Server speichert Bankfreigaben isoliert,
 ruft über Enable Banking ausschließlich auf Knopfdruck Kontostände und Buchungen ab
@@ -268,46 +268,46 @@ autonom.
 
 ### Gemeinsame Bildsprache
 
-- magische, hochwertige Fantasy-Budgetwelt;
-- dunkles Navy, Petrol und fast schwarzes Blau als Grundfarben;
-- leuchtendes Türkis für Wasser, aktive Zustände und Fortschritt;
-- warmes Gold für Rahmen, Titel und Navigation;
-- Creme nur für gut lesbare Texte;
+- eigenständiges, hochwertiges Weltraum-Universum statt Fantasy-Insel;
+- fast schwarzes Weltraumblau und dunkles Violett als Grundfarben;
+- Kupfer, Champagner, gedecktes Rosé und zurückhaltendes Violett als Akzente;
+- halbtransparente Glaskarten mit feinen, warmen Konturen;
+- Sternenatlas, Konstellationen und Umlaufbahnen als wiederkehrende Motive;
 - elegante Serifenschrift für große Titel und Beträge;
-- klare, größere Touch-Flächen;
-- hochwertige Symbole statt einfacher Platzhalterzeichen, soweit passende
-  Assets vorhanden sind.
+- klare, größere Touch-Flächen und hochwertige Linien-Symbole;
+- keine sichtbare Mischung mit alten Insel-, Wasser-, Türkis-, Buch- oder
+  Pergamentflächen.
 
 ### Windows
 
-- große Landschaft als Mittelpunkt der Budgetseite;
-- seitliche Navigation;
-- Fixkosten, Sparen und Buchungen dürfen die märchenhafte Buch-/Pergamentoptik
-  verwenden;
-- Inhalte müssen im Vollbild die verfügbare Fläche sinnvoll nutzen;
-- keine winzigen, weit auseinandergezogenen Bedienelemente.
+- kosmischer Sternenatlas als Mittelpunkt der Budgetseite;
+- Kontostand zentral, Fixkosten, Sparziele und freies Geld auf Umlaufbahnen;
+- seitliche Navigation und einheitliche Glaskarten in allen Untermenüs;
+- Fixkosten, Sparen, Buchungen, Wochenplanung, Banking und Einstellungen nutzen
+  dieselben Farben, Abstände, Rahmen und Bedienelemente;
+- Inhalte müssen nach jeder Fenstergrößenänderung neu angeordnet werden und die
+  verfügbare Fläche sinnvoll nutzen;
+- keine winzigen oder nur hochskalierten Mobilbedienelemente.
 
-Die drei am 31. Juli 2026 erzeugten Vorschaubilder für Desktop-Login,
-Mobil-Login und angemeldete Startseite wurden ausdrücklich als exakte
-Zielrichtung freigegeben. Die vorhandene zentrale Budgetwelt-Illustration
-bleibt unverändert; Navigation, Anmeldung und Zusammenfassung erhalten den
-gezeigten dunklen Glas-Stil. Die Überschrift wird durch `Guten Morgen`,
-`Guten Tag` oder `Guten Abend` plus Nutzername ersetzt.
+### PWA, iPhone und Android
 
-### iPhone und andere Mobilgeräte
-
-- Hochformat;
-- Landschaft bleibt groß und sichtbar;
-- kein großes offenes Buch und kein vollflächiger Papierhintergrund;
-- dunkle halbtransparente Glaskarten mit goldener Kontur;
-- feste Navigation am unteren Rand mit Budget, Fixkosten, Sparen, Buchungen;
+- echtes Hochformatlayout mit vertikalem Scrollbereich;
+- Sternenatlas bleibt sichtbar, ohne Inhalte oder Texte zu überlagern;
+- dunkle halbtransparente Glaskarten mit Kupfer-/Champagnerkontur;
+- feste Navigation am unteren Rand mit ausreichendem sicheren Abstand;
 - Karten und Listen werden vertikal gestapelt;
-- Texte erhalten bei hellem Hintergrund eine dunkle Kontur oder Glasfläche;
-- ausreichend Abstand zwischen Kennzahlenrahmen und nachfolgendem Text;
-- keine abgeschnittenen Inhalte rechts;
-- keine horizontale Seitennavigation;
-- keine zu kleinen Desktop-Ansichten, die lediglich herunterskaliert werden.
+- keine abgeschnittenen Inhalte rechts und keine horizontale Seitennavigation;
+- keine verkleinerte Desktop-Seite, sondern eigene responsive Größen und
+  Abstände für 390 × 844 und vergleichbare Geräte.
 
+### Administration
+
+- Login, Übersicht, Benutzer, Budgetgruppen, Einladungen, Serverstatus, Updates
+  und Dialoge verwenden exakt dasselbe Cosmic-Glasdesign;
+- die Administration verwendet den Cosmic-Star-Atlas-Hintergrund und keine
+  frühere Budgetinsel;
+- Desktop-Seitennavigation und mobile Bottom-Navigation bleiben funktional und
+  visuell konsistent mit App und PWA.
 ## 6. Technische Basis
 
 - Engine: **Godot 4.7.1**
@@ -317,10 +317,10 @@ gezeigten dunklen Glas-Stil. Die Überschrift wird durch `Guten Morgen`,
 - Landschaftsansicht: `ui/budget_world_view.gd`
 - Renderer: GL Compatibility
 - Desktop-Viewport: 1440 × 900
-- lokaler Entwicklungsstand: 0.41.1
-- lokaler Server-Entwicklungsstand: 0.1.5
-- zuletzt veröffentlichte Serverversion: 0.1.5
-- zuletzt veröffentlichte Version: 0.41.1
+- lokaler Entwicklungsstand: 0.42.0
+- lokaler Server-Entwicklungsstand: 0.1.6
+- zuletzt veröffentlichte Serverversion: 0.1.6
+- zuletzt veröffentlichte Version: 0.42.0
 
 Wichtige Autoloads aus `project.godot`:
 
@@ -362,7 +362,7 @@ werden.
 - `core/update_manager.gd` – Versions- und Update-Prüfung
 - `tests/budget_manager_test.gd` – vorhandene Logiktests
 - `tests/TestRunner.tscn` – Headless-Testeinstieg
-- `assets/world/budget_world_island.png` – zentrale Landschaft
+- `assets/space/cosmic-star-atlas-background.png` – gemeinsamer Sternenatlas-Hintergrund
 - `assets/icons/` – Navigationssymbole
 - `assets/pwa/` – PWA-Symbole
 - `.github/workflows/pages.yml` – PWA-Build und GitHub Pages
@@ -492,7 +492,7 @@ läuft mit serverseitigem Login unter `https://budget.leno.info`.**
 
 Aktuelle Windows-Version:
 
-`https://github.com/unique1986/meine-budgetwelt/releases/download/v0.41.0/Meine-Budgetwelt-Setup-0.41.0.exe`
+`https://github.com/unique1986/meine-budgetwelt/releases/download/v0.42.0/Meine-Budgetwelt-Setup-0.42.0.exe`
 
 Veröffentlichungsablauf:
 
@@ -513,15 +513,10 @@ Versionsnummer, Git-Tag und Dateiname müssen übereinstimmen.
 
 ## 13. Bekannte Einschränkungen
 
-- der gemeinsame Ollama-Durchstichtest auf dem Root-Server steht noch aus; der
-  integrierte Planungsbereich und sein lokaler KI-Vertrag sind mit Version 0.41.0
-  veröffentlicht;
-- die Enable-Banking-Sandbox-App, App-ID und der private Schlüssel sind auf dem
-  Root-Server eingerichtet; Backend, Client, Dublettenschutz und Oberfläche sind
-  geprüft, die erste echte Bankfreigabe und Live-Import-Abnahme stehen noch aus;
-- Version 0.41.0 enthält die neue Wochenplanung; der echte gemeinsame
-  Ollama-Durchstichtest auf dem Root-Server gehört zur abschließenden
-  Live-Abnahme;
+- Server 0.1.6 migriert die alte Modellvorgabe `qwen3.5:4b` auf das auf dem
+  Root-Server installierte `qwen3.5:9b`, erkennt kompatible installierte
+  Qwen-Modelle automatisch und liefert konkrete Providerfehler; der echte
+  Wochenplan muss nach dem automatischen Serverupdate einmal live geprüft werden;
 - keine Codesignatur für die Windows-Dateien; der veröffentlichte Installer
   wird bis zur späteren kostenlosen Signaturlösung per SHA-256 geschützt;
 - die PWA kann auf dem iPhone durch Safari-/Service-Worker-Caches kurzzeitig
@@ -540,7 +535,7 @@ Versionsnummer, Git-Tag und Dateiname müssen übereinstimmen.
 1. Vor jeder Aufgabe `git status`, relevante Dateien und aktuelle Tests prüfen.
 2. Fremde Änderungen im Arbeitsverzeichnis nicht überschreiben oder stageen.
 3. Pro Auftrag nur einen logisch zusammenhängenden Bereich ändern.
-4. Die Landschaft und den festgelegten Fantasy-Stil bewahren.
+4. Das verbindliche Cosmic-Glasdesign in App, PWA und Admin einheitlich bewahren.
 5. Mobil und Windows nicht mit identischen starren Größen behandeln.
 6. Finanzlogik nicht in mehreren UI-Funktionen duplizieren.
 7. Bestehende IDs und gespeicherte JSON-Felder nicht ohne Migration umbenennen.
@@ -557,18 +552,22 @@ Versionsnummer, Git-Tag und Dateiname müssen übereinstimmen.
 
 ## 15. Aktueller Repository-Zustand bei Erstellung dieser Übergabe
 
-- Branch: `main`
-- Versionen: Client `0.41.1`, Server `0.1.5`
-- Cosmic-Star-Atlas-Design für Start, Login, Dashboard und Untermenüs umgesetzt
-- dynamische Fensterneuberechnung und Scrollbarkeit für Windows, Android und iPhone geprüft
-- KI-Wochenplanung stabilisiert und Android-PWA-Anmeldung samt Cacheverhalten korrigiert
-- vor Erstellung dieser Datei bestanden bereits lokale Änderungen an:
-  - `assets/ui/fixed_costs_ledger_background.png.import`
-  - `assets/ui/transactions_ledger_background.png.import`
-
-Diese beiden Importdateien gehörten nicht zur Übergabe und dürfen nicht
-ungeprüft verworfen, gestaget oder committed werden.
-
+- veröffentlichter Stand: Client `0.42.0`, Server `0.1.6`;
+- Arbeitsbranch: `agent/complete-cosmic-ai-fix`;
+- Cosmic-Star-Atlas-Design für App, PWA und die vollständige Administration
+  vereinheitlicht;
+- echte Vorschauen für 1440 × 900 und 390 × 844 für Login, Dashboard,
+  Fixkosten, Sparen, Buchungen, Wochenplanung und Banking erzeugt;
+- Admin-Login und Admin-Dashboard zusätzlich mit Edge in Desktop- und
+  Mobilgröße gerendert;
+- KI-Modellvorgabe auf `qwen3.5:9b` migriert und installierte Qwen-Modelle werden
+  über Ollama erkannt;
+- Client zeigt konkrete Server-/Transportfehler für die KI-Planung;
+- Projekt-, Server-, KI-, Client-Server-, PWA- und Banking-Prüfungen bestanden;
+- die fremde bestehende Löschung `build/.gdignore` gehört nicht zu diesem
+  Auftrag und darf nicht gestaget oder verworfen werden;
+- Veröffentlichung und Installation erst nach ausdrücklicher Freigabe der
+  neuen Vorschaubilder.
 ## 16. Verbindliche Roadmap ab 31. Juli 2026
 
 Die weitere Reihenfolge ist in `docs/ROADMAP.md` festgelegt:

@@ -82,7 +82,7 @@ später ausdrücklich im Client.
 
 Installierte Server aktivieren die lokale KI standardmäßig über
 `LocalAi:Enabled`. Budgetwelt verwendet dieselbe Ollama-Laufzeit und dasselbe
-Modell `qwen3.5:4b` wie Blenk Voice, spricht sie aber ausschließlich direkt
+Modell `qwen3.5:9b` wie Blenk Voice, spricht sie aber ausschließlich direkt
 über `http://127.0.0.1:11434/api/chat` an. Entfernte KI-Adressen werden vom
 Server abgelehnt. Es gibt keinen API-Schlüssel und keine nutzungsabhängigen
 KI-Gebühren. Anfragen erzwingen ein strukturiertes JSON-Schema und werden vor

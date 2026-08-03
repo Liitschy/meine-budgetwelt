@@ -1,27 +1,38 @@
 extends Control
 
-const WORLD_ART := preload("res://assets/space/cosmic-star-atlas-background.png")
+const ORBIT_ART := preload("res://assets/space/financial-orbit-system-v1.png")
+const BACKDROP := Color("#080a0f")
+const PANEL := Color("#0c1116f2")
+const BORDER := Color("#6f4935")
+const CHAMPAGNE := Color("#f0d3ae")
+const COPPER := Color("#d58b5e")
+const MUTED := Color("#afa8a7")
+const ROSE := Color("#c77f82")
 
 var snapshot: Dictionary = {}
-var _time := 0.0
 var _compact_mode := false
-
-const WATER := Color("#0a817e")
-const WATER_LIGHT := Color("#43e0cc")
-const LAND := Color("#264b3d")
-const GRASS := Color("#4c7445")
-const STONE := Color("#40514b")
-const GOLD := Color("#ffc56f")
+var _display_font: Font
+var _interface_font: Font
 
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if DisplayServer.get_name() == "headless":
+		return
 	clip_contents = true
-	set_process(true)
+	_display_font = SystemFont.new()
+	_interface_font = SystemFont.new()
+	(_display_font as SystemFont).font_names = PackedStringArray(["Georgia", "Palatino Linotype"])
+	(_interface_font as SystemFont).font_names = PackedStringArray(["Segoe UI Variable Text", "Segoe UI"])
+	queue_redraw()
 
+
+func _exit_tree() -> void:
+	_display_font = null
+	_interface_font = null
 
 func set_snapshot(value: Dictionary) -> void:
-	snapshot = value
+	snapshot = value.duplicate(true)
 	queue_redraw()
 
 
@@ -32,287 +43,126 @@ func set_compact_mode(value: bool) -> void:
 	queue_redraw()
 
 
-func _process(delta: float) -> void:
-	_time += delta
-	queue_redraw()
-
-
 func _draw() -> void:
-	if snapshot.is_empty():
+	if DisplayServer.get_name() == "headless":
 		return
-
-	var art_size := WORLD_ART.get_size()
-	var view_ratio := size.x / maxf(size.y, 1.0)
-	var art_ratio := art_size.x / art_size.y
-	var contain_scale := minf(size.x / art_size.x, size.y / art_size.y)
-	var cover_scale := maxf(size.x / art_size.x, size.y / art_size.y)
-	var scale_factor := (
-		contain_scale
-		if view_ratio >= art_ratio
-		else lerpf(contain_scale, cover_scale, 0.38)
-	)
-	var rendered_size := art_size * scale_factor
-	var art_rect := Rect2((size - rendered_size) * 0.5, rendered_size)
-	draw_texture_rect(WORLD_ART, art_rect, false)
-
-	if _compact_mode:
+	if size.x < 8.0 or size.y < 8.0:
 		return
-
-	var shimmer := 0.92 + sin(_time * 1.5) * 0.06
-	_draw_income_badge(_art_point(art_rect, Vector2(0.50, 0.105)), shimmer)
-	_draw_fixed_cost_badge(_art_point(art_rect, Vector2(0.315, 0.405)))
-	_draw_savings_badge(_art_point(art_rect, Vector2(0.665, 0.315)))
-	if size.x >= 520.0:
-		_draw_cost_labels(art_rect)
-	_draw_available_badge(_art_point(art_rect, Vector2(0.54, 0.635)), shimmer)
-
-
-func _art_point(rect: Rect2, relative: Vector2) -> Vector2:
-	return rect.position + rect.size * relative
+	var outer := Rect2(Vector2(1, 1), size - Vector2(2, 2))
+	draw_style_box(_panel_style(), outer)
+	var title_size := 25 if _compact_mode else 20
+	_draw_text(Vector2(24, 40 if _compact_mode else 35), "Finanzielle Umlaufbahn  ⓘ", title_size, CHAMPAGNE, _display_font)
+	var art_rect := _art_rect()
+	draw_texture_rect(ORBIT_ART, art_rect, false, Color(1, 1, 1, 0.98))
+	_draw_month_markers(art_rect)
+	_draw_budget_labels(art_rect)
+	if not _compact_mode:
+		_draw_legend()
 
 
-func _draw_income_badge(position: Vector2, shimmer: float) -> void:
-	var box := Rect2(position - Vector2(116, 43), Vector2(232, 86))
-	draw_style_box(
-		_panel_style(Color("#17131ef0"), 42, Color("#e4c99a") * shimmer),
-		box
+func _art_rect() -> Rect2:
+	var top := 50.0 if _compact_mode else 42.0
+	var bottom := 18.0 if _compact_mode else 38.0
+	var available := Rect2(12, top, size.x - 24.0, size.y - top - bottom)
+	if not _compact_mode:
+		return available
+	var edge := minf(available.size.x, available.size.y)
+	return Rect2(
+		available.position + Vector2((available.size.x - edge) * 0.5, 0),
+		Vector2(edge, edge)
 	)
-	_draw_centered_text(position + Vector2(0, -8), "KONTOSTAND", 12, Color("#e4c99a"))
-	_draw_centered_text(position + Vector2(0, 25), _money(float(snapshot.balance)), 25, Color.WHITE)
 
 
-func _draw_fixed_cost_badge(position: Vector2) -> void:
-	var box := Rect2(position - Vector2(91, 34), Vector2(182, 68))
-	draw_style_box(_panel_style(Color("#1a1319ed"), 15, Color("#b8734b")), box)
-	_draw_centered_text(position + Vector2(0, -6), "FIXKOSTEN RESERVIERT", 10, Color("#d8a27f"))
-	_draw_centered_text(position + Vector2(0, 20), _money(float(snapshot.fixed_costs_total)), 19, Color.WHITE)
-
-
-func _draw_savings_badge(position: Vector2) -> void:
-	var box := Rect2(position - Vector2(82, 31), Vector2(164, 62))
-	draw_style_box(_panel_style(Color("#211720ed"), 15, Color("#9a6474")), box)
-	_draw_centered_text(position + Vector2(0, -5), "SPARZIEL", 11, Color("#d6a8b6"))
-	_draw_centered_text(position + Vector2(0, 19), _money(float(snapshot.savings_goal)), 18, Color.WHITE)
-
-
-func _draw_available_badge(position: Vector2, shimmer: float) -> void:
-	var box := Rect2(position - Vector2(116, 36), Vector2(232, 72))
-	draw_style_box(
-		_panel_style(Color("#24151ced"), 17, Color("#e4c99a") * shimmer),
-		box
-	)
-	_draw_centered_text(position + Vector2(0, -8), "NACH ALLEN FIXKOSTEN FREI", 10, Color("#e4c99a"))
-	_draw_centered_text(position + Vector2(0, 21), _money(float(snapshot.freely_available)), 24, Color.WHITE)
-
-
-func _draw_cost_labels(art_rect: Rect2) -> void:
-	var costs: Array = snapshot.get("fixed_costs", [])
-	var positions := [
-		Vector2(0.315, 0.485),
-		Vector2(0.325, 0.565),
-		Vector2(0.335, 0.645),
-		Vector2(0.355, 0.725),
+func _draw_budget_labels(art_rect: Rect2) -> void:
+	var free_amount := float(snapshot.get("freely_available", snapshot.get("available_now", 0.0)))
+	var total := maxf(float(snapshot.get("fixed_costs_total", 0.0)), 0.01)
+	var categories := _category_totals()
+	var positions: Array[Vector2] = [
+		Vector2(0.245, 0.255),
+		Vector2(0.755, 0.365),
+		Vector2(0.285, 0.690),
+		Vector2(0.685, 0.710),
 	]
-	for index in mini(costs.size(), positions.size()):
-		var cost: Dictionary = costs[index]
-		var position := _art_point(art_rect, positions[index])
-		var paid := bool(cost.get("paid", false))
-		var status := "✓ bezahlt" if paid else "• offen"
-		var status_color := Color("#a9c493") if paid else Color("#d18a65")
-		var box := Rect2(position - Vector2(78, 18), Vector2(156, 36))
-		draw_style_box(_panel_style(Color("#15111bc2"), 18, Color("#b8734b59")), box)
-		_draw_centered_text(position + Vector2(0, -2), str(cost.get("name", "Fixkosten")), 11, Color.WHITE)
-		_draw_centered_text(position + Vector2(0, 12), status, 9, status_color)
-
-
-func _draw_sky(center: Vector2, radius: float) -> void:
-	for layer in range(6, 0, -1):
-		draw_circle(
-			center,
-			radius * 1.28 + layer * 18.0,
-			Color(0.10, 0.90, 0.82, 0.012 * float(7 - layer))
-		)
-	for index in range(22):
-		var angle := float(index) * 2.399
-		var distance := radius * (0.72 + float((index * 17) % 55) / 42.0)
-		var star := center + Vector2(cos(angle), sin(angle) * 0.70) * distance
-		var shimmer := 0.35 + 0.35 * sin(_time * 1.4 + float(index))
-		draw_circle(star, 1.2 + float(index % 3) * 0.45, Color(0.29, 0.95, 0.88, shimmer))
-
-
-func _draw_island(center: Vector2, radius: float) -> void:
-	var island := PackedVector2Array()
-	for index in range(64):
-		var angle := TAU * float(index) / 64.0
-		var roughness := 1.0 + sin(angle * 5.0) * 0.035 + cos(angle * 9.0) * 0.025
-		island.append(
-			center + Vector2(cos(angle) * radius * roughness, sin(angle) * radius * 0.64 * roughness)
-		)
-	var shadow := PackedVector2Array()
-	for point in island:
-		shadow.append(point + Vector2(0, 24))
-	draw_colored_polygon(shadow, Color(0.01, 0.04, 0.05, 0.72))
-	draw_colored_polygon(island, LAND)
-	draw_polyline(island + PackedVector2Array([island[0]]), Color("#66805c"), 6.0, true)
-
-	draw_circle(center + Vector2(0, 12), radius * 0.60, Color("#123e3c"))
-	draw_circle(center + Vector2(0, 12), radius * 0.49, WATER)
-	for ring in range(4):
-		var wave_radius := radius * (0.22 + ring * 0.085) + sin(_time * 1.5 + ring) * 3.0
-		draw_arc(
-			center + Vector2(0, 17),
-			wave_radius,
-			0.12,
-			PI - 0.12,
-			44,
-			Color(0.35, 1.0, 0.89, 0.14),
-			2.0,
-			true
+	var center := art_rect.position + art_rect.size * Vector2(0.5, 0.505)
+	_draw_centered(center + Vector2(0, -3), _money(free_amount), 32 if _compact_mode else 34, Color("#17100d"), _display_font)
+	_draw_centered(center + Vector2(0, 31), "frei", 28 if _compact_mode else 30, Color("#17100d"), _display_font)
+	for index in mini(categories.size(), positions.size()):
+		var category: Dictionary = categories[index]
+		var point := art_rect.position + art_rect.size * positions[index]
+		var font_size := 16 if _compact_mode else 17
+		_draw_centered(point + Vector2(0, -12), str(category.name), font_size, CHAMPAGNE, _display_font)
+		_draw_centered(point + Vector2(0, 11), _money(float(category.amount)), font_size, CHAMPAGNE, _display_font)
+		_draw_centered(
+			point + Vector2(0, 32),
+			"%d %%" % roundi(float(category.amount) / total * 100.0),
+			13,
+			CHAMPAGNE,
+			_interface_font
 		)
 
 
-func _draw_waterfall(center: Vector2, radius: float) -> void:
-	var top := center + Vector2(0, -radius * 0.96)
-	var stream := PackedVector2Array([
-		top + Vector2(-radius * 0.19, -radius * 0.16),
-		top + Vector2(radius * 0.19, -radius * 0.16),
-		center + Vector2(radius * 0.10, -radius * 0.18),
-		center + Vector2(-radius * 0.10, -radius * 0.18),
-	])
-	draw_colored_polygon(stream, Color("#159b91"))
-	for line in range(5):
-		var x := lerpf(-0.13, 0.13, float(line) / 4.0) * radius
-		var drift := sin(_time * 2.0 + line) * 2.5
-		draw_line(
-			top + Vector2(x + drift, -radius * 0.12),
-			center + Vector2(x * 0.55, -radius * 0.20),
-			Color(0.48, 1.0, 0.91, 0.55),
-			2.0
-		)
-	draw_circle(top + Vector2(0, -radius * 0.15), radius * 0.23, Color("#315b46"))
-	draw_circle(top + Vector2(0, -radius * 0.14), radius * 0.17, Color("#1d7566"))
+func _category_totals() -> Array[Dictionary]:
+	var grouped: Dictionary = {}
+	for raw_cost: Variant in snapshot.get("fixed_costs", []):
+		if raw_cost is not Dictionary:
+			continue
+		var cost := raw_cost as Dictionary
+		var category := str(cost.get("category", "Sonstiges"))
+		grouped[category] = float(grouped.get(category, 0.0)) + float(cost.get("amount", 0.0))
+	var result: Array[Dictionary] = []
+	for category: String in grouped:
+		result.append({"name": category, "amount": float(grouped[category])})
+	result.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a.amount) > float(b.amount))
+	if result.is_empty():
+		result = [
+			{"name": "Wohnen", "amount": 0.0},
+			{"name": "Freizeit", "amount": 0.0},
+			{"name": "Mobilität", "amount": 0.0},
+			{"name": "Lebensmittel", "amount": 0.0},
+		]
+	return result.slice(0, 4)
 
 
-func _draw_fixed_cost_home(center: Vector2, radius: float) -> void:
-	var position := center + Vector2(-radius * 0.58, -radius * 0.28)
-	var house := Rect2(position - Vector2(radius * 0.16, radius * 0.08), Vector2(radius * 0.32, radius * 0.24))
-	draw_rect(house, Color("#513b31"), true)
-	draw_colored_polygon(
-		PackedVector2Array([
-			position + Vector2(-radius * 0.21, -radius * 0.08),
-			position + Vector2(0, -radius * 0.27),
-			position + Vector2(radius * 0.21, -radius * 0.08),
-		]),
-		Color("#283837")
-	)
-	draw_rect(
-		Rect2(position + Vector2(-radius * 0.045, radius * 0.055), Vector2(radius * 0.09, radius * 0.105)),
-		Color("#251f1b"),
-		true
-	)
-	for side in [-1.0, 1.0]:
-		var window := position + Vector2(side * radius * 0.105, 0)
-		draw_rect(
-			Rect2(window - Vector2(radius * 0.035, radius * 0.035), Vector2(radius * 0.07, radius * 0.07)),
-			Color(1.0, 0.65, 0.22, 0.88),
-			true
-		)
-	draw_circle(position + Vector2(0, radius * 0.19), radius * 0.22, Color(0.02, 0.08, 0.08, 0.28))
-	_draw_caption(
-		position + Vector2(0, radius * 0.27),
-		"FIXKOSTEN",
-		_money(float(snapshot.fixed_costs_total)),
-		Color("#ffae63")
-	)
+func _draw_month_markers(rect: Rect2) -> void:
+	var markers := [
+		[Vector2(0.50, 0.045), "APR"], [Vector2(0.79, 0.18), "JUN"],
+		[Vector2(0.93, 0.72), "SEP"], [Vector2(0.50, 0.955), "AUG"],
+		[Vector2(0.15, 0.86), "OKT"], [Vector2(0.055, 0.60), "JAN"],
+		[Vector2(0.10, 0.27), "DEZ"],
+	]
+	for marker: Array in markers:
+		var position := rect.position + rect.size * (marker[0] as Vector2)
+		draw_circle(position, 3.4, COPPER)
+		_draw_centered(position + Vector2(0, -10 if position.y > rect.get_center().y else 18), str(marker[1]), 11, COPPER, _interface_font)
 
 
-func _draw_savings_tree(center: Vector2, radius: float) -> void:
-	var position := center + Vector2(radius * 0.57, -radius * 0.32)
-	var target := maxf(float(snapshot.savings_goal), 1.0)
-	var paid := float(snapshot.get("savings_payments", 0.0))
-	var progress := clampf(paid / target, 0.0, 1.0)
-	draw_line(position + Vector2(0, radius * 0.15), position + Vector2(0, -radius * 0.10), Color("#765238"), 12.0)
-	for index in range(9):
-		var angle := TAU * float(index) / 9.0
-		var crown := position + Vector2(cos(angle) * radius * 0.13, sin(angle) * radius * 0.10 - radius * 0.13)
-		var leaf_color := Color("#69a64d").lerp(Color("#b1db57"), progress * 0.75)
-		draw_circle(crown, radius * 0.105, leaf_color.darkened(float(index % 3) * 0.07))
-	if progress > 0.0:
-		for index in range(5):
-			var fruit := position + Vector2((index - 2) * radius * 0.055, -radius * (0.11 + float(index % 2) * 0.07))
-			draw_circle(fruit, 3.0 + progress * 2.0, GOLD)
-	_draw_caption(
-		position + Vector2(0, radius * 0.28),
-		"SPARZIEL",
-		_money(float(snapshot.savings_goal)),
-		Color("#8de56f")
-	)
+func _draw_legend() -> void:
+	var y := size.y - 20.0
+	draw_line(Vector2(24, y), Vector2(46, y), CHAMPAGNE, 2.0, true)
+	_draw_text(Vector2(54, y + 5), "Geplant", 11, MUTED, _interface_font)
+	draw_dashed_line(Vector2(120, y), Vector2(144, y), Color(COPPER, 0.65), 1.0, 5.0, true)
+	_draw_text(Vector2(151, y + 5), "Ausgegeben", 11, MUTED, _interface_font)
 
 
-func _draw_fixed_cost_path(center: Vector2, radius: float) -> void:
-	var total := float(snapshot.fixed_costs_total)
-	var paid := float(snapshot.fixed_costs_paid)
-	var ratio := 0.0 if total <= 0.0 else clampf(paid / total, 0.0, 1.0)
-	for index in range(5):
-		var t := float(index) / 4.0
-		var position := center + Vector2(
-			-radius * (0.74 - t * 0.44),
-			radius * (0.07 + t * 0.18)
-		)
-		var stone_color := Color("#3f514c")
-		if t <= ratio:
-			stone_color = Color("#28745e")
-		draw_ellipse(position, radius * 0.12, radius * 0.055, stone_color)
-		var symbol := "✓" if t <= ratio else "•"
-		_draw_centered_text(position + Vector2(0, 6), symbol, 16, Color("#9af3bd") if t <= ratio else Color("#d4ded8"))
-	var status := "%d%% bezahlt" % roundi(ratio * 100.0)
-	_draw_centered_text(center + Vector2(-radius * 0.52, radius * 0.39), status, 13, Color("#a8d9ce"))
-
-
-func _draw_free_money(center: Vector2, radius: float) -> void:
-	var position := center + Vector2(0, radius * 0.29)
-	var box := Rect2(position - Vector2(radius * 0.47, 48), Vector2(radius * 0.94, 96))
-	draw_style_box(_panel_style(Color(0.02, 0.45, 0.42, 0.91), 20, WATER_LIGHT), box)
-	_draw_centered_text(position + Vector2(0, -12), "NACH ALLEN FIXKOSTEN FREI", 13, Color("#c8fff6"))
-	_draw_centered_text(position + Vector2(0, 28), _money(float(snapshot.freely_available)), 31, Color.WHITE)
-
-
-func _draw_income_source(center: Vector2, radius: float) -> void:
-	var position := center + Vector2(0, -radius * 1.22)
-	var box := Rect2(position - Vector2(116, 42), Vector2(232, 84))
-	draw_style_box(_panel_style(Color(0.04, 0.34, 0.32, 0.96), 42, WATER_LIGHT), box)
-	_draw_centered_text(position + Vector2(0, -8), "KONTOSTAND", 12, Color("#e4c99a"))
-	_draw_centered_text(position + Vector2(0, 25), _money(float(snapshot.balance)), 25, Color.WHITE)
-
-
-func _draw_caption(position: Vector2, title: String, value: String, accent: Color) -> void:
-	var box := Rect2(position - Vector2(83, 30), Vector2(166, 60))
-	draw_style_box(_panel_style(Color(0.03, 0.13, 0.14, 0.90), 14, accent), box)
-	_draw_centered_text(position + Vector2(0, -5), title, 11, accent)
-	_draw_centered_text(position + Vector2(0, 19), value, 17, Color.WHITE)
-
-
-func _draw_centered_text(position: Vector2, text: String, font_size: int, color: Color) -> void:
-	var font := ThemeDB.fallback_font
-	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
-	draw_string(
-		font,
-		position + Vector2(-width * 0.5, 0),
-		text,
-		HORIZONTAL_ALIGNMENT_LEFT,
-		-1,
-		font_size,
-		color
-	)
-
-
-func _panel_style(color: Color, radius: int, border_color: Color) -> StyleBoxFlat:
+func _panel_style() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
-	style.bg_color = color
-	style.border_color = border_color
+	style.bg_color = PANEL
+	style.border_color = Color(BORDER, 0.78)
 	style.set_border_width_all(1)
-	style.set_corner_radius_all(radius)
+	style.set_corner_radius_all(18)
+	style.shadow_color = Color("#00000088")
+	style.shadow_size = 14
+	style.shadow_offset = Vector2(0, 5)
 	return style
+
+
+func _draw_centered(position: Vector2, text: String, font_size: int, color: Color, font: Font) -> void:
+	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	draw_string(font, position - Vector2(width * 0.5, 0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
+
+
+func _draw_text(position: Vector2, text: String, font_size: int, color: Color, font: Font) -> void:
+	draw_string(font, position, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
 
 
 func _money(value: float) -> String:
@@ -323,5 +173,4 @@ func _money(value: float) -> String:
 	while integer_part.length() > 3:
 		grouped = "." + integer_part.right(3) + grouped
 		integer_part = integer_part.left(integer_part.length() - 3)
-	grouped = integer_part + grouped
-	return "%s,%s €" % [grouped, parts[1]]
+	return "%s%s,%s €" % [integer_part, grouped, parts[1]]
