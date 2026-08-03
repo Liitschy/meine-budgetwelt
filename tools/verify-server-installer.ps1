@@ -206,7 +206,7 @@ try {
         $config.Email.PublicBaseUrl -ne "https://budget.leno.info" -or
         $config.LocalAi.Enabled -ne $true -or
         $config.LocalAi.Endpoint -ne "http://127.0.0.1:11434/api/chat" -or
-        $config.LocalAi.Model -ne "qwen3.5:4b" -or
+        $config.LocalAi.Model -ne "qwen3.5:9b" -or
         $config.EnableBanking.Enabled -ne $false -or
         $config.EnableBanking.ApplicationId -ne "" -or
         $config.EnableBanking.PrivateKeyPath -ne (Join-Path $dataRoot "secrets\enable-banking-private.pem") -or
@@ -254,7 +254,7 @@ try {
     if (
         $migratedConfig.LocalAi.Enabled -ne $true -or
         $migratedConfig.LocalAi.Endpoint -ne "http://127.0.0.1:11434/api/chat" -or
-        $migratedConfig.LocalAi.Model -ne "qwen3.5:4b" -or
+        $migratedConfig.LocalAi.Model -ne "qwen3.5:9b" -or
         $migratedConfig.EnableBanking.Enabled -ne $false -or
         $migratedConfig.EnableBanking.ApplicationId -ne "" -or
         $migratedConfig.EnableBanking.PrivateKeyPath -ne (Join-Path $dataRoot "secrets\enable-banking-private.pem") -or
