@@ -309,11 +309,13 @@ if (!string.IsNullOrWhiteSpace(configuredPwaRoot))
         ContentTypeProvider = contentTypes,
         OnPrepareResponse = context =>
         {
-            var fileName = context.File.Name;
+            var requestPath = context.Context.Request.Path;
             context.Context.Response.Headers["Cache-Control"] =
-                fileName is "index.html" or "index.service.worker.js"
+                requestPath == "/"
+                || requestPath == "/index.html"
+                || requestPath == "/index.service.worker.js"
                     ? "no-cache, no-store, must-revalidate"
-                    : "public, max-age=86400";
+                    : "no-cache, must-revalidate";
         },
     });
 }

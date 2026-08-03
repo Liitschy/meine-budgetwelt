@@ -266,7 +266,7 @@ func request_weekly_plan(planning_data: Dictionary) -> Dictionary:
 		"/api/planning/groups/%s/weekly-plan" % active_group_id.uri_encode(),
 		planning_data,
 		true,
-		120.0
+		330.0
 	)
 	if int(response.code) == 401:
 		clear_session()
@@ -456,7 +456,7 @@ func _request_json(
 		await get_tree().process_frame
 	_request_in_progress = true
 	var request := HTTPRequest.new()
-	request.timeout = clampf(timeout_seconds, 5.0, 180.0)
+	request.timeout = clampf(timeout_seconds, 5.0, 360.0)
 	add_child(request)
 	var headers := PackedStringArray(["Accept: application/json"])
 	if use_session and not _token.is_empty():

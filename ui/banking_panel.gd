@@ -8,16 +8,16 @@ signal balance_adoption_requested(account_reference: String)
 signal manual_view_requested()
 
 const COLORS := {
-	"panel": Color("#041d24ed"),
-	"panel_soft": Color("#082d35ee"),
-	"card": Color("#06262df2"),
-	"accent": Color("#39dfc8"),
-	"gold": Color("#d7a84f"),
-	"text": Color("#f5ead0"),
-	"muted": Color("#b8c9bf"),
-	"success": Color("#83db84"),
-	"warning": Color("#e6b85c"),
-	"danger": Color("#ef9a76"),
+	"panel": Color("#15111bed"),
+	"panel_soft": Color("#211923ee"),
+	"card": Color("#19141ef2"),
+	"accent": Color("#e4c99a"),
+	"gold": Color("#b8734b"),
+	"text": Color("#f5eadb"),
+	"muted": Color("#b9a9ad"),
+	"success": Color("#a9c493"),
+	"warning": Color("#d18a65"),
+	"danger": Color("#c47878"),
 }
 
 var _compact := false
@@ -132,14 +132,14 @@ func _rebuild() -> void:
 	for child in get_children():
 		child.queue_free()
 	var background := TextureRect.new()
-	background.texture = load("res://assets/world/budget_world_island.png")
+	background.texture = load("res://assets/space/cosmic-star-atlas-background.png")
 	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(background)
 	var shade := ColorRect.new()
-	shade.color = Color("#01151dcc")
+	shade.color = Color("#090b1399")
 	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(shade)
@@ -202,7 +202,7 @@ func _build_header() -> Control:
 
 func _build_section_tabs() -> Control:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _style(Color("#031a20dd"), 15, Color("#6d5835")))
+	panel.add_theme_stylebox_override("panel", _style(Color("#15111bdd"), 15, Color("#6d5835")))
 	var row := BoxContainer.new()
 	row.vertical = false
 	row.add_theme_constant_override("separation", 8)
@@ -214,7 +214,7 @@ func _build_section_tabs() -> Control:
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.custom_minimum_size.y = 44
 		if bool(definition[1]):
-			button.add_theme_color_override("font_color", Color("#03272c"))
+			button.add_theme_color_override("font_color", Color("#1a1117"))
 			button.add_theme_stylebox_override("normal", _style(COLORS.accent, 12, COLORS.gold))
 		else:
 			button.pressed.connect(manual_view_requested.emit)
@@ -279,7 +279,7 @@ func _build_empty_connection_card() -> Control:
 	button.text = "+  Erste Bank auswählen"
 	button.custom_minimum_size.y = 48
 	button.disabled = _busy
-	button.add_theme_color_override("font_color", Color("#03272c"))
+	button.add_theme_color_override("font_color", Color("#1a1117"))
 	button.add_theme_stylebox_override("normal", _style(COLORS.accent, 13, COLORS.gold))
 	button.pressed.connect(connect_requested.emit)
 	column.add_child(button)
@@ -288,7 +288,7 @@ func _build_empty_connection_card() -> Control:
 
 func _build_security_card() -> Control:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _style(Color("#073a3de8"), 16, Color("#42d9c6aa")))
+	panel.add_theme_stylebox_override("panel", _style(Color("#211923e8"), 16, Color("#b8734baa")))
 	var row := BoxContainer.new()
 	row.vertical = _compact
 	row.add_theme_constant_override("separation", 12)
@@ -366,7 +366,7 @@ func _build_connection_card() -> Control:
 	)
 	refresh.custom_minimum_size.y = 44
 	refresh.disabled = _busy or connection_status in ["expired", "rejected"]
-	refresh.add_theme_color_override("font_color", Color("#03272c"))
+	refresh.add_theme_color_override("font_color", Color("#1a1117"))
 	refresh.add_theme_stylebox_override("normal", _style(COLORS.accent, 12, COLORS.gold))
 	refresh.pressed.connect(refresh_requested.emit.bind(str(_active_connection.get("id", ""))))
 	row.add_child(refresh)
@@ -449,7 +449,7 @@ func _build_transactions_card() -> Control:
 	import_button.text = "Ausgewählte Buchungen übernehmen"
 	import_button.custom_minimum_size.y = 48
 	import_button.disabled = _busy or get_selected_import_ids().is_empty()
-	import_button.add_theme_color_override("font_color", Color("#03272c"))
+	import_button.add_theme_color_override("font_color", Color("#1a1117"))
 	import_button.add_theme_stylebox_override("normal", _style(COLORS.accent, 13, COLORS.gold))
 	import_button.pressed.connect(func() -> void:
 		import_requested.emit(get_selected_import_ids())
@@ -461,7 +461,7 @@ func _build_transactions_card() -> Control:
 
 func _transaction_row(item: Dictionary) -> Control:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _style(COLORS.card, 13, Color("#52706a66")))
+	panel.add_theme_stylebox_override("panel", _style(COLORS.card, 13, Color("#8a6a5c66")))
 	var row := BoxContainer.new()
 	row.vertical = _compact
 	row.add_theme_constant_override("separation", 10)
@@ -504,7 +504,7 @@ func _transaction_row(item: Dictionary) -> Control:
 
 func _build_new_connection_card() -> Control:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _style(Color("#031a20dd"), 16, Color("#5e5948")))
+	panel.add_theme_stylebox_override("panel", _style(Color("#15111bdd"), 16, Color("#5e5948")))
 	var row := BoxContainer.new()
 	row.vertical = _compact
 	row.add_theme_constant_override("separation", 10)
@@ -532,7 +532,7 @@ func _build_new_connection_card() -> Control:
 func _metric_card(title_text: String, value_text: String, color: Color) -> Control:
 	var panel := PanelContainer.new()
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.add_theme_stylebox_override("panel", _style(Color("#062b32e8"), 15, Color(color, 0.55)))
+	panel.add_theme_stylebox_override("panel", _style(Color("#19141ee8"), 15, Color(color, 0.55)))
 	var column := VBoxContainer.new()
 	panel.add_child(column)
 	var title := Label.new()
@@ -583,4 +583,8 @@ static func _style(fill: Color, radius: int, border: Color) -> StyleBoxFlat:
 	style.content_margin_right = 14
 	style.content_margin_top = 11
 	style.content_margin_bottom = 11
+	if fill.a > 0.15 and radius >= 12:
+		style.shadow_color = Color("#00000066")
+		style.shadow_size = 7
+		style.shadow_offset = Vector2(0, 3)
 	return style

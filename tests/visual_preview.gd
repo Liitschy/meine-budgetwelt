@@ -28,11 +28,11 @@ func _ready() -> void:
 		app._queue_responsive_layout()
 		await get_tree().process_frame
 		await get_tree().process_frame
-	app.login_panel.visible = false
-	app.startup_status_panel.visible = false
 	var preview_page := OS.get_environment("BUDGETWELT_VISUAL_PAGE")
 	if preview_page.is_empty():
 		preview_page = "fixed_costs"
+	app.login_panel.visible = preview_page == "login"
+	app.startup_status_panel.visible = false
 	if preview_page == "weekly_planning":
 		var catalog_preview := OS.get_environment("BUDGETWELT_VISUAL_CATALOG")
 		var weekly_step := int(OS.get_environment("BUDGETWELT_VISUAL_WEEKLY_STEP"))
@@ -58,7 +58,8 @@ func _ready() -> void:
 			AiPlanningManager._draft = _weekly_planning_fixture() if weekly_step > 1 else {}
 			app.weekly_planning_page._step = weekly_step
 			app.weekly_planning_page._rebuild_content()
-	app._show_page(preview_page)
+	if preview_page != "login":
+		app._show_page(preview_page)
 	app._apply_responsive_layout()
 	if preview_page == "banking_preview":
 		app._show_page("transactions")

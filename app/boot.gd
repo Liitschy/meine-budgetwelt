@@ -1,7 +1,7 @@
 extends Control
 
 const MAIN_SCENE_PATH := "res://app/Main.tscn"
-const WORLD_IMAGE := preload("res://assets/world/budget_world_island.png")
+const WORLD_IMAGE := preload("res://assets/space/cosmic-star-atlas-background.png")
 const STAGE_TITLES := ["Daten", "Konto", "Updates", "Oberfläche", "Startbereit"]
 
 var progress_bar: ProgressBar
@@ -46,13 +46,20 @@ func _build_interface() -> void:
 
 	var shade := ColorRect.new()
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.color = Color("#01131cd1")
+	shade.color = Color("#090b13d1")
 	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(shade)
 
+	var screen_scroll := ScrollContainer.new()
+	screen_scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	screen_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	screen_scroll.follow_focus = true
+	add_child(screen_scroll)
+
 	panel_center = CenterContainer.new()
-	panel_center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(panel_center)
+	panel_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel_center.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	screen_scroll.add_child(panel_center)
 
 	glass_panel = PanelContainer.new()
 	glass_panel.add_theme_stylebox_override("panel", _panel_style())
@@ -89,7 +96,7 @@ func _build_interface() -> void:
 	var version := Label.new()
 	version.text = "Version %s" % UpdateManager.get_current_version()
 	version.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	version.add_theme_color_override("font_color", Color("#9bb7b2"))
+	version.add_theme_color_override("font_color", Color("#b9a9ad"))
 	version.add_theme_font_size_override("font_size", 14)
 	column.add_child(version)
 
@@ -109,8 +116,8 @@ func _build_interface() -> void:
 	progress_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	progress_bar.custom_minimum_size.y = 16
 	progress_bar.show_percentage = false
-	progress_bar.add_theme_stylebox_override("background", _bar_style(Color("#041b25d9")))
-	progress_bar.add_theme_stylebox_override("fill", _bar_style(Color("#32daca")))
+	progress_bar.add_theme_stylebox_override("background", _bar_style(Color("#211923d9")))
+	progress_bar.add_theme_stylebox_override("fill", _bar_style(Color("#e4c99a")))
 	progress_row.add_child(progress_bar)
 
 	percent_label = Label.new()
@@ -133,14 +140,14 @@ func _build_interface() -> void:
 		var marker := Label.new()
 		marker.text = "○"
 		marker.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		marker.add_theme_color_override("font_color", Color("#6e8986"))
+		marker.add_theme_color_override("font_color", Color("#9c858a"))
 		marker.add_theme_font_size_override("font_size", 19)
 		stage.add_child(marker)
 		stage_markers.append(marker)
 		var label := Label.new()
 		label.text = stage_title
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		label.add_theme_color_override("font_color", Color("#7e9995"))
+		label.add_theme_color_override("font_color", Color("#aa949a"))
 		label.add_theme_font_size_override("font_size", 12)
 		label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		stage.add_child(label)
@@ -149,7 +156,7 @@ func _build_interface() -> void:
 	detail_label = Label.new()
 	detail_label.text = "Lokale Daten bleiben bei Updates erhalten."
 	detail_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	detail_label.add_theme_color_override("font_color", Color("#789591"))
+	detail_label.add_theme_color_override("font_color", Color("#a48e94"))
 	detail_label.add_theme_font_size_override("font_size", 13)
 	detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(detail_label)
@@ -158,9 +165,9 @@ func _build_interface() -> void:
 	continue_button.text = "Trotzdem zur App"
 	continue_button.custom_minimum_size.y = 44
 	continue_button.visible = false
-	continue_button.add_theme_color_override("font_color", Color("#03252a"))
-	continue_button.add_theme_stylebox_override("normal", _button_style(Color("#32daca")))
-	continue_button.add_theme_stylebox_override("hover", _button_style(Color("#75ead9")))
+	continue_button.add_theme_color_override("font_color", Color("#1a1117"))
+	continue_button.add_theme_stylebox_override("normal", _button_style(Color("#e4c99a")))
+	continue_button.add_theme_stylebox_override("hover", _button_style(Color("#f0d8ad")))
 	continue_button.pressed.connect(_load_main_scene)
 	column.add_child(continue_button)
 
@@ -169,7 +176,8 @@ func _apply_layout() -> void:
 	if not is_instance_valid(glass_panel):
 		return
 	var viewport_size := size
-	var panel_width := minf(760.0, maxf(viewport_size.x - 28.0, 300.0))
+	panel_center.custom_minimum_size = viewport_size
+	var panel_width := minf(760.0, maxf(viewport_size.x - 24.0, 260.0))
 	var panel_height := minf(450.0, maxf(viewport_size.y - 36.0, 400.0))
 	glass_panel.custom_minimum_size = Vector2(panel_width, panel_height)
 	var title := glass_panel.find_child("Title", true, false) as Label
@@ -354,12 +362,12 @@ func _set_stage(index: int, state: String) -> void:
 	match state:
 		"active":
 			marker.text = "◉"
-			marker.add_theme_color_override("font_color", Color("#32daca"))
+			marker.add_theme_color_override("font_color", Color("#e4c99a"))
 			label.add_theme_color_override("font_color", Color("#f4e6bf"))
 		"done":
 			marker.text = "✓"
-			marker.add_theme_color_override("font_color", Color("#32daca"))
-			label.add_theme_color_override("font_color", Color("#bfeee5"))
+			marker.add_theme_color_override("font_color", Color("#e4c99a"))
+			label.add_theme_color_override("font_color", Color("#e8d7c8"))
 		"skipped":
 			marker.text = "—"
 			marker.add_theme_color_override("font_color", Color("#d9aa5d"))
@@ -368,8 +376,8 @@ func _set_stage(index: int, state: String) -> void:
 
 func _panel_style() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color("#03232dda")
-	style.border_color = Color("#4be2d1")
+	style.bg_color = Color("#17131ff0")
+	style.border_color = Color("#b8734b")
 	style.set_border_width_all(1)
 	style.set_corner_radius_all(25)
 	style.shadow_color = Color("#00000099")

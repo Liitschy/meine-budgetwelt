@@ -9,16 +9,16 @@ const WeeklyPlanningPage := preload("res://ui/weekly_planning_page.gd")
 const BankingPanel := preload("res://ui/banking_panel.gd")
 
 const COLORS := {
-	"background": Color("#02151e"),
-	"sidebar": Color("#052833f2"),
-	"panel": Color("#07333ce8"),
-	"panel_soft": Color("#0a4148f2"),
-	"accent": Color("#39dfc8"),
-	"gold": Color("#e6b85c"),
-	"text": Color("#f5f0df"),
-	"muted": Color("#a7c7bf"),
-	"warning": Color("#ef9a5d"),
-	"success": Color("#85dfa0"),
+	"background": Color("#090b13"),
+	"sidebar": Color("#14111bf2"),
+	"panel": Color("#18131fe8"),
+	"panel_soft": Color("#211923f2"),
+	"accent": Color("#e4c99a"),
+	"gold": Color("#b8734b"),
+	"text": Color("#f5eadb"),
+	"muted": Color("#b9a9ad"),
+	"warning": Color("#d18a65"),
+	"success": Color("#a9c493"),
 }
 const BOOK_ART_SIZE := Vector2(1672.0, 941.0)
 
@@ -301,14 +301,14 @@ func _apply_design_theme() -> void:
 	app_theme.set_color("font_color", "Button", COLORS.text)
 	app_theme.set_color("font_hover_color", "Button", Color.WHITE)
 	app_theme.set_color("font_pressed_color", "Button", Color.WHITE)
-	app_theme.set_stylebox("normal", "Button", _style(Color("#082c35e8"), 12, Color("#39645e")))
-	app_theme.set_stylebox("hover", "Button", _style(Color("#104c50f2"), 12, COLORS.gold))
-	app_theme.set_stylebox("pressed", "Button", _style(Color("#0a6262"), 12, COLORS.accent))
+	app_theme.set_stylebox("normal", "Button", _style(Color("#1a1520e8"), 12, Color("#715044")))
+	app_theme.set_stylebox("hover", "Button", _style(Color("#2a1c29f2"), 12, COLORS.accent))
+	app_theme.set_stylebox("pressed", "Button", _style(Color("#3a222b"), 12, COLORS.gold))
 	app_theme.set_stylebox("focus", "Button", _style(Color.TRANSPARENT, 12, COLORS.accent))
-	app_theme.set_stylebox("normal", "LineEdit", _style(Color("#061f28f2"), 9, Color("#3c635d")))
-	app_theme.set_stylebox("focus", "LineEdit", _style(Color("#0a353b"), 9, COLORS.gold))
-	app_theme.set_stylebox("normal", "SpinBox", _style(Color("#061f28f2"), 9, Color("#3c635d")))
-	app_theme.set_stylebox("normal", "OptionButton", _style(Color("#061f28f2"), 9, Color("#3c635d")))
+	app_theme.set_stylebox("normal", "LineEdit", _style(Color("#12101af2"), 9, Color("#654950")))
+	app_theme.set_stylebox("focus", "LineEdit", _style(Color("#211923"), 9, COLORS.accent))
+	app_theme.set_stylebox("normal", "SpinBox", _style(Color("#12101af2"), 9, Color("#654950")))
+	app_theme.set_stylebox("normal", "OptionButton", _style(Color("#12101af2"), 9, Color("#654950")))
 	app_theme.set_color("font_color", "LineEdit", COLORS.text)
 	app_theme.set_color("font_color", "SpinBox", COLORS.text)
 	app_theme.set_color("font_color", "OptionButton", COLORS.text)
@@ -316,9 +316,9 @@ func _apply_design_theme() -> void:
 	app_theme.set_color("font_pressed_color", "CheckBox", COLORS.success)
 	app_theme.set_color("icon_normal_color", "CheckBox", COLORS.muted)
 	app_theme.set_color("icon_pressed_color", "CheckBox", COLORS.success)
-	app_theme.set_color("separator_color", "HSeparator", Color("#6b7658"))
-	app_theme.set_stylebox("background", "ProgressBar", _style(Color("#041f28"), 9, Color("#34524e")))
-	app_theme.set_stylebox("fill", "ProgressBar", _style(Color("#32bfae"), 9, COLORS.gold))
+	app_theme.set_color("separator_color", "HSeparator", Color("#715044"))
+	app_theme.set_stylebox("background", "ProgressBar", _style(Color("#12101a"), 9, Color("#4c3842")))
+	app_theme.set_stylebox("fill", "ProgressBar", _style(Color("#b8734b"), 9, COLORS.accent))
 	theme = app_theme
 
 
@@ -343,16 +343,16 @@ func _build_interface() -> void:
 	add_child(background)
 
 	desktop_backdrop = TextureRect.new()
-	desktop_backdrop.texture = load("res://assets/world/budget_world_island.png")
+	desktop_backdrop.texture = load("res://assets/space/cosmic-star-atlas-background.png")
 	desktop_backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	desktop_backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	desktop_backdrop.modulate = Color(0.42, 0.72, 0.66, 0.16)
+	desktop_backdrop.modulate = Color(1.0, 1.0, 1.0, 0.92)
 	desktop_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	desktop_backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(desktop_backdrop)
 
 	var backdrop_tint := ColorRect.new()
-	backdrop_tint.color = Color(0.01, 0.07, 0.09, 0.58)
+	backdrop_tint.color = Color("#090b1352")
 	backdrop_tint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	backdrop_tint.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	desktop_backdrop.add_child(backdrop_tint)
@@ -493,7 +493,7 @@ func _build_login_panel() -> Control:
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 	var island := TextureRect.new()
-	island.texture = load("res://assets/world/budget_world_island.png")
+	island.texture = load("res://assets/space/cosmic-star-atlas-background.png")
 	island.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	island.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	island.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -501,7 +501,7 @@ func _build_login_panel() -> Control:
 	backdrop.add_child(island)
 
 	var tint := ColorRect.new()
-	tint.color = Color("#00131db8")
+	tint.color = Color("#090b1366")
 	tint.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	tint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	backdrop.add_child(tint)
@@ -516,8 +516,16 @@ func _build_login_panel() -> Control:
 	margin.add_theme_constant_override("margin_bottom", 28)
 	backdrop.add_child(margin)
 
+	var login_scroll := ScrollContainer.new()
+	login_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	login_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	login_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	login_scroll.follow_focus = true
+	margin.add_child(login_scroll)
 	login_layout = BoxContainer.new()
-	margin.add_child(login_layout)
+	login_layout.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	login_layout.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	login_scroll.add_child(login_layout)
 	var card_center := CenterContainer.new()
 	card_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	card_center.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -525,7 +533,7 @@ func _build_login_panel() -> Control:
 
 	login_card = PanelContainer.new()
 	login_card.custom_minimum_size = Vector2(440, 0)
-	var glass := _style(Color("#062832e8"), 28, Color("#72e1d0aa"))
+	var glass := _style(Color("#17131ef2"), 28, Color("#b8734baa"))
 	glass.content_margin_left = 34
 	glass.content_margin_right = 34
 	glass.content_margin_top = 30
@@ -614,9 +622,9 @@ func _build_login_panel() -> Control:
 	login_submit_button = Button.new()
 	login_submit_button.text = "Sicher anmelden"
 	login_submit_button.custom_minimum_size.y = 52
-	login_submit_button.add_theme_color_override("font_color", Color("#03252a"))
+	login_submit_button.add_theme_color_override("font_color", Color("#1a1117"))
 	login_submit_button.add_theme_stylebox_override("normal", _style(COLORS.accent, 14))
-	login_submit_button.add_theme_stylebox_override("hover", _style(Color("#75ead9"), 14))
+	login_submit_button.add_theme_stylebox_override("hover", _style(Color("#f0d8ad"), 14))
 	login_submit_button.pressed.connect(_submit_account_form)
 	column.add_child(login_submit_button)
 	login_mode_button = Button.new()
@@ -847,7 +855,7 @@ func _apply_login_layout() -> void:
 
 func _build_startup_status_panel() -> Control:
 	var backdrop := ColorRect.new()
-	backdrop.color = Color("#02151ef5")
+	backdrop.color = Color("#090b13f5")
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 	var center := CenterContainer.new()
@@ -856,7 +864,7 @@ func _build_startup_status_panel() -> Control:
 
 	startup_status_card = PanelContainer.new()
 	var panel := startup_status_card
-	panel.add_theme_stylebox_override("panel", _style(Color("#07333c"), 22, COLORS.accent))
+	panel.add_theme_stylebox_override("panel", _style(Color("#17131f"), 22, COLORS.accent))
 	center.add_child(panel)
 
 	var column := VBoxContainer.new()
@@ -986,7 +994,7 @@ func _open_confirmed_update() -> void:
 func _build_app_bar() -> Control:
 	var bar := PanelContainer.new()
 	bar.custom_minimum_size.y = 48
-	bar.add_theme_stylebox_override("panel", _style(Color("#031a23f2"), 0, Color("#3d625b")))
+	bar.add_theme_stylebox_override("panel", _style(Color("#100d16f2"), 0, Color("#5f4852")))
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("margin_left", 18)
 	row.add_theme_constant_override("margin_right", 18)
@@ -1054,7 +1062,7 @@ func _build_summary_column() -> Control:
 
 func _build_upcoming_costs() -> Control:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 18, Color("#15515b")))
+	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 18, Color("#684853")))
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 8)
 	column.add_theme_constant_override("margin_left", 18)
@@ -1079,7 +1087,7 @@ func _build_upcoming_costs() -> Control:
 func _build_month_flow() -> Control:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size.y = 104
-	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 17, Color("#15515b")))
+	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 17, Color("#684853")))
 	var row := BoxContainer.new()
 	row.vertical = false
 	week_cards = row
@@ -1136,7 +1144,7 @@ func _build_mobile_dashboard_metrics() -> Control:
 		var card := PanelContainer.new()
 		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		card.custom_minimum_size.y = 110
-		var card_style := _style(Color("#041b22ee"), 22, Color("#b98b42"))
+		var card_style := _style(Color("#041b22ee"), 22, Color("#b8734b"))
 		card_style.set_border_width_all(2)
 		card.add_theme_stylebox_override("panel", card_style)
 		var labels := VBoxContainer.new()
@@ -1233,7 +1241,7 @@ func _build_mobile_dashboard_actions() -> Control:
 func _build_mobile_navigation() -> Control:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size.y = 88
-	panel.add_theme_stylebox_override("panel", _style(Color("#03181ef8"), 0, Color("#b78b43")))
+	panel.add_theme_stylebox_override("panel", _style(Color("#100d16f8"), 0, Color("#b8734b")))
 
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 4)
@@ -1255,7 +1263,7 @@ func _build_mobile_navigation() -> Control:
 		button.custom_minimum_size.y = 72
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.add_theme_stylebox_override("normal", _style(Color.TRANSPARENT, 0))
-		button.add_theme_stylebox_override("hover", _style(Color("#0b3438"), 12, Color("#87662f")))
+		button.add_theme_stylebox_override("hover", _style(Color("#241923"), 12, Color("#8e6048")))
 		button.pressed.connect(_show_page.bind(item[2]))
 		var content := VBoxContainer.new()
 		content.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1302,9 +1310,9 @@ func _build_sidebar() -> Control:
 	emblem_center.custom_minimum_size.y = 112
 	var emblem := PanelContainer.new()
 	emblem.custom_minimum_size = Vector2(74, 74)
-	emblem.add_theme_stylebox_override("panel", _style(Color("#07313a"), 37, COLORS.accent))
+	emblem.add_theme_stylebox_override("panel", _style(Color("#211722"), 37, COLORS.accent))
 	var emblem_icon := TextureRect.new()
-	emblem_icon.texture = load("res://assets/icons/leaf.svg")
+	emblem_icon.texture = load("res://assets/icons/orbit.svg")
 	emblem_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	emblem_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	emblem.add_child(emblem_icon)
@@ -1459,7 +1467,7 @@ func _build_settings_banking_card() -> Control:
 	var button := Button.new()
 	button.text = "Bankkonto verbinden oder verwalten"
 	button.custom_minimum_size.y = 48
-	button.add_theme_color_override("font_color", Color("#042226"))
+	button.add_theme_color_override("font_color", Color("#1a1117"))
 	button.add_theme_stylebox_override("normal", _style(COLORS.accent, 12))
 	button.pressed.connect(_open_banking_settings)
 	content.add_child(button)
@@ -1558,9 +1566,9 @@ func _build_header() -> Control:
 	edit_button.custom_minimum_size = Vector2(160, 48)
 	month_edit_button = edit_button
 	edit_button.add_theme_font_size_override("font_size", 16)
-	edit_button.add_theme_color_override("font_color", Color("#042226"))
+	edit_button.add_theme_color_override("font_color", Color("#1a1117"))
 	edit_button.add_theme_stylebox_override("normal", _style(COLORS.accent, 14))
-	edit_button.add_theme_stylebox_override("hover", _style(Color("#6ce8d7"), 14))
+	edit_button.add_theme_stylebox_override("hover", _style(Color("#f0d8ad"), 14))
 	edit_button.pressed.connect(_open_setup)
 	month_controls.add_child(edit_button)
 
@@ -1570,7 +1578,7 @@ func _build_header() -> Control:
 func _build_summary() -> Control:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size.x = 345
-	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 18, Color("#15515b")))
+	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 18, Color("#684853")))
 
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 4)
@@ -1589,9 +1597,9 @@ func _build_summary() -> Control:
 	var change_balance := Button.new()
 	change_balance.text = "Kontostand ändern"
 	change_balance.custom_minimum_size.y = 38
-	change_balance.add_theme_color_override("font_color", Color("#042226"))
+	change_balance.add_theme_color_override("font_color", Color("#1a1117"))
 	change_balance.add_theme_stylebox_override("normal", _style(COLORS.accent, 11))
-	change_balance.add_theme_stylebox_override("hover", _style(Color("#6ce8d7"), 11))
+	change_balance.add_theme_stylebox_override("hover", _style(Color("#f0d8ad"), 11))
 	change_balance.pressed.connect(_open_balance_dialog)
 	column.add_child(change_balance)
 
@@ -1685,7 +1693,7 @@ func _summary_row(key: String, title_text: String, accent: Color) -> Control:
 func _build_week_strip() -> Control:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size.y = 100
-	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 16, Color("#15515b")))
+	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 16, Color("#684853")))
 
 	var row := BoxContainer.new()
 	row.vertical = false
@@ -1716,16 +1724,21 @@ func _build_week_strip() -> Control:
 
 
 func _build_fixed_costs_page() -> Control:
+	var page_scroll := ScrollContainer.new()
+	page_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	page_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	page_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	var page := Control.new()
 	page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	page.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	page_scroll.add_child(page)
 
 	var art := TextureRect.new()
 	fixed_page_art = art
-	art.texture = load("res://assets/world/budget_world_island.png")
+	art.texture = load("res://assets/space/cosmic-star-atlas-background.png")
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	art.modulate = Color(0.40, 0.68, 0.62, 0.28)
+	art.modulate = Color(1.0, 1.0, 1.0, 0.72)
 	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	page.add_child(art)
@@ -1854,7 +1867,7 @@ func _build_fixed_costs_page() -> Control:
 	list_column.add_child(hint)
 
 	_build_book_navigation(page, "fixed_costs")
-	return page
+	return page_scroll
 
 
 func _build_book_navigation(page: Control, active_page: String) -> void:
@@ -2012,7 +2025,7 @@ func _build_fixed_cost_row(cost: Dictionary) -> Control:
 	row_panel.custom_minimum_size.y = 205 if _compact_layout else 76
 	row_panel.add_theme_stylebox_override(
 		"panel",
-		_style(Color("#041b22f2"), 18, Color("#b98b42"))
+		_style(Color("#17131ef2"), 18, Color("#b8734b"))
 	)
 
 	var row := BoxContainer.new()
@@ -2140,7 +2153,7 @@ func _build_fixed_cost_row(cost: Dictionary) -> Control:
 		payment.custom_minimum_size = Vector2(0, 42)
 		payment.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	payment.add_theme_color_override("font_color", Color("#e8cf8d"))
-	payment.add_theme_stylebox_override("normal", _ornament_button_style(Color("#183739")))
+	payment.add_theme_stylebox_override("normal", _ornament_button_style(Color("#261c25")))
 	payment.pressed.connect(_open_fixed_payment.bind(str(cost.id)))
 	payment.disabled = not bool(cost.get("due_this_month", true))
 	actions.add_child(payment)
@@ -2154,7 +2167,7 @@ func _build_fixed_cost_row(cost: Dictionary) -> Control:
 		edit.custom_minimum_size = Vector2(0, 42)
 		edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	edit.add_theme_color_override("font_color", Color("#e8cf8d"))
-	edit.add_theme_stylebox_override("normal", _ornament_button_style(Color("#183739")))
+	edit.add_theme_stylebox_override("normal", _ornament_button_style(Color("#261c25")))
 	edit.pressed.connect(_open_edit_cost.bind(str(cost.id)))
 	actions.add_child(edit)
 
@@ -2177,7 +2190,7 @@ func _build_fixed_cost_row(cost: Dictionary) -> Control:
 		more.text = "•••"
 		more.custom_minimum_size = Vector2(68, 42)
 		more.add_theme_color_override("font_color", Color("#e8cf8d"))
-		more.add_theme_stylebox_override("normal", _ornament_button_style(Color("#183739")))
+		more.add_theme_stylebox_override("normal", _ornament_button_style(Color("#261c25")))
 		var popup := more.get_popup()
 		popup.add_item("Bearbeiten", 0)
 		popup.add_item("Kostenpunkt löschen", 1)
@@ -2194,16 +2207,21 @@ func _build_fixed_cost_row(cost: Dictionary) -> Control:
 
 
 func _build_savings_page() -> Control:
+	var page_scroll := ScrollContainer.new()
+	page_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	page_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	page_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	var page := Control.new()
 	page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	page.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	page_scroll.add_child(page)
 
 	var art := TextureRect.new()
 	savings_page_art = art
-	art.texture = load("res://assets/world/budget_world_island.png")
+	art.texture = load("res://assets/space/cosmic-star-atlas-background.png")
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	art.modulate = Color(0.40, 0.68, 0.62, 0.28)
+	art.modulate = Color(1.0, 1.0, 1.0, 0.72)
 	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	page.add_child(art)
@@ -2308,7 +2326,7 @@ func _build_savings_page() -> Control:
 	savings_list.add_theme_constant_override("separation", 12)
 	scroll.add_child(savings_list)
 	_build_book_navigation(page, "savings")
-	return page
+	return page_scroll
 
 
 func _savings_summary_card(key: String, title_text: String, accent: Color) -> Control:
@@ -2363,7 +2381,7 @@ func _rebuild_savings_rows() -> void:
 func _build_savings_goal_card(goal: Dictionary) -> Control:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size.y = 190 if _compact_layout else 0
-	var card_style := _style(Color("#041b22f2"), 18, Color("#b98b42"))
+	var card_style := _style(Color("#17131ef2"), 18, Color("#b8734b"))
 	card_style.content_margin_left = 18
 	card_style.content_margin_right = 18
 	card_style.content_margin_top = 14
@@ -2419,7 +2437,7 @@ func _build_savings_goal_card(goal: Dictionary) -> Control:
 	deposit.custom_minimum_size.y = 46 if _compact_layout else 0
 	deposit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	deposit.add_theme_color_override("font_color", Color("#e8cf8d"))
-	deposit.add_theme_stylebox_override("normal", _ornament_button_style(Color("#183739")))
+	deposit.add_theme_stylebox_override("normal", _ornament_button_style(Color("#261c25")))
 	deposit.pressed.connect(_open_deposit.bind(str(goal.id), str(goal.name)))
 	actions.add_child(deposit)
 
@@ -2492,7 +2510,7 @@ func _build_add_goal_panel() -> PanelContainer:
 	save.text = "Sparziel speichern"
 	save.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	save.custom_minimum_size.y = 48
-	save.add_theme_color_override("font_color", Color("#042226"))
+	save.add_theme_color_override("font_color", Color("#1a1117"))
 	save.add_theme_stylebox_override("normal", _style(COLORS.accent, 12))
 	save.pressed.connect(_save_new_goal)
 	buttons.add_child(save)
@@ -2559,7 +2577,7 @@ func _build_deposit_panel() -> PanelContainer:
 	var save := Button.new()
 	save.text = "Einzahlung speichern"
 	save.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	save.add_theme_color_override("font_color", Color("#042226"))
+	save.add_theme_color_override("font_color", Color("#1a1117"))
 	save.add_theme_stylebox_override("normal", _style(COLORS.accent, 12))
 	save.pressed.connect(_save_deposit)
 	buttons.add_child(save)
@@ -2568,16 +2586,21 @@ func _build_deposit_panel() -> PanelContainer:
 
 
 func _build_transactions_page() -> Control:
+	var page_scroll := ScrollContainer.new()
+	page_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	page_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	page_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	var page := Control.new()
 	page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	page.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	page_scroll.add_child(page)
 
 	var art := TextureRect.new()
 	transactions_page_art = art
-	art.texture = load("res://assets/world/budget_world_island.png")
+	art.texture = load("res://assets/space/cosmic-star-atlas-background.png")
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	art.modulate = Color(0.40, 0.68, 0.62, 0.28)
+	art.modulate = Color(1.0, 1.0, 1.0, 0.72)
 	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	page.add_child(art)
@@ -2694,7 +2717,7 @@ func _build_transactions_page() -> Control:
 	transaction_weekly_filter_button.add_theme_color_override("font_color", Color("#e8cf8d"))
 	transaction_weekly_filter_button.add_theme_stylebox_override(
 		"normal",
-		_ornament_button_style(Color("#183739"))
+		_ornament_button_style(Color("#261c25"))
 	)
 	transaction_weekly_filter_button.toggled.connect(_on_weekly_filter_toggled)
 	list_header.add_child(transaction_weekly_filter_button)
@@ -2719,7 +2742,7 @@ func _build_transactions_page() -> Control:
 	banking_panel.disconnect_requested.connect(_request_disconnect_bank)
 	banking_panel.connect_requested.connect(_open_bank_selection)
 	page.add_child(banking_panel)
-	return page
+	return page_scroll
 
 
 func _build_transaction_mode_tabs() -> Control:
@@ -3054,7 +3077,7 @@ func _on_weekly_filter_toggled(enabled: bool) -> void:
 func _build_transaction_row(transaction: Dictionary) -> Control:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size.y = 78 if _compact_layout else 0
-	var transaction_style := _style(Color("#041b22f2"), 14, Color("#b98b42"))
+	var transaction_style := _style(Color("#17131ef2"), 14, Color("#b8734b"))
 	transaction_style.content_margin_left = 8
 	transaction_style.content_margin_right = 8
 	panel.add_theme_stylebox_override("panel", transaction_style)
@@ -3210,7 +3233,7 @@ func _build_add_transaction_panel() -> PanelContainer:
 	save.text = "Buchung speichern"
 	save.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	save.custom_minimum_size.y = 48
-	save.add_theme_color_override("font_color", Color("#042226"))
+	save.add_theme_color_override("font_color", Color("#1a1117"))
 	save.add_theme_stylebox_override("normal", _style(COLORS.accent, 12))
 	save.pressed.connect(_save_new_transaction)
 	buttons.add_child(save)
@@ -3252,7 +3275,7 @@ func _build_shopping_page() -> VBoxContainer:
 	var add := Button.new()
 	add.text = "+  Artikel hinzufügen"
 	add.custom_minimum_size = Vector2(190, 48)
-	add.add_theme_color_override("font_color", Color("#042226"))
+	add.add_theme_color_override("font_color", Color("#1a1117"))
 	add.add_theme_stylebox_override("normal", _style(COLORS.accent, 14))
 	add.pressed.connect(_open_add_shopping_item)
 	header.add_child(add)
@@ -3287,7 +3310,7 @@ func _build_shopping_page() -> VBoxContainer:
 
 	var list_panel := PanelContainer.new()
 	list_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	list_panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 18, Color("#15515b")))
+	list_panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 18, Color("#684853")))
 	var list_column := VBoxContainer.new()
 	list_column.add_theme_constant_override("separation", 10)
 	list_column.add_theme_constant_override("margin_left", 18)
@@ -3314,7 +3337,7 @@ func _build_shopping_page() -> VBoxContainer:
 	shopping_book_button = Button.new()
 	shopping_book_button.text = "Abgehakte Artikel als Einkauf verbuchen"
 	shopping_book_button.custom_minimum_size.y = 50
-	shopping_book_button.add_theme_color_override("font_color", Color("#042226"))
+	shopping_book_button.add_theme_color_override("font_color", Color("#1a1117"))
 	shopping_book_button.add_theme_stylebox_override("normal", _style(COLORS.accent, 12))
 	shopping_book_button.pressed.connect(_book_shopping)
 	list_column.add_child(shopping_book_button)
@@ -3363,7 +3386,7 @@ func _rebuild_shopping_rows() -> void:
 
 func _build_shopping_row(item: Dictionary, booked: bool) -> Control:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _style(Color("#0b3640"), 12))
+	panel.add_theme_stylebox_override("panel", _style(Color("#211923"), 12))
 	var row := HBoxContainer.new()
 	panel.add_child(row)
 
@@ -3463,7 +3486,7 @@ func _build_add_shopping_item_panel() -> PanelContainer:
 	save.text = "Artikel speichern"
 	save.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	save.custom_minimum_size.y = 48
-	save.add_theme_color_override("font_color", Color("#042226"))
+	save.add_theme_color_override("font_color", Color("#1a1117"))
 	save.add_theme_stylebox_override("normal", _style(COLORS.accent, 12))
 	save.pressed.connect(_save_shopping_item)
 	buttons.add_child(save)
@@ -3495,7 +3518,7 @@ func _build_meal_plan_page() -> VBoxContainer:
 	var weekly_list := Button.new()
 	weekly_list.text = "Einkaufsliste erstellen"
 	weekly_list.custom_minimum_size = Vector2(210, 48)
-	weekly_list.add_theme_color_override("font_color", Color("#042226"))
+	weekly_list.add_theme_color_override("font_color", Color("#1a1117"))
 	weekly_list.add_theme_stylebox_override("normal", _style(COLORS.success, 14))
 	weekly_list.pressed.connect(_create_weekly_shopping_need)
 	header.add_child(weekly_list)
@@ -3518,7 +3541,7 @@ func _build_meal_plan_page() -> VBoxContainer:
 
 	var panel := PanelContainer.new()
 	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 18, Color("#15515b")))
+	panel.add_theme_stylebox_override("panel", _style(COLORS.panel, 18, Color("#684853")))
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	panel.add_child(scroll)
@@ -3570,7 +3593,7 @@ func _build_meal_day_row(
 	day: Dictionary
 ) -> Control:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _style(Color("#0b3640"), 12))
+	panel.add_theme_stylebox_override("panel", _style(Color("#211923"), 12))
 	var content := VBoxContainer.new()
 	content.add_theme_constant_override("separation", 5)
 	panel.add_child(content)
@@ -3687,7 +3710,7 @@ func _build_recipe_panel() -> PanelContainer:
 	recipe_add_button = Button.new()
 	recipe_add_button.text = "Zutaten zur Einkaufsliste"
 	recipe_add_button.custom_minimum_size = Vector2(230, 46)
-	recipe_add_button.add_theme_color_override("font_color", Color("#042226"))
+	recipe_add_button.add_theme_color_override("font_color", Color("#1a1117"))
 	recipe_add_button.add_theme_stylebox_override("normal", _style(COLORS.accent, 12))
 	recipe_add_button.pressed.connect(_add_open_recipe_to_shopping)
 	buttons.add_child(recipe_add_button)
@@ -3812,7 +3835,7 @@ func _build_custom_recipe_panel() -> PanelContainer:
 	editor_buttons.add_child(editor_spacer)
 	var save := Button.new()
 	save.text = "Rezept speichern"
-	save.add_theme_color_override("font_color", Color("#042226"))
+	save.add_theme_color_override("font_color", Color("#1a1117"))
 	save.add_theme_stylebox_override("normal", _style(COLORS.accent, 10))
 	save.pressed.connect(_save_custom_recipe)
 	editor_buttons.add_child(save)
@@ -3841,7 +3864,7 @@ func _rebuild_custom_recipe_rows() -> void:
 		return
 	for recipe: Dictionary in recipes:
 		var panel := PanelContainer.new()
-		panel.add_theme_stylebox_override("panel", _style(Color("#0b3640"), 10))
+		panel.add_theme_stylebox_override("panel", _style(Color("#211923"), 10))
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 8)
 		panel.add_child(row)
@@ -4226,7 +4249,7 @@ func _build_balance_panel() -> PanelContainer:
 	save.text = "Kontostand speichern"
 	save.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	save.custom_minimum_size.y = 48
-	save.add_theme_color_override("font_color", Color("#042226"))
+	save.add_theme_color_override("font_color", Color("#1a1117"))
 	save.add_theme_stylebox_override("normal", _style(COLORS.accent, 12))
 	save.pressed.connect(_save_balance)
 	buttons.add_child(save)
@@ -4284,7 +4307,7 @@ func _build_fixed_payment_panel() -> PanelContainer:
 	save.text = "Zahlung speichern"
 	save.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	save.custom_minimum_size.y = 48
-	save.add_theme_color_override("font_color", Color("#042226"))
+	save.add_theme_color_override("font_color", Color("#1a1117"))
 	save.add_theme_stylebox_override("normal", _style(COLORS.accent, 12))
 	save.pressed.connect(_save_fixed_payment)
 	buttons.add_child(save)
@@ -4434,7 +4457,7 @@ func _build_add_cost_panel() -> PanelContainer:
 	cost_save_button = save
 	save.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	save.custom_minimum_size.y = 48
-	save.add_theme_color_override("font_color", Color("#042226"))
+	save.add_theme_color_override("font_color", Color("#1a1117"))
 	save.add_theme_stylebox_override("normal", _style(COLORS.accent, 12))
 	save.pressed.connect(_save_cost)
 	buttons.add_child(save)
@@ -4514,7 +4537,7 @@ func _build_month_change_panel() -> PanelContainer:
 	create.text = "Monat beginnen"
 	create.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	create.custom_minimum_size.y = 48
-	create.add_theme_color_override("font_color", Color("#042226"))
+	create.add_theme_color_override("font_color", Color("#1a1117"))
 	create.add_theme_stylebox_override("normal", _style(COLORS.accent, 12))
 	create.pressed.connect(_confirm_new_month)
 	buttons.add_child(create)
@@ -4575,7 +4598,7 @@ func _build_setup_panel() -> PanelContainer:
 	save.text = "Werte speichern"
 	save.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	save.custom_minimum_size.y = 48
-	save.add_theme_color_override("font_color", Color("#042226"))
+	save.add_theme_color_override("font_color", Color("#1a1117"))
 	save.add_theme_stylebox_override("normal", _style(COLORS.accent, 12))
 	save.pressed.connect(_save_setup)
 	buttons.add_child(save)
@@ -4720,6 +4743,13 @@ func _apply_responsive_layout() -> void:
 
 	var is_web := OS.has_feature("web")
 	var responsive_size := _responsive_view_size()
+	if is_web:
+		var target_scale_size := Vector2i(
+			maxi(roundi(responsive_size.x), 280),
+			maxi(roundi(responsive_size.y), 480)
+		)
+		if get_window().content_scale_size != target_scale_size:
+			get_window().content_scale_size = target_scale_size
 	var compact := _should_use_compact_layout(responsive_size, is_web)
 	var stacked_content := _should_stack_dashboard(responsive_size, is_web)
 	var layout_changed := compact != _compact_layout
@@ -4905,7 +4935,16 @@ func _responsive_view_size() -> Vector2:
 func _apply_mobile_book_layout(compact: bool) -> void:
 	for control: Control in book_navigation_controls:
 		control.visible = false
-	var mobile_art := load("res://assets/world/budget_world_island.png")
+	for header: Control in [fixed_header, savings_header, transactions_header]:
+		if not is_instance_valid(header):
+			continue
+		var page := header.get_parent() as Control
+		if page != null:
+			page.custom_minimum_size = Vector2(
+				0.0,
+				1120.0 if compact else 0.0
+			)
+	var mobile_art := load("res://assets/space/cosmic-star-atlas-background.png")
 	if is_instance_valid(fixed_page_art):
 		fixed_page_art.texture = mobile_art
 	if is_instance_valid(savings_page_art):
@@ -5113,7 +5152,7 @@ func _style_mobile_book_header(header: BoxContainer, compact: bool, mobile_add_t
 	)
 	if compact:
 		back_button.add_theme_stylebox_override(
-			"normal", _style(Color("#07191def"), 27, Color("#b98b42"))
+			"normal", _style(Color("#07191def"), 27, Color("#b8734b"))
 		)
 	add_button.text = "+" if compact else (
 		"＋  Fixkosten hinzufügen" if header == fixed_header
@@ -5150,7 +5189,7 @@ func _style_mobile_fixed_summaries(compact: bool) -> void:
 		card.custom_minimum_size.y = 92 if compact else 112.0 * desktop_scale
 		card.clip_contents = compact
 		card.add_theme_stylebox_override(
-			"panel", _style(Color("#041b22e8"), 16, Color("#b98b42"))
+			"panel", _style(Color("#041b22e8"), 16, Color("#b8734b"))
 		)
 		var row := card.get_child(0) as HBoxContainer
 		row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -5213,7 +5252,7 @@ func _style_mobile_simple_summaries(row: BoxContainer, compact: bool) -> void:
 	for index in row.get_child_count():
 		var card := row.get_child(index) as Control
 		card.clip_contents = compact
-		var style := _style(Color("#041b22e8"), 16, Color("#b98b42"))
+		var style := _style(Color("#041b22e8"), 16, Color("#b8734b"))
 		style.content_margin_left = 8 if compact else 18
 		style.content_margin_right = 8 if compact else 18
 		style.content_margin_top = 8
@@ -5257,12 +5296,12 @@ func _update_mobile_navigation(active_page: String = "") -> void:
 		var label := button.get_meta("mobile_label") as Label
 		var icon := button.get_meta("mobile_icon") as TextureRect
 		label.add_theme_color_override(
-			"font_color", Color("#43e5d2") if active else Color("#d9c99d")
+			"font_color", Color("#e4c99a") if active else Color("#d9c99d")
 		)
-		icon.modulate = Color("#43e5d2") if active else Color("#d0aa64")
+		icon.modulate = Color("#e4c99a") if active else Color("#d0aa64")
 		button.add_theme_stylebox_override(
 			"normal",
-			_style(Color("#0b3438cc"), 12, Color("#33d9c5")) if active
+			_style(Color("#241923cc"), 12, Color("#b8734b")) if active
 			else _style(Color.TRANSPARENT, 0)
 		)
 
@@ -6082,6 +6121,10 @@ func _style(
 ) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = background
+	if background.a > 0.15 and radius >= 12:
+		style.shadow_color = Color("#00000066")
+		style.shadow_size = 8
+		style.shadow_offset = Vector2(0, 3)
 	style.border_color = border
 	style.set_border_width_all(1 if border.a > 0.0 else 0)
 	style.set_corner_radius_all(radius)

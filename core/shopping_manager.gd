@@ -64,7 +64,7 @@ func save_planning_profile(profile: Dictionary) -> bool:
 		if profile.has(key):
 			clean[key] = profile[key]
 	_planning_profile = clean.duplicate(true)
-	var saved := _save_and_emit()
+	var saved := _save_and_emit(false, false)
 	planning_profile_changed.emit(get_planning_profile())
 	return saved
 
@@ -341,14 +341,18 @@ func _set_week_data(data: Dictionary) -> void:
 	_months[month_id] = month
 
 
-func _save_and_emit(emit_personal_prices: bool = false) -> bool:
+func _save_and_emit(
+	emit_personal_prices: bool = false,
+	emit_shopping_change: bool = true
+) -> bool:
 	var saved := StorageManager.save_shopping_data({
 		"schema_version": 2,
 		"months": _months,
 		"personal_prices": _personal_prices,
 		"planning_profile": _planning_profile,
 	})
-	_emit_current()
+	if emit_shopping_change:
+		_emit_current()
 	if emit_personal_prices:
 		personal_prices_changed.emit(get_personal_prices())
 	return saved
