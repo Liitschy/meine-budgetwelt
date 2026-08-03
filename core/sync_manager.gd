@@ -266,7 +266,7 @@ func request_weekly_plan(planning_data: Dictionary) -> Dictionary:
 		"/api/planning/groups/%s/weekly-plan" % active_group_id.uri_encode(),
 		planning_data,
 		true,
-		330.0
+		75.0
 	)
 	if int(response.code) == 401:
 		clear_session()

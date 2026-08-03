@@ -20,11 +20,42 @@ const SyncManagerScript := preload("res://core/sync_manager.gd")
 const AiPlanningManagerScript := preload("res://core/ai_planning_manager.gd")
 const BankingManagerScript := preload("res://core/banking_manager.gd")
 const UpdateManagerScript := preload("res://core/update_manager.gd")
+const TouchScrollHelper := preload("res://core/touch_scroll_helper.gd")
 
 var _failed := false
 
 
 func _ready() -> void:
+	var touch_scroll := ScrollContainer.new()
+	var touch_content := VBoxContainer.new()
+	var touch_button := Button.new()
+	var ignored_decoration := ColorRect.new()
+	ignored_decoration.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	touch_content.add_child(touch_button)
+	touch_content.add_child(ignored_decoration)
+	touch_scroll.add_child(touch_content)
+	TouchScrollHelper.configure(touch_scroll)
+	_assert_equal(
+		touch_button.mouse_filter,
+		Control.MOUSE_FILTER_PASS,
+		"Touch-Wischen wird von Bedienelementen an den Scrollbereich weitergegeben"
+	)
+	_assert_equal(
+		ignored_decoration.mouse_filter,
+		Control.MOUSE_FILTER_IGNORE,
+		"Dekorative Elemente bleiben für Touch-Eingaben durchlässig"
+	)
+	_assert_equal(touch_scroll.scroll_deadzone, 4, "Mobiler Scrollbereich reagiert früh auf Wischgesten")
+	var dynamic_button := Button.new()
+	touch_content.add_child(dynamic_button)
+	TouchScrollHelper.configure_added_descendant(dynamic_button)
+	_assert_equal(
+		dynamic_button.mouse_filter,
+		Control.MOUSE_FILTER_PASS,
+		"Dynamisch ergänzte Karten und Buttons bleiben direkt wischbar"
+	)
+	touch_scroll.free()
+
 	var snapshot := BudgetCalculator.calculate({
 		"balance": 2000.0,
 		"fixed_costs_total": 1200.0,
@@ -821,8 +852,55 @@ func _test_responsive_layout() -> void:
 
 	app.size = Vector2(390, 844)
 	app._apply_responsive_layout()
+	app._on_sync_status_changed(
+		"conflict",
+		"Auf einem anderen Gerät liegen neuere Änderungen vor. Nichts wurde überschrieben."
+	)
 	await get_tree().process_frame
 	_assert_equal(app._compact_layout, true, "Kompaktes Layout bei Mobilbreite")
+	_assert_equal(app.app_local_status.text, "Prüfen", "Langer Sync-Hinweis wird mobil kurz dargestellt")
+	_assert_equal(
+		app.app_local_status.tooltip_text,
+		"Auf einem anderen Gerät liegen neuere Änderungen vor. Nichts wurde überschrieben.",
+		"Vollständiger Sync-Hinweis bleibt als Detailtext erhalten"
+	)
+	var mobile_status_rect: Rect2 = app.app_local_status.get_global_rect()
+	_assert_equal(
+		app.app_local_status.visible
+		and mobile_status_rect.size.x >= 36.0
+		and mobile_status_rect.end.x <= app.size.x + 1.0,
+		true,
+		"Mobiler Sync-Status bleibt vollständig im Display"
+	)
+	for mobile_control: Control in [
+		app.app_shell,
+		app.app_bar,
+		app.dashboard_scroll,
+		app.dashboard_page,
+		app.mobile_dashboard_metrics,
+		app.world_view,
+		app.mobile_navigation,
+	]:
+		var mobile_control_rect := mobile_control.get_global_rect()
+		_assert_equal(
+			mobile_control_rect.position.x >= -1.0
+			and mobile_control_rect.end.x <= app.size.x + 1.0,
+			true,
+			"Mobiler Bereich bleibt innerhalb der Displaybreite: %s" % mobile_control.name
+		)
+	for mobile_button: Button in app.mobile_nav_buttons.values():
+		var mobile_button_rect := mobile_button.get_global_rect()
+		_assert_equal(
+			mobile_button_rect.position.x >= -1.0
+			and mobile_button_rect.end.x <= app.size.x + 1.0,
+			true,
+			"Jeder mobile Navigationspunkt bleibt vollständig sichtbar"
+		)
+		_assert_equal(
+			mobile_button.get_meta("mobile_icon") is TextureRect,
+			true,
+			"Mobile Navigation verwendet browserfeste SVG-Symbole"
+		)
 	_assert_equal(app.sidebar_panel.visible, false, "Seitenleiste mobil ausgeblendet")
 	_assert_equal(app.mobile_navigation.visible, true, "Mobile Navigation eingeblendet")
 	_assert_equal(app.desktop_backdrop.visible, true, "Landschaft verbindet auch die mobile Oberfläche")
@@ -904,6 +982,55 @@ func _test_responsive_layout() -> void:
 		true,
 		"Wochenplanung stapelt Angaben und Entwurf in der mobilen Ansicht"
 	)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var weekly_scroll: ScrollContainer = app.weekly_planning_page._scroll
+	var weekly_scroll_bar: VScrollBar = weekly_scroll.get_v_scroll_bar()
+	_assert_equal(
+		app.weekly_planning_page._generate_button.mouse_filter,
+		Control.MOUSE_FILTER_PASS,
+		"Wischen über dem KI-Knopf erreicht weiterhin den mobilen Scrollbereich"
+	)
+	_assert_equal(
+		weekly_scroll.vertical_scroll_mode,
+		ScrollContainer.SCROLL_MODE_SHOW_ALWAYS,
+		"Wochenplanung zeigt mobil dauerhaft eine Scrollleiste"
+	)
+	var weekly_content_rect: Rect2 = app.weekly_planning_page._content.get_global_rect()
+	_assert_equal(
+		weekly_content_rect.position.x >= -1.0
+		and weekly_content_rect.end.x <= app.size.x + 1.0,
+		true,
+		"Der tatsächliche Wochenplaninhalt bleibt innerhalb der mobilen Displaykanten"
+	)
+	_assert_equal(
+		weekly_scroll_bar.max_value > weekly_scroll_bar.page,
+		true,
+		"Wochenplanung besitzt mobil einen nutzbaren Scrollbereich"
+	)
+	weekly_scroll_bar.value = weekly_scroll_bar.max_value
+	await get_tree().process_frame
+	_assert_equal(
+		weekly_scroll_bar.value > 0.0,
+		true,
+		"Wochenplanung kann bis zum unteren Inhalt gescrollt werden"
+	)
+	var mobile_navigation_rect: Rect2 = app.mobile_navigation.get_global_rect()
+	_assert_equal(
+		app.mobile_navigation.visible and mobile_navigation_rect.end.y <= app.size.y + 1.0,
+		true,
+		"Mobile Navigation bleibt beim Scrollen vollständig im Display"
+	)
+	var weekly_navigation_gap := (
+		mobile_navigation_rect.position.y - weekly_scroll.get_global_rect().end.y
+	)
+	_assert_equal(
+		weekly_navigation_gap >= -1.0 and weekly_navigation_gap <= 12.0,
+		true,
+		"Zwischen Wochenplanung und Navigation bleibt kein schwarzer Leerblock"
+	)
+	weekly_scroll_bar.value = 0.0
 	_assert_equal(
 		app.desktop_backdrop.visible,
 		true,

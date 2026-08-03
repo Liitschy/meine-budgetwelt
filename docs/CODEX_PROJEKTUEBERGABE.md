@@ -1,6 +1,6 @@
 # Codex-Projektübergabe: Meine Budgetwelt
 
-Stand: **0.42.0** vom 3. August 2026;
+Stand: **0.42.1** vom 3. August 2026;
 veröffentlicht sind Client **0.42.0** und Server **0.1.6**
 
 Diese Datei enthält den aktuellen Projektstand und kann zusammen mit dem
@@ -226,12 +226,21 @@ Rezeptdetails und den dauerhaften Wocheneinkauf; Artikel lassen sich manuell
 ergänzen, abhaken und nach Bestätigung löschen. Nur die ausdrücklich abgehakten
 Artikel können über die bestehende Funktion als Monatsausgabe verbucht werden.
 Desktop- und Mobilvorschau wurden aus der echten Godot-Oberfläche auf
-vollständige Darstellung geprüft. Version 0.41.0 konfigurierte ursprünglich
-`qwen3.5:4b`; auf dem Root-Server ist tatsächlich `qwen3.5:9b` installiert.
-Server 0.1.6 migriert die Konfiguration auf
-`qwen3.5:9b`, erkennt installierte Qwen-Modelle über Ollamas `/api/tags` und
-liefert konkrete Transport-/Providerfehler statt nur einer Sammelmeldung.
+vollständige Darstellung geprüft. Der reale 0.1.7-Test mit `qwen3.5:9b`
+benötigte mehr als drei Minuten und wurde anschließend wegen einer leeren
+`Zubereitungsart` abgelehnt. Server 0.1.8 verwendet deshalb für Budgetwelt das
+schnellere, kostenlose `qwen3.5:4b`, begrenzt die strukturierte Antwort stärker
+und ergänzt ausschließlich fehlende Darstellungsfelder sicher auf dem Server.
+Allergien, ausgeschlossene Zutaten, Rezeptverweise und Budgetgrenze bleiben
+streng validiert. Das bestehende 9B-Modell bleibt ausschließlich für Blenk Voice
+unverändert. Server 0.1.10 fällt nicht mehr still auf dieses langsame Modell
+zurück: Das Setup lädt `qwen3.5:4b` automatisch und ein fehlendes Planungsmodell
+wird sofort verständlich gemeldet. Das mitgelieferte
+`tools/Install-PlanningModel.ps1` erlaubt dieselbe Einrichtung auch manuell.
 Ollama bleibt serverseitig an Loopback gebunden und benötigt keinen API-Schlüssel.
+Die mobile Wochenplanung wurde zusätzlich mit einem dauerhaft verfügbaren
+vertikalen Scrollbereich, erneuter Layoutberechnung nach Größenwechseln und
+automatisierten 390 × 844-Prüfungen für Displaybreite und Navigation abgesichert.
 Ebenfalls am 2. August 2026 wurde die freigegebene read-only-Bankoberfläche in
 den Buchungsbereich integriert. Der Server speichert Bankfreigaben isoliert,
 ruft über Enable Banking ausschließlich auf Knopfdruck Kontostände und Buchungen ab
@@ -317,8 +326,9 @@ autonom.
 - Landschaftsansicht: `ui/budget_world_view.gd`
 - Renderer: GL Compatibility
 - Desktop-Viewport: 1440 × 900
-- lokaler Entwicklungsstand: 0.42.0
-- lokaler Server-Entwicklungsstand: 0.1.6
+- lokaler Entwicklungsstand: 0.42.1
+- lokaler Server-Entwicklungsstand: 0.1.10 (noch nicht veröffentlicht)
+- auf dem Root-Server zuletzt manuell installierter Stand: 0.1.9 (noch zu verifizieren)
 - zuletzt veröffentlichte Serverversion: 0.1.6
 - zuletzt veröffentlichte Version: 0.42.0
 
@@ -513,10 +523,12 @@ Versionsnummer, Git-Tag und Dateiname müssen übereinstimmen.
 
 ## 13. Bekannte Einschränkungen
 
-- Server 0.1.6 migriert die alte Modellvorgabe `qwen3.5:4b` auf das auf dem
-  Root-Server installierte `qwen3.5:9b`, erkennt kompatible installierte
-  Qwen-Modelle automatisch und liefert konkrete Providerfehler; der echte
-  Wochenplan muss nach dem automatischen Serverupdate einmal live geprüft werden;
+- Der reale Server-0.1.7-Test benötigte mit `qwen3.5:9b` mehr als drei Minuten
+  und wurde danach wegen leerer `Zubereitungsart` abgelehnt. Server 0.1.10 nutzt
+  ausschließlich `qwen3.5:4b`, 1.280 Ausgabetoken, drei Rezeptbasen, 8.192
+  Kontexttoken sowie serverseitige Kosten-/Einkaufsberechnung und sichere
+  Darstellungsfeld-Normalisierung. Das Setup installiert das schnelle Modell
+  automatisch; Laufzeit und Ergebnis müssen danach auf dem Root-Server gemessen werden;
 - keine Codesignatur für die Windows-Dateien; der veröffentlichte Installer
   wird bis zur späteren kostenlosen Signaturlösung per SHA-256 geschützt;
 - die PWA kann auf dem iPhone durch Safari-/Service-Worker-Caches kurzzeitig
@@ -552,18 +564,24 @@ Versionsnummer, Git-Tag und Dateiname müssen übereinstimmen.
 
 ## 15. Aktueller Repository-Zustand bei Erstellung dieser Übergabe
 
-- veröffentlichter Stand: Client `0.42.0`, Server `0.1.6`;
-- Arbeitsbranch: `agent/complete-cosmic-ai-fix`;
+- veröffentlichter Stand: Client `0.42.0`, Server `0.1.6`; Root-Server wurde zuletzt manuell auf `0.1.9` aktualisiert;
+- Arbeitsbranch: `agent/ai-planning-performance-0.1.7` (enthält 0.1.10-Hotfix);
 - Cosmic-Star-Atlas-Design für App, PWA und die vollständige Administration
   vereinheitlicht;
 - echte Vorschauen für 1440 × 900 und 390 × 844 für Login, Dashboard,
   Fixkosten, Sparen, Buchungen, Wochenplanung und Banking erzeugt;
 - Admin-Login und Admin-Dashboard zusätzlich mit Edge in Desktop- und
   Mobilgröße gerendert;
-- KI-Modellvorgabe auf `qwen3.5:9b` migriert und installierte Qwen-Modelle werden
-  über Ollama erkannt;
+- unveröffentlichter Server 0.1.10 installiert `qwen3.5:4b` bei Bedarf im Setup,
+  nutzt ausschließlich dieses schnelle Planungsmodell und lässt das 9B-Modell von
+  Blenk Voice unverändert;
+- Client 0.42.1 verhindert den Android-Horizontalüberlauf, passt schmale Dashboards
+  ab 320 px an, nutzt browserfeste SVG-Symbole und gibt Wischgesten über Karten,
+  Texte und Bedienelemente an den jeweiligen Scrollbereich weiter;
 - Client zeigt konkrete Server-/Transportfehler für die KI-Planung;
 - Projekt-, Server-, KI-, Client-Server-, PWA- und Banking-Prüfungen bestanden;
+- mobile Wochenplanung bleibt bei 390 × 844 innerhalb der Displaybreite, ist bis
+  zum Ende scrollbar und hält die Navigation vollständig sichtbar;
 - die fremde bestehende Löschung `build/.gdignore` gehört nicht zu diesem
   Auftrag und darf nicht gestaget oder verworfen werden;
 - Veröffentlichung und Installation erst nach ausdrücklicher Freigabe der

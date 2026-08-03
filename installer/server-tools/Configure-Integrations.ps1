@@ -124,13 +124,16 @@ if ($Integration -in @("LocalAi", "Both")) {
             Enabled = $true
             Endpoint = "http://127.0.0.1:11434/api/chat"
             Model = "qwen3.5:4b"
-            ContextTokens = 16384
-            TimeoutSeconds = 300
-            KeepAlive = "30m"
+            ContextTokens = 8192
+            TimeoutSeconds = 60
+            KeepAlive = "5m"
         }
     $configuration.LocalAi.Enabled = $true
     $configuration.LocalAi.Endpoint = "http://127.0.0.1:11434/api/chat"
     $configuration.LocalAi.Model = "qwen3.5:4b"
+    $configuration.LocalAi.ContextTokens = 8192
+    $configuration.LocalAi.TimeoutSeconds = 60
+    $configuration.LocalAi.KeepAlive = "5m"
 }
 
 if ($Integration -in @("EnableBanking", "Both")) {

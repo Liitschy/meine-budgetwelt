@@ -182,17 +182,165 @@ var localAi = new LocalAiWeeklyPlanningService(
     {
         Enabled = true,
         Endpoint = "http://127.0.0.1:11434/api/chat",
-        Model = "qwen3.5:9b",
-        ContextTokens = 16_384,
+        Model = "qwen3.5:4b",
+        ContextTokens = 8_192,
         TimeoutSeconds = 30,
-        KeepAlive = "30m",
+        KeepAlive = "5m",
     }));
 var generated = await localAi.CreateDraftAsync(request, "test-user");
+if (
+    generated.Currency != "EUR"
+    || generated.WeeklyBudgetCents != request.WeeklyBudgetCents
+    || generated.SafetyBufferCents != request.SafetyBufferCents
+    || generated.PlanningTargetCents != 6_000
+    || generated.EstimatedCostCents != 1_750
+    || generated.RemainingCents != 4_250
+    || generated.Recipes.Single().EstimatedCostCents != 250
+    || generated.Days.Any(day => day.Servings != 2 || day.EstimatedCostCents != 250)
+    || generated.ShoppingItems.Count != 1
+    || generated.ShoppingItems[0].EstimatedPriceCents != 1_750
+    || generated.ShoppingItems[0].Quantity != "7 x 500 g"
+)
+{
+    throw new InvalidOperationException(
+        "Die deterministische Kosten- und Einkaufsnachberechnung ist fehlerhaft.");
+}
 validator.ValidateDraft(request, generated);
+
+var presentationNormalized = WeeklyPlanningDraftNormalizer.Normalize(
+    request,
+    draft with
+    {
+        PriceBasis = string.Empty,
+        Days = draft.Days.Select(day => day with
+        {
+            Meal = string.Empty,
+            Mode = string.Empty,
+            MealPrepNote = string.Empty,
+            LeftoverNote = string.Empty,
+        }).ToList(),
+        Recipes = [recipe with { Title = string.Empty, Mode = string.Empty }],
+        ShoppingItems = [],
+    });
+if (
+    string.IsNullOrWhiteSpace(presentationNormalized.PriceBasis)
+    || presentationNormalized.Recipes.Any(item =>
+        string.IsNullOrWhiteSpace(item.Title) || string.IsNullOrWhiteSpace(item.Mode))
+    || presentationNormalized.Days.Any(day =>
+        string.IsNullOrWhiteSpace(day.Meal) || string.IsNullOrWhiteSpace(day.Mode))
+    || !presentationNormalized.Days.Any(day =>
+        !string.IsNullOrWhiteSpace(day.MealPrepNote))
+    || !presentationNormalized.Days.Any(day =>
+        !string.IsNullOrWhiteSpace(day.LeftoverNote))
+)
+{
+    throw new InvalidOperationException(
+        "Fehlende Darstellungsfelder wurden nicht sicher normalisiert.");
+}
+validator.ValidateDraft(request, presentationNormalized);
+
+var pantryRecipe = recipe with
+{
+    Ingredients =
+    [
+        recipe.Ingredients[0],
+        new WeeklyPlanningIngredient
+        {
+            Name = "Vorratsreis",
+            Quantity = "250 g",
+            EstimatedPriceCents = 999,
+            IncludeInShopping = true,
+            UsesPantry = true,
+        },
+    ],
+};
+var pantryNormalized = WeeklyPlanningDraftNormalizer.Normalize(
+    request,
+    draft with { Recipes = [pantryRecipe], ShoppingItems = [] });
+if (
+    pantryNormalized.Recipes[0].Ingredients[1].EstimatedPriceCents != 0
+    || pantryNormalized.Recipes[0].Ingredients[1].IncludeInShopping
+    || pantryNormalized.ShoppingItems.Any(item => item.Name == "Vorratsreis")
+)
+{
+    throw new InvalidOperationException(
+        "Vorratszutaten wurden nicht kostenfrei aus dem Einkauf entfernt.");
+}
+validator.ValidateDraft(request, pantryNormalized);
+
+var aggregateRecipe = recipe with
+{
+    Ingredients =
+    [
+        recipe.Ingredients[0],
+        recipe.Ingredients[0] with
+        {
+            Name = "ROTE-LINSEN",
+            Quantity = "250 g",
+            EstimatedPriceCents = 100,
+        },
+    ],
+};
+var aggregated = WeeklyPlanningDraftNormalizer.Normalize(
+    request,
+    draft with { Recipes = [aggregateRecipe], ShoppingItems = [] });
+if (
+    aggregated.EstimatedCostCents != 2_450
+    || aggregated.ShoppingItems.Count != 1
+    || aggregated.ShoppingItems[0].EstimatedPriceCents != 2_450
+    || aggregated.ShoppingItems[0].Quantity != "7 x 500 g + 7 x 250 g"
+)
+{
+    throw new InvalidOperationException(
+        "Gleiche Einkaufsartikel wurden nicht korrekt zusammengefasst.");
+}
+validator.ValidateDraft(request, aggregated);
+
+var smallBudgetRequest = request with
+{
+    WeeklyBudgetCents = 2_000,
+    SafetyBufferCents = 0,
+};
+var overBudget = WeeklyPlanningDraftNormalizer.Normalize(
+    smallBudgetRequest,
+    draft with { Recipes = [aggregateRecipe], ShoppingItems = [] });
+ExpectRejected(
+    () => validator.ValidateDraft(smallBudgetRequest, overBudget),
+    "deterministisch erkannte Budgetueberschreitung");
+
 if (!handler.ContractVerified)
 {
     throw new InvalidOperationException(
         "Der lokale Ollama-Vertrag wurde nicht vollständig geprüft.");
+}
+var missingModelHandler = new FakeOllamaHandler(
+    draft,
+    ["qwen3.5:9b"]);
+var missingModelAi = new LocalAiWeeklyPlanningService(
+    new HttpClient(missingModelHandler),
+    Options.Create(new LocalAiPlanningOptions
+    {
+        Enabled = true,
+        Endpoint = "http://127.0.0.1:11434/api/chat",
+        Model = "qwen3.5:4b",
+        ContextTokens = 8_192,
+        TimeoutSeconds = 30,
+        KeepAlive = "5m",
+    }));
+var missingModelRejected = false;
+try
+{
+    _ = await missingModelAi.CreateDraftAsync(request, "missing-model-user");
+}
+catch (PlanningUnavailableException exception)
+    when (exception.Message.Contains("qwen3.5:4b", StringComparison.Ordinal))
+{
+    missingModelRejected = true;
+}
+if (!missingModelRejected || missingModelHandler.ContractVerified)
+{
+    throw new InvalidOperationException(
+        "Ein fehlendes 4B-Modell darf nicht unbemerkt auf das langsame 9B-Modell fallen.");
 }
 ExpectUnsafeEndpointRejected();
 
@@ -232,8 +380,22 @@ static void ExpectUnsafeEndpointRejected()
         "Eine entfernte KI-Adresse wurde nicht abgelehnt.");
 }
 
-sealed class FakeOllamaHandler(WeeklyPlanningDraft draft) : HttpMessageHandler
+sealed class FakeOllamaHandler : HttpMessageHandler
 {
+    private readonly WeeklyPlanningDraft _draft;
+    private readonly IReadOnlyList<string> _installedModels;
+    private readonly string _expectedModel;
+
+    public FakeOllamaHandler(
+        WeeklyPlanningDraft draft,
+        IReadOnlyList<string>? installedModels = null,
+        string expectedModel = "qwen3.5:4b")
+    {
+        _draft = draft;
+        _installedModels = installedModels ?? ["qwen3.5:4b", "qwen3.5:9b"];
+        _expectedModel = expectedModel;
+    }
+
     public bool ContractVerified { get; private set; }
 
     protected override async Task<HttpResponseMessage> SendAsync(
@@ -247,7 +409,7 @@ sealed class FakeOllamaHandler(WeeklyPlanningDraft draft) : HttpMessageHandler
         {
             var tagsJson = JsonSerializer.Serialize(new
             {
-                models = new[] { new { name = "qwen3.5:9b" } },
+                models = _installedModels.Select(name => new { name }),
             });
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
@@ -266,11 +428,24 @@ sealed class FakeOllamaHandler(WeeklyPlanningDraft draft) : HttpMessageHandler
         var body = await request.Content!.ReadAsStringAsync(cancellationToken);
         using var requestDocument = JsonDocument.Parse(body);
         var root = requestDocument.RootElement;
+        var recipesSchema = root.GetProperty("format")
+            .GetProperty("properties")
+            .GetProperty("recipes");
+        var ingredientsSchema = recipesSchema.GetProperty("items")
+            .GetProperty("properties")
+            .GetProperty("ingredients");
         if (
-            root.GetProperty("model").GetString() != "qwen3.5:9b"
+            root.GetProperty("model").GetString() != _expectedModel
             || root.GetProperty("stream").GetBoolean()
             || root.GetProperty("think").GetBoolean()
+            || root.GetProperty("options").GetProperty("num_predict").GetInt32() != 1_280
+            || root.GetProperty("options").GetProperty("num_ctx").GetInt32() != 8_192
             || root.GetProperty("format").GetProperty("type").GetString() != "object"
+            || root.GetProperty("format").GetProperty("properties")
+                .TryGetProperty("shoppingItems", out _)
+            || recipesSchema.GetProperty("minItems").GetInt32() != 3
+            || recipesSchema.GetProperty("maxItems").GetInt32() != 3
+            || ingredientsSchema.GetProperty("maxItems").GetInt32() != 6
             || root.GetProperty("messages").GetArrayLength() != 2
         )
         {
@@ -279,11 +454,11 @@ sealed class FakeOllamaHandler(WeeklyPlanningDraft draft) : HttpMessageHandler
         }
         ContractVerified = true;
         var planJson = JsonSerializer.Serialize(
-            draft,
+            _draft,
             new JsonSerializerOptions(JsonSerializerDefaults.Web));
         var responseJson = JsonSerializer.Serialize(new
         {
-            model = "qwen3.5:9b",
+            model = _expectedModel,
             message = new { role = "assistant", content = planJson },
             done = true,
         });

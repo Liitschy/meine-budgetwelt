@@ -8,6 +8,7 @@ const PackPlanner := preload("res://core/pack_planner.gd")
 const WeeklyPlanningPage := preload("res://ui/weekly_planning_page.gd")
 const WeeklyBudgetChart := preload("res://ui/weekly_budget_chart.gd")
 const BankingPanel := preload("res://ui/banking_panel.gd")
+const TouchScrollHelper := preload("res://core/touch_scroll_helper.gd")
 
 const COLORS := {
 	"background": Color("#080a0f"),
@@ -57,6 +58,7 @@ var sidebar_nav_buttons: Dictionary = {}
 var book_navigation_controls: Array[Control] = []
 var app_shell: VBoxContainer
 var app_bar: Control
+var app_bar_row: HBoxContainer
 var desktop_nav_buttons: Dictionary = {}
 var desktop_nav_container: Control
 var desktop_month_control: Control
@@ -78,6 +80,7 @@ var week_cards: BoxContainer
 var summary_panel: Control
 var mobile_dashboard_metrics: Control
 var mobile_dashboard_actions: Control
+var mobile_dashboard_captions: BoxContainer
 var mobile_dashboard_values: Dictionary = {}
 var month_flow_panel: Control
 var fixed_header: BoxContainer
@@ -221,10 +224,14 @@ var custom_recipe_preparation_input: TextEdit
 var custom_recipe_day_input: OptionButton
 var _editing_custom_recipe_id := ""
 var upcoming_cost_list: VBoxContainer
+var upcoming_cost_header: BoxContainer
+var upcoming_cost_filter: Button
 var dashboard_flow_values: Dictionary = {}
 var display_font: Font
 var interface_font: Font
 var _responsive_layout_queued := false
+var _sync_status_code := "synced"
+var _sync_status_message := "Synchronisiert"
 
 
 func _ready() -> void:
@@ -234,6 +241,8 @@ func _ready() -> void:
 	_apply_design_theme()
 	_build_interface()
 	_apply_heading_fonts(self)
+	if not get_tree().node_added.is_connected(_on_touch_scroll_node_added):
+		get_tree().node_added.connect(_on_touch_scroll_node_added)
 	BudgetManager.budget_changed.connect(_refresh)
 	FixedCostManager.fixed_costs_changed.connect(_on_fixed_costs_changed)
 	SavingsManager.savings_goals_changed.connect(_on_savings_goals_changed)
@@ -265,6 +274,7 @@ func _ready() -> void:
 	resized.connect(_queue_responsive_layout)
 	get_viewport().size_changed.connect(_queue_responsive_layout)
 	_apply_responsive_layout()
+	_configure_touch_scrolling()
 	_queue_responsive_layout()
 	call_deferred("_reset_dashboard_scroll")
 	if get_tree().current_scene == self:
@@ -280,7 +290,7 @@ func _configure_web_content_scale() -> void:
 		return
 	var css_width := int(browser_window.innerWidth)
 	var css_height := int(browser_window.innerHeight)
-	if css_width < 280 or css_height < 480:
+	if css_width < 280 or css_height < 320:
 		return
 	var window := get_window()
 	window.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
@@ -346,6 +356,14 @@ func _apply_heading_fonts(node: Node) -> void:
 func _reset_dashboard_scroll() -> void:
 	if is_instance_valid(dashboard_scroll):
 		dashboard_scroll.scroll_vertical = 0
+
+
+func _configure_touch_scrolling() -> void:
+	TouchScrollHelper.configure(self)
+
+
+func _on_touch_scroll_node_added(node: Node) -> void:
+	TouchScrollHelper.configure_added_descendant(node)
 
 
 func _build_interface() -> void:
@@ -832,12 +850,14 @@ func _logout_account() -> void:
 
 
 func _on_sync_status_changed(status: String, message: String) -> void:
+	_sync_status_code = status
+	_sync_status_message = message
 	if is_instance_valid(app_local_status):
-		app_local_status.text = "●  %s" % message
 		app_local_status.add_theme_color_override(
 			"font_color",
 			COLORS.success if status == "synced" else COLORS.warning if status in ["syncing", "conflict"] else COLORS.muted
 		)
+		_update_compact_sync_status()
 	if is_instance_valid(status_label):
 		status_label.text = message
 	if is_instance_valid(settings_sync_label):
@@ -1024,6 +1044,7 @@ func _build_app_bar() -> Control:
 	bar_style.border_width_bottom = 1
 	bar.add_theme_stylebox_override("panel", bar_style)
 	var row := HBoxContainer.new()
+	app_bar_row = row
 	row.add_theme_constant_override("separation", 12)
 	row.add_theme_constant_override("margin_left", 32)
 	row.add_theme_constant_override("margin_right", 24)
@@ -1043,6 +1064,7 @@ func _build_app_bar() -> Control:
 	brand.text = "Meine Budgetwelt"
 	brand.custom_minimum_size.x = 310
 	brand.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	brand.clip_text = true
 	brand.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	brand.add_theme_font_override("font", display_font)
 	brand.add_theme_font_size_override("font_size", 26)
@@ -1102,8 +1124,10 @@ func _build_app_bar() -> Control:
 	row.add_child(month_panel)
 
 	app_local_status = Label.new()
-	app_local_status.text = "●  Synchronisiert"
+	app_local_status.text = "Aktuell"
 	app_local_status.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	app_local_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	app_local_status.clip_text = true
 	app_local_status.add_theme_font_size_override("font_size", 15)
 	app_local_status.add_theme_color_override("font_color", Color("#9ecb9c"))
 	app_local_status.visible = false
@@ -1139,18 +1163,20 @@ func _build_upcoming_costs() -> Control:
 	column.add_theme_constant_override("separation", 8)
 	panel.add_child(column)
 
-	var header := HBoxContainer.new()
+	var header := BoxContainer.new()
+	upcoming_cost_header = header
 	header.add_theme_constant_override("separation", 10)
 	column.add_child(header)
 	var title := Label.new()
-	title.text = "◌  Nächste Fixkosten"
+	title.text = "Nächste Fixkosten"
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title.add_theme_font_override("font", display_font)
 	title.add_theme_font_size_override("font_size", 17)
 	title.add_theme_color_override("font_color", Color("#f0d3ae"))
 	header.add_child(title)
 	var filter := Button.new()
-	filter.text = "Diese Woche  ⌄"
+	upcoming_cost_filter = filter
+	filter.text = "Diese Woche  v"
 	filter.custom_minimum_size = Vector2(104, 38)
 	filter.add_theme_color_override("font_color", Color("#d7c2ab"))
 	filter.add_theme_stylebox_override("normal", _style(Color("#14181df2"), 13, Color("#4e382c")))
@@ -1185,9 +1211,9 @@ func _build_mobile_dashboard_metrics() -> Control:
 	grid.add_theme_constant_override("h_separation", 12)
 	grid.add_theme_constant_override("v_separation", 12)
 	for definition: Array in [
-		["balance", "Kontostand", "✦", Color("#d8a35f")],
-		["free", "Frei verfügbar", "✷", Color("#d98a5c")],
-		["weekly", "Wochenbudget", "◯", Color("#d8a35f")],
+		["balance", "Kontostand", "res://assets/icons/orbit.svg", Color("#d8a35f")],
+		["free", "Frei verfügbar", "res://assets/icons/leaf.svg", Color("#d98a5c")],
+		["weekly", "Wochenbudget", "res://assets/icons/meal-plan.svg", Color("#d8a35f")],
 	]:
 		var card := PanelContainer.new()
 		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1204,13 +1230,12 @@ func _build_mobile_dashboard_metrics() -> Control:
 		var content := HBoxContainer.new()
 		content.add_theme_constant_override("separation", 6)
 		column.add_child(content)
-		var icon := Label.new()
-		icon.text = definition[2]
+		var icon := TextureRect.new()
+		icon.texture = load(str(definition[2]))
 		icon.custom_minimum_size = Vector2(40, 48)
-		icon.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		icon.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		icon.add_theme_font_size_override("font_size", 28)
-		icon.add_theme_color_override("font_color", definition[3])
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		content.add_child(icon)
 		var labels := VBoxContainer.new()
 		labels.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1288,7 +1313,8 @@ func _build_mobile_dashboard_actions() -> Control:
 	progress.add_theme_stylebox_override("fill", _style(Color("#b8799c"), 4))
 	mobile_dashboard_values["weekly_remaining_progress"] = progress
 	column.add_child(progress)
-	var captions := HBoxContainer.new()
+	var captions := BoxContainer.new()
+	mobile_dashboard_captions = captions
 	var spent := Label.new()
 	spent.text = "Verbraucht: 0,00 €"
 	spent.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1303,6 +1329,19 @@ func _build_mobile_dashboard_actions() -> Control:
 	column.add_child(captions)
 	button.add_child(column)
 	return button
+
+func _mobile_navigation_button_style(
+	background: Color,
+	border: Color = Color.TRANSPARENT
+) -> StyleBoxFlat:
+	var style := _style(background, 14, border)
+	style.content_margin_left = 0
+	style.content_margin_right = 0
+	style.content_margin_top = 0
+	style.content_margin_bottom = 0
+	style.shadow_size = 0
+	return style
+
 
 func _build_mobile_navigation() -> Control:
 	var panel := PanelContainer.new()
@@ -1322,35 +1361,55 @@ func _build_mobile_navigation() -> Control:
 	row.add_theme_constant_override("separation", 4)
 	panel.add_child(row)
 	for item: Array in [
-		["◎", "Budget", "dashboard"],
-		["◌", "Fixkosten", "fixed_costs"],
-		["▤", "Buchungen", "transactions"],
-		["⌁", "Planung", "weekly_planning"],
-		["⋯", "Mehr", "settings"],
+		["res://assets/icons/home.svg", "Budget", "dashboard"],
+		["res://assets/icons/fixed-costs.svg", "Fixkosten", "fixed_costs"],
+		["res://assets/icons/bookings.svg", "Buchungen", "transactions"],
+		["res://assets/icons/meal-plan.svg", "Planung", "weekly_planning"],
+		["res://assets/icons/orbit.svg", "Mehr", "settings"],
 	]:
 		var button := Button.new()
 		button.text = ""
 		button.custom_minimum_size.y = 88
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		button.add_theme_stylebox_override("normal", _style(Color.TRANSPARENT, 0))
-		button.add_theme_stylebox_override("hover", _style(Color("#241a15aa"), 14, Color("#7a5038")))
+		button.flat = true
+		button.add_theme_stylebox_override(
+			"normal", _mobile_navigation_button_style(Color.TRANSPARENT)
+		)
+		button.add_theme_stylebox_override(
+			"hover",
+			_mobile_navigation_button_style(Color("#241a15aa"), Color("#7a5038"))
+		)
+		button.add_theme_stylebox_override(
+			"pressed",
+			_mobile_navigation_button_style(Color("#3a291ee6"), Color("#6f4935"))
+		)
+		button.add_theme_stylebox_override(
+			"hover_pressed",
+			_mobile_navigation_button_style(Color("#3a291ee6"), Color("#6f4935"))
+		)
+		button.add_theme_stylebox_override(
+			"focus", _mobile_navigation_button_style(Color.TRANSPARENT)
+		)
+		button.add_theme_stylebox_override(
+			"disabled", _mobile_navigation_button_style(Color.TRANSPARENT)
+		)
 		button.pressed.connect(_show_page.bind(str(item[2])))
 		var content := VBoxContainer.new()
 		content.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		content.alignment = BoxContainer.ALIGNMENT_CENTER
 		content.add_theme_constant_override("separation", 2)
-		var icon := Label.new()
-		icon.text = str(item[0])
-		icon.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		icon.add_theme_font_size_override("font_size", 31)
-		icon.add_theme_color_override("font_color", Color("#d8a276"))
+		var icon := TextureRect.new()
+		icon.texture = load(str(item[0]))
+		icon.custom_minimum_size = Vector2(36, 36)
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		content.add_child(icon)
 		var label := Label.new()
 		label.text = str(item[1])
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		label.add_theme_font_size_override("font_size", 14)
+		label.add_theme_font_size_override("font_size", 12)
 		label.add_theme_color_override("font_color", Color("#aaa4a4"))
 		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		content.add_child(label)
@@ -1593,7 +1652,7 @@ func _build_header() -> Control:
 	title.add_theme_color_override("font_color", Color("#f0d3ae"))
 	titles.add_child(title)
 	var ornament := Label.new()
-	ornament.text = "━━━━━━━━━━━━  ✦"
+	ornament.text = "----------------"
 	ornament.add_theme_font_size_override("font_size", 12)
 	ornament.add_theme_color_override("font_color", Color("#d58b5e"))
 	titles.add_child(ornament)
@@ -1619,12 +1678,12 @@ func _build_header() -> Control:
 	month_content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	month_content.add_theme_constant_override("margin_left", 18)
 	month_content.add_theme_constant_override("margin_right", 18)
-	var month_icon := Label.new()
-	month_icon.text = "▣"
-	month_icon.custom_minimum_size.x = 48
-	month_icon.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	month_icon.add_theme_font_size_override("font_size", 27)
-	month_icon.add_theme_color_override("font_color", Color("#d58b5e"))
+	var month_icon := TextureRect.new()
+	month_icon.texture = load("res://assets/icons/meal-plan.svg")
+	month_icon.custom_minimum_size = Vector2(48, 48)
+	month_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	month_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	month_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	month_content.add_child(month_icon)
 	month_selector_label = Label.new()
 	month_selector_label.text = "August 2026"
@@ -1634,7 +1693,7 @@ func _build_header() -> Control:
 	month_selector_label.add_theme_color_override("font_color", Color("#f0d3ae"))
 	month_content.add_child(month_selector_label)
 	var chevron := Label.new()
-	chevron.text = "⌄"
+	chevron.text = "v"
 	chevron.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	chevron.add_theme_font_size_override("font_size", 28)
 	chevron.add_theme_color_override("font_color", Color("#f0d3ae"))
@@ -4871,13 +4930,14 @@ static func _should_stack_dashboard(view_size: Vector2, is_web: bool) -> bool:
 func _apply_responsive_layout() -> void:
 	if not is_node_ready():
 		return
+	_configure_touch_scrolling()
 
 	var is_web := OS.has_feature("web")
 	var responsive_size := _responsive_view_size()
 	if is_web:
 		var target_scale_size := Vector2i(
 			maxi(roundi(responsive_size.x), 280),
-			maxi(roundi(responsive_size.y), 480)
+			maxi(roundi(responsive_size.y), 320)
 		)
 		if get_window().content_scale_size != target_scale_size:
 			get_window().content_scale_size = target_scale_size
@@ -4935,7 +4995,13 @@ func _apply_responsive_layout() -> void:
 
 	dashboard_body.vertical = compact or stacked_content
 	mobile_dashboard_metrics.visible = compact
+	if mobile_dashboard_metrics is GridContainer:
+		(mobile_dashboard_metrics as GridContainer).columns = (
+			1 if compact and responsive_size.x < 380.0 else 2
+		)
 	mobile_dashboard_actions.visible = compact
+	if is_instance_valid(mobile_dashboard_captions):
+		mobile_dashboard_captions.vertical = compact and responsive_size.x < 380.0
 	summary_panel.visible = true
 	month_flow_panel.visible = not compact
 	if compact:
@@ -4964,6 +5030,14 @@ func _apply_responsive_layout() -> void:
 		else Vector2(760, 520)
 	)
 	summary_panel.custom_minimum_size = Vector2(0, 600) if compact else Vector2(385, 520)
+	if is_instance_valid(upcoming_cost_header):
+		upcoming_cost_header.vertical = compact and responsive_size.x < 380.0
+	if is_instance_valid(upcoming_cost_filter):
+		upcoming_cost_filter.size_flags_horizontal = (
+			Control.SIZE_EXPAND_FILL
+			if compact and responsive_size.x < 380.0
+			else Control.SIZE_SHRINK_END
+		)
 	dashboard_header.custom_minimum_size.y = 220 if compact else 126
 	fixed_header.custom_minimum_size.y = 0 if compact else 82
 	_apply_login_layout()
@@ -5420,17 +5494,17 @@ func _update_mobile_navigation(active_page: String = "") -> void:
 		var button: Button = mobile_nav_buttons[key]
 		var active := key == active_page
 		var label := button.get_meta("mobile_label") as Label
-		var icon := button.get_meta("mobile_icon") as Label
+		var icon := button.get_meta("mobile_icon") as TextureRect
 		label.add_theme_color_override(
 			"font_color", Color("#f0d3ae") if active else Color("#aaa4a4")
 		)
-		icon.add_theme_color_override(
-			"font_color", Color("#f0d3ae") if active else Color("#d08c62")
-		)
+		icon.modulate = Color(1, 1, 1, 1.0 if active else 0.68)
 		button.add_theme_stylebox_override(
 			"normal",
-			_style(Color("#3a291ee6"), 15, Color("#6f4935")) if active
-			else _style(Color.TRANSPARENT, 0)
+			_mobile_navigation_button_style(
+				Color("#3a291ee6"), Color("#6f4935")
+			) if active
+			else _mobile_navigation_button_style(Color.TRANSPARENT)
 		)
 
 func _update_sidebar_navigation(active_page: String) -> void:
@@ -5475,18 +5549,48 @@ func _update_app_bar_layout(compact: bool = _compact_layout) -> void:
 			else "Meine Budgetwelt"
 		)
 		app_bar_title.custom_minimum_size.x = 0 if compact else 310
-		app_bar_title.add_theme_font_size_override("font_size", 27 if compact else 26)
+		var compact_width := _responsive_view_size().x
+		app_bar_title.add_theme_font_size_override(
+			"font_size",
+			22 if compact and compact_width < 430.0 else 27 if compact else 26
+		)
+	if is_instance_valid(app_bar_row):
+		app_bar_row.add_theme_constant_override("margin_left", 14 if compact else 32)
+		app_bar_row.add_theme_constant_override("margin_right", 14 if compact else 24)
+		app_bar_row.add_theme_constant_override("separation", 8 if compact else 12)
 	if is_instance_valid(desktop_nav_container):
 		desktop_nav_container.visible = not compact
 	if is_instance_valid(desktop_month_control):
 		desktop_month_control.visible = not compact
 	if is_instance_valid(app_local_status):
 		app_local_status.visible = compact and _current_page == "dashboard"
+		_update_compact_sync_status()
 	if is_instance_valid(account_button):
 		account_button.visible = false
 	if is_instance_valid(app_bar_settings_button):
 		app_bar_settings_button.visible = false
 	_update_sidebar_navigation(_current_page)
+
+func _update_compact_sync_status() -> void:
+	if not is_instance_valid(app_local_status):
+		return
+	app_local_status.text = {
+		"synced": "Aktuell",
+		"syncing": "Sync ...",
+		"conflict": "Prüfen",
+		"offline": "Offline",
+		"error": "Fehler",
+	}.get(_sync_status_code, "Status")
+	app_local_status.tooltip_text = _sync_status_message
+	app_local_status.custom_minimum_size.x = (
+		58.0 if _responsive_view_size().x < 430.0 else 76.0
+	)
+	app_local_status.size_flags_horizontal = Control.SIZE_SHRINK_END
+	app_local_status.add_theme_font_size_override(
+		"font_size",
+		13 if _responsive_view_size().x < 430.0 else 15
+	)
+
 
 func _navigate_back() -> void:
 	if _page_history.is_empty():
@@ -5528,6 +5632,7 @@ func _show_page(page: String, remember_history: bool = true) -> void:
 		_rebuild_savings_rows()
 	elif page == "transactions":
 		_rebuild_transaction_rows()
+	call_deferred("_configure_touch_scrolling")
 
 func _show_not_ready(page_name: String) -> void:
 	status_label.text = "%s folgt in einem späteren Entwicklungsschritt." % page_name
