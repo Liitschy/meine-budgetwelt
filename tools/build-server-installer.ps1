@@ -81,8 +81,13 @@ foreach ($updaterFile in @(
         throw "Server-Updater-Datei fehlt: $updaterFile"
     }
 }
-if (-not (Test-Path -LiteralPath (Join-Path $publishedToolsRoot "Configure-Integrations.ps1") -PathType Leaf)) {
-    throw "Server-Konfigurationswerkzeug fehlt: Configure-Integrations.ps1"
+foreach ($toolFile in @(
+    "Configure-Integrations.ps1",
+    "Install-PlanningModel.ps1"
+)) {
+    if (-not (Test-Path -LiteralPath (Join-Path $publishedToolsRoot $toolFile) -PathType Leaf)) {
+        throw "Server-Konfigurationswerkzeug fehlt: $toolFile"
+    }
 }
 
 if ([string]::IsNullOrWhiteSpace($MakensisPath)) {

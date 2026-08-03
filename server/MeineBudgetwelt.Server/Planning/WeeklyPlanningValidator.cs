@@ -186,7 +186,7 @@ public sealed partial class WeeklyPlanningValidator
                 }
                 if (ingredient.IncludeInShopping)
                 {
-                    var ingredientName = Normalize(ingredient.Name);
+                    var ingredientName = NormalizeForComparison(ingredient.Name);
                     if (!requiredShoppingSources.TryGetValue(
                         ingredientName,
                         out var recipeIds))
@@ -249,7 +249,7 @@ public sealed partial class WeeklyPlanningValidator
             {
                 throw InvalidDraft("Ein Einkaufspreis ist ungültig.");
             }
-            var normalizedName = Normalize(item.Name);
+            var normalizedName = NormalizeForComparison(item.Name);
             if (!seenShoppingItems.Add(normalizedName))
             {
                 throw InvalidDraft("Ein Einkaufsartikel kommt mehrfach vor.");
@@ -336,8 +336,8 @@ public sealed partial class WeeklyPlanningValidator
 
     private static bool MatchesBlockedTerm(string candidate, string blocked)
     {
-        var normalizedCandidate = Normalize(candidate);
-        var normalizedBlocked = Normalize(blocked);
+        var normalizedCandidate = NormalizeForComparison(candidate);
+        var normalizedBlocked = NormalizeForComparison(blocked);
         if (normalizedBlocked.Length == 0)
         {
             return false;
@@ -359,7 +359,7 @@ public sealed partial class WeeklyPlanningValidator
         return normalizedCandidate.Contains(normalizedBlocked, StringComparison.Ordinal);
     }
 
-    private static string Normalize(string value)
+    internal static string NormalizeForComparison(string value)
     {
         var decomposed = value.Trim().ToLowerInvariant()
             .Replace("ß", "ss", StringComparison.Ordinal)

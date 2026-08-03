@@ -21,6 +21,8 @@
              Link="Planning\LocalAiWeeklyPlanningService.cs" />
     <Compile Include="..\MeineBudgetwelt.Server\Planning\WeeklyPlanningValidator.cs"
              Link="Planning\WeeklyPlanningValidator.cs" />
+    <Compile Include="..\MeineBudgetwelt.Server\Planning\WeeklyPlanningDraftNormalizer.cs"
+             Link="Planning\WeeklyPlanningDraftNormalizer.cs" />
   </ItemGroup>
 
 </Project>

@@ -81,12 +81,16 @@ Er verändert weder Buchungen noch synchronisierte Daten; die Übernahme erfolgt
 später ausdrücklich im Client.
 
 Installierte Server aktivieren die lokale KI standardmäßig über
-`LocalAi:Enabled`. Budgetwelt verwendet dieselbe Ollama-Laufzeit und dasselbe
-Modell `qwen3.5:9b` wie Blenk Voice, spricht sie aber ausschließlich direkt
-über `http://127.0.0.1:11434/api/chat` an. Entfernte KI-Adressen werden vom
-Server abgelehnt. Es gibt keinen API-Schlüssel und keine nutzungsabhängigen
-KI-Gebühren. Anfragen erzwingen ein strukturiertes JSON-Schema und werden vor
-der Rückgabe vollständig validiert.
+`LocalAi:Enabled`. Budgetwelt nutzt dieselbe loopback-gebundene Ollama-Laufzeit
+wie Blenk Voice, verwendet für die Wochenplanung aber das schnellere, kostenlose
+Modell `qwen3.5:4b`. Blenk Voice kann `qwen3.5:9b` unverändert weiterverwenden.
+Das Server-Setup prüft das 4B-Modell und lädt es bei Bedarf automatisch. Ein
+fehlendes 4B-Modell wird sofort verständlich gemeldet; Budgetwelt fällt nicht
+mehr auf das deutlich langsamere Voice-Modell zurück. Das mitgelieferte Werkzeug
+`tools/Install-PlanningModel.ps1` erlaubt dieselbe Einrichtung auch manuell.
+Entfernte KI-Adressen werden abgelehnt. Es gibt keinen API-Schlüssel und keine
+nutzungsabhängigen KI-Gebühren. Anfragen erzwingen ein strukturiertes JSON-Schema
+und werden vor der Rückgabe vollständig validiert.
 
 Die deterministischen Prüfungen laufen ohne API-Schlüssel:
 

@@ -43,10 +43,10 @@ public static class InstalledConfiguration
             {
                 Enabled = true,
                 Endpoint = "http://127.0.0.1:11434/api/chat",
-                Model = "qwen3.5:9b",
-                ContextTokens = 16_384,
-                TimeoutSeconds = 300,
-                KeepAlive = "30m",
+                Model = "qwen3.5:4b",
+                ContextTokens = 8_192,
+                TimeoutSeconds = 60,
+                KeepAlive = "5m",
             },
             EnableBanking = new
             {
@@ -98,23 +98,41 @@ public static class InstalledConfiguration
             {
                 ["Enabled"] = true,
                 ["Endpoint"] = "http://127.0.0.1:11434/api/chat",
-                ["Model"] = "qwen3.5:9b",
-                ["ContextTokens"] = 16_384,
-                ["TimeoutSeconds"] = 300,
-                ["KeepAlive"] = "30m",
+                ["Model"] = "qwen3.5:4b",
+                ["ContextTokens"] = 8_192,
+                ["TimeoutSeconds"] = 60,
+                ["KeepAlive"] = "5m",
             };
             changed = true;
         }
-        else if (
-            configuration["LocalAi"] is JsonObject localAi
-            && string.Equals(
-                localAi["Model"]?.GetValue<string>(),
-                "qwen3.5:4b",
-                StringComparison.OrdinalIgnoreCase)
-        )
+        else if (configuration["LocalAi"] is JsonObject localAi)
         {
-            localAi["Model"] = "qwen3.5:9b";
-            changed = true;
+            if (string.Equals(
+                localAi["Model"]?.GetValue<string>(),
+                "qwen3.5:9b",
+                StringComparison.OrdinalIgnoreCase))
+            {
+                localAi["Model"] = "qwen3.5:4b";
+                changed = true;
+            }
+            if ((localAi["TimeoutSeconds"]?.GetValue<int>() ?? 0) != 60)
+            {
+                localAi["TimeoutSeconds"] = 60;
+                changed = true;
+            }
+            if ((localAi["ContextTokens"]?.GetValue<int>() ?? 0) != 8_192)
+            {
+                localAi["ContextTokens"] = 8_192;
+                changed = true;
+            }
+            if (string.Equals(
+                localAi["KeepAlive"]?.GetValue<string>(),
+                "30m",
+                StringComparison.OrdinalIgnoreCase))
+            {
+                localAi["KeepAlive"] = "5m";
+                changed = true;
+            }
         }
 
         if (!configuration.ContainsKey("EnableBanking"))

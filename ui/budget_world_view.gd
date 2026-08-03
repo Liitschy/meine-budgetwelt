@@ -51,7 +51,7 @@ func _draw() -> void:
 	var outer := Rect2(Vector2(1, 1), size - Vector2(2, 2))
 	draw_style_box(_panel_style(), outer)
 	var title_size := 25 if _compact_mode else 20
-	_draw_text(Vector2(24, 40 if _compact_mode else 35), "Finanzielle Umlaufbahn  ⓘ", title_size, CHAMPAGNE, _display_font)
+	_draw_text(Vector2(24, 40 if _compact_mode else 35), "Finanzielle Umlaufbahn  (i)", title_size, CHAMPAGNE, _display_font)
 	var art_rect := _art_rect()
 	draw_texture_rect(ORBIT_ART, art_rect, false, Color(1, 1, 1, 0.98))
 	_draw_month_markers(art_rect)

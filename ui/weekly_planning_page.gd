@@ -8,6 +8,7 @@ signal request_remove_personal_price(price_id: String)
 
 const RecipeCatalog := preload("res://core/recipe_catalog.gd")
 const PackPlanner := preload("res://core/pack_planner.gd")
+const TouchScrollHelper := preload("res://core/touch_scroll_helper.gd")
 
 const COLORS := {
 	"panel": Color("#0d1218e8"),
@@ -131,6 +132,10 @@ func _build_shell() -> void:
 	_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	_scroll.scroll_deadzone = 4
+	_scroll.follow_focus = true
+	_scroll.mouse_force_pass_scroll_events = true
 	add_child(_scroll)
 	_content = VBoxContainer.new()
 	_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -142,6 +147,7 @@ func _rebuild_content() -> void:
 	if not is_instance_valid(_content):
 		return
 	for child in _content.get_children():
+		_content.remove_child(child)
 		child.queue_free()
 	_step_buttons.clear()
 	_field_rows.clear()
@@ -155,6 +161,7 @@ func _rebuild_content() -> void:
 			else _build_price_library_preview()
 		)
 		_apply_layout()
+		TouchScrollHelper.configure(_scroll)
 		return
 	_content.add_child(_build_step_panel())
 
@@ -169,6 +176,7 @@ func _rebuild_content() -> void:
 	else:
 		_content.add_child(_build_review_step(AiPlanningManager.get_draft()))
 	_apply_layout()
+	TouchScrollHelper.configure(_scroll)
 
 
 func _build_header() -> BoxContainer:
@@ -1589,7 +1597,13 @@ func _apply_layout() -> void:
 	for side in ["margin_left", "margin_right"]:
 		add_theme_constant_override(side, 10 if _compact else 22)
 	add_theme_constant_override("margin_top", 10 if _compact else 18)
-	add_theme_constant_override("margin_bottom", 112 if _host_compact else 18)
+	add_theme_constant_override("margin_bottom", 10 if _host_compact else 18)
+	if is_instance_valid(_scroll):
+		_scroll.vertical_scroll_mode = (
+			ScrollContainer.SCROLL_MODE_SHOW_ALWAYS
+			if _host_compact
+			else ScrollContainer.SCROLL_MODE_AUTO
+		)
 	if is_instance_valid(_header):
 		_header.vertical = _compact
 	if is_instance_valid(_step_row):
@@ -1610,6 +1624,18 @@ func _apply_layout() -> void:
 	for row in _field_rows:
 		if is_instance_valid(row):
 			row.vertical = _compact
+	call_deferred("_refresh_minimum_sizes")
+
+
+func _refresh_minimum_sizes() -> void:
+	if not is_instance_valid(_content) or not is_instance_valid(_scroll):
+		return
+	_content.update_minimum_size()
+	_scroll.update_minimum_size()
+	update_minimum_size()
+	var parent := get_parent()
+	if parent is Container:
+		(parent as Container).queue_sort()
 
 
 func _on_draft_changed(_draft: Dictionary) -> void:
@@ -1682,7 +1708,7 @@ func _refresh_responsive_mode() -> void:
 		return
 	_compact = effective_compact
 	_phone_compact = phone_compact
-	_apply_layout()
+	_rebuild_content()
 
 
 func _show_draft_recipe(source_id: String) -> void:

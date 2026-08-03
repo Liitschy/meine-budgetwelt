@@ -388,8 +388,23 @@ health_retry:
     '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -Command "& { try { Invoke-WebRequest -UseBasicParsing -Uri http://127.0.0.1:$Port/health -TimeoutSec 3 -ErrorAction Stop | Out-Null; exit 0 } catch { exit 1 } }"'
   Pop $0
   !insertmacro TestLog "Healthcheck $2: Exitcode $0"
-  StrCmp $0 "0" install_success
+  StrCmp $0 "0" install_planning_model
   IntCmp $2 15 install_rollback health_retry install_rollback
+
+install_planning_model:
+!ifdef TEST_MODE
+  Goto install_success
+!else
+  DetailPrint "Schnelles kostenloses KI-Planungsmodell wird geprüft ..."
+  nsExec::ExecToLog \
+    '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy RemoteSigned -File "$AppDir\tools\Install-PlanningModel.ps1" -SkipConfiguration'
+  Pop $0
+  StrCmp $0 "0" install_success planning_model_warning
+planning_model_warning:
+  MessageBox MB_OK|MB_ICONEXCLAMATION \
+    "Der Server wurde aktualisiert, aber das schnelle KI-Planungsmodell konnte noch nicht installiert werden.$\r$\n$\r$\nStarten Sie das Setup erneut, sobald Ollama erreichbar ist." /SD IDOK
+  Goto install_success
+!endif
 
 install_rollback:
   nsExec::ExecToLog '$\"$SYSDIR\sc.exe$\" stop ${SERVICE_NAME}'

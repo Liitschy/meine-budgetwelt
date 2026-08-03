@@ -30,6 +30,11 @@ func _ready() -> void:
 	if not preview_month.is_empty():
 		app.month_selector_label.text = preview_month
 		app.desktop_month_selector_label.text = "%s  ⌄" % preview_month
+	var preview_sync_status := OS.get_environment(
+		"BUDGETWELT_VISUAL_SYNC_STATUS"
+	).strip_edges()
+	if not preview_sync_status.is_empty():
+		app._on_sync_status_changed("conflict", preview_sync_status)
 	if resize_first:
 		get_window().size = Vector2i(preview_width, preview_height)
 		get_window().content_scale_size = Vector2i(preview_width, preview_height)
@@ -110,6 +115,73 @@ func _ready() -> void:
 			var bank_scroll_bar: VScrollBar = bank_scroll.get_v_scroll_bar()
 			bank_scroll_bar.value = bank_scroll_bar.max_value
 		await get_tree().process_frame
+	if preview_page == "weekly_planning":
+		var weekly_scroll: ScrollContainer = app.weekly_planning_page._scroll
+		var weekly_bar: VScrollBar = weekly_scroll.get_v_scroll_bar()
+		var navigation_rect: Rect2 = app.mobile_navigation.get_global_rect()
+		if weekly_bar.max_value <= weekly_bar.page:
+			push_error("Die mobile Wochenplanung besitzt keinen nutzbaren Scrollbereich.")
+			get_tree().quit(1)
+			return
+		var page_rect: Rect2 = app.weekly_planning_page.get_global_rect()
+		var scroll_rect: Rect2 = weekly_scroll.get_global_rect()
+		var content_rect: Rect2 = app.weekly_planning_page._content.get_global_rect()
+		if (
+			page_rect.position.x < -1.0
+			or page_rect.end.x > float(preview_width) + 1.0
+			or scroll_rect.position.x < -1.0
+			or scroll_rect.end.x > float(preview_width) + 1.0
+			or content_rect.position.x < -1.0
+			or content_rect.end.x > float(preview_width) + 1.0
+		):
+			push_error("Die mobile Wochenplanung ist breiter als das Display.")
+			get_tree().quit(1)
+			return
+		if not app.mobile_navigation.visible or navigation_rect.end.y > app.size.y + 1.0:
+			push_error("Die mobile Navigation liegt ausserhalb des sichtbaren Displays.")
+			get_tree().quit(1)
+			return
+		if navigation_rect.position.y - scroll_rect.end.y > 12.0:
+			push_error("Zwischen Wochenplanung und Navigation bleibt eine schwarze Leerfläche.")
+			get_tree().quit(1)
+			return
+	if preview_page == "dashboard":
+		var sync_rect: Rect2 = app.app_local_status.get_global_rect()
+		if (
+			not app.app_local_status.visible
+			or sync_rect.size.x < 36.0
+			or sync_rect.end.x > float(preview_width) + 1.0
+		):
+			push_error("Der mobile Synchronisationsstatus ist nicht vollständig sichtbar: status=%s shell_min=%s dashboard_min=%s header=%s body=%s metrics=%s action=%s world=%s summary=%s" % [str(sync_rect), str(app.app_shell.get_combined_minimum_size()), str(app.dashboard_page.get_combined_minimum_size()), str(app.dashboard_header.get_combined_minimum_size()), str(app.dashboard_body.get_combined_minimum_size()), str(app.mobile_dashboard_metrics.get_combined_minimum_size()), str(app.mobile_dashboard_actions.get_combined_minimum_size()), str(app.world_view.get_combined_minimum_size()), str(app.summary_panel.get_combined_minimum_size())])
+			get_tree().quit(1)
+			return
+		var dashboard_controls: Array[Control] = [
+			app.app_shell,
+			app.app_bar,
+			app.dashboard_scroll,
+			app.dashboard_page,
+			app.mobile_dashboard_metrics,
+			app.world_view,
+			app.mobile_navigation,
+		]
+		for control: Control in dashboard_controls:
+			var control_rect := control.get_global_rect()
+			if (
+				control_rect.position.x < -1.0
+				or control_rect.end.x > float(preview_width) + 1.0
+			):
+				push_error(
+					"Das mobile Dashboard ist breiter als das Display: %s %s"
+					% [control.name, str(control_rect)]
+				)
+				get_tree().quit(1)
+				return
+		for button: Button in app.mobile_nav_buttons.values():
+			var button_rect := button.get_global_rect()
+			if button_rect.position.x < -1.0 or button_rect.end.x > float(preview_width) + 1.0:
+				push_error("Ein mobiler Navigationspunkt liegt außerhalb des Displays.")
+				get_tree().quit(1)
+				return
 	print(
 		"VISUAL_LAYOUT:name=%s:size=%s:compact=%s" % [
 			preview_page,

@@ -466,7 +466,7 @@ Offizielle technische Referenzen:
 
 - [Ollama Structured Outputs](https://docs.ollama.com/capabilities/structured-outputs)
 - [Ollama Windows und lokale API](https://docs.ollama.com/windows)
-- [Qwen 3.5 9B in Ollama](https://ollama.com/library/qwen3.5:9b)
+- [Qwen 3.5 4B in Ollama](https://ollama.com/library/qwen3.5:4b) für die schnelle Budgetwelt-Planung; das bestehende 9B-Modell bleibt ausschließlich Blenk Voice vorbehalten
 
 Abnahmekriterien:
 
